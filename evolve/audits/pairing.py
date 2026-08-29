@@ -31,6 +31,8 @@ def _matched_invariants(branch: BranchSpec) -> Mapping[str, Any]:
         "harness_version": branch.harness_version,
         "verifier_id": branch.verifier_id,
         "verifier_version": branch.verifier_version,
+        "memory_view_id": branch.memory_view_id,
+        "memory_view_hash": branch.memory_view_hash,
         "horizon": branch.horizon,
         "budget": dict(branch.budget),
         "generation_settings": dict(branch.generation_settings),

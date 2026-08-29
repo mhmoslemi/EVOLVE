@@ -20,7 +20,7 @@ evolve:
     epochs: 2
     verifier_calls: 20
   workers:
-    max_inflight_branches: 10
+    max_inflight_branches: 20
 """,
         encoding="utf-8",
     )

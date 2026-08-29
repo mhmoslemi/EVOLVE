@@ -1,32 +1,91 @@
+# 26-circle packing search. `problems/circle_packing.py` defines the scientific
+# state, geometry fingerprint, independent payload verifier, and renderer.
 engine: evolve
 schema_version: 1
 problem: circle_packing
+
+# Problem/verifier layer.
 num_circles: 26
 target: 2.636
 num_seed_states: 8
 sandbox_timeout_s: 100
+
+# Frozen backbone and isolated role-LoRAs.
 model_name: Qwen/Qwen3-8B
 backend: hf
-generation_backend: hf
+generation_backend: vllm
 max_seq_length: 32000
 max_new_tokens: 6700
 temperature: 1.0
 top_p: 1.0
+load_in_4bit: true  # HF training only; vLLM loads its own inference base.
+lora_rank: 32
+lora_alpha: 32
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
 learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
+gen_micro_batch: 1
+
+# GPU 0 owns both phases sequentially: vLLM generation, then HF role learning.
+gpu_type: H100
 gpu_ids: [0]
 num_gpus: 1
+vllm_tensor_parallel_size: 1
+vllm_quantization: auto  # vLLM checkpoint choice; not HF load_in_4bit.
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 4
+vllm_max_num_batched_tokens: 8192
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 4
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
 seed: 42
 deterministic: false
+
 evolve:
-  budget: {epochs: 50, verifier_calls: 12000, audit_fraction: 0.15, refinement_fraction: 0.05}
-  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
-  roles: {enabled: [scout, mechanist, challenger]}
-  options: {max_horizon: 4, branch_budget: 64}
-  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
-  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
-  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
-  learning: {objective: ordergrad, top_m: 1, group_k: 8}
-  refinement: {max_attempts: 3, max_depth: 2}
-  reporting: {status_every_verifications: 25, plots_every_epochs: 1}
-  workers: {max_inflight_branches: 16}
+  # Barrier count, verifier budget, and paired audit/refinement reservations.
+  budget:
+    epochs: 50
+    verifier_calls: 12000
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  # Descriptor-indexed quality-diversity archive.
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  # Exactly three independently trained EVOLVE roles.
+  roles:
+    enabled: [scout, mechanist, challenger]
+  # Branch option horizon and hard candidate budget.
+  options:
+    max_horizon: 4
+    branch_budget: 64
+  # Harness arms and matched harness-calibration reserve.
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  # Record-gain posterior allocation, not global PUCT.
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  # Randomized matched audits are the only source of promoted causal memory.
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 5
+  # Homogeneous per-role OrderGrad groups.
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 8
+  # Bounded challenger repair nursery.
+  refinement:
+    max_attempts: 3
+    max_depth: 2
+  reporting:
+    status_every_verifications: 25
+    plots_every_epochs: 1
+  # Capacity includes paired audits/refinements/harness trials and role coverage.
+  workers:
+    max_inflight_branches: 20

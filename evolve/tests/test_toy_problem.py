@@ -16,12 +16,12 @@ from problems.evolve_toy import EvolveToyProblem
 from problems.registry import available_problems, get_problem
 
 
-class _OldPromptProblem(Problem):
-    """Deliberately uses the pre-memory legacy method signature."""
+class _PromptCompatibilityProblem(Problem):
+    """Scientific problem whose prompt hook does not consume causal memory."""
 
     def __init__(self):
         super().__init__({})
-        self.messages = [{"role": "user", "content": "legacy prompt"}]
+        self.messages = [{"role": "user", "content": "base prompt"}]
 
     def build_prompt(self, parent):
         del parent
@@ -45,9 +45,28 @@ class _OldPromptProblem(Problem):
     def seed_states(self):
         return [SeedState()]
 
+    def serialize_answer(self, candidate, evidence=None):
+        del evidence
+        return candidate
+
+    def verify_answer_payload(self, payload, policy=None):
+        del payload, policy
+        raise NotImplementedError
+
+    def describe_scientific_state(self, candidate, evidence=None):
+        del candidate, evidence
+        return {"fixture": True}
+
+    def scientific_fingerprint(self, candidate, evidence=None):
+        del candidate, evidence
+        return "0" * 64
+
+    def resource_requirements(self):
+        return ResourceRequirements(timeout_s=1.0)
+
 
 def test_prompt_adapter_preserves_old_signature_and_does_not_mutate_messages():
-    problem = _OldPromptProblem()
+    problem = _PromptCompatibilityProblem()
     parent = ParentContext()
 
     assert build_problem_prompt(problem, parent) is problem.messages
@@ -56,20 +75,7 @@ def test_prompt_adapter_preserves_old_signature_and_does_not_mutate_messages():
     assert rendered is not problem.messages
     assert rendered[0] is not problem.messages[0]
     assert "tested lesson" in rendered[0]["content"]
-    assert problem.messages == [{"role": "user", "content": "legacy prompt"}]
-
-
-def test_default_scientific_hooks_are_explicitly_method_incomplete():
-    problem = _OldPromptProblem()
-    verified = problem.verify_answer_payload([1, 2])
-
-    assert problem.scientific_method_complete is False
-    assert verified.resolved is True
-    assert verified.admitted is True
-    assert verified.internal_reward == 3.0
-    assert verified.flags["method_incomplete"] is True
-    assert problem.describe_scientific_state([1, 2])["method_complete"] is False
-    assert len(problem.scientific_fingerprint([1, 2])) == 64
+    assert problem.messages == [{"role": "user", "content": "base prompt"}]
 
 
 def test_resource_declarations_reject_ambiguous_or_impossible_values():
@@ -177,7 +183,7 @@ def test_toy_seeds_are_deterministic_and_cover_every_quadrant():
         assert verified.internal_reward == seed.value
 
 
-def test_toy_legacy_compute_path_and_memory_prompt_are_operational():
+def test_toy_sandbox_compute_path_and_memory_prompt_are_operational():
     problem = EvolveToyProblem({})
     response = """```python
 def run_toy():

@@ -5,9 +5,7 @@
 
 Every plot reads only already-committed JSON (``stepNN.summary.json``,
 ``checkpoints/latest.json``); it works after a run and while one is active,
-and it never reruns candidate code or imports a model/CUDA library.  Old
-plotting commands (``plot_erdos.py``, ``plot_search_tree.py``, ...) are
-preserved unchanged alongside this one.
+and it never reruns candidate code or imports a model/CUDA library.
 """
 
 from __future__ import annotations

@@ -129,14 +129,10 @@ def test_common_cli_aliases_and_symmetric_boolean_overrides(tmp_path):
     cfg, resolved, metadata = _fresh(
         tmp_path,
         "thinking: true\n"
-        "deterministic: true\n"
-        "vllm_enforce_eager: true\n"
-        "vllm_enable_prefix_caching: true\n",
+        "deterministic: true\n",
         cli=(
             "--no-thinking",
             "--no-deterministic",
-            "--no-vllm-enforce-eager",
-            "--no-vllm-prefix-caching",
             "--lr",
             "0.002",
             "--gpu-type",
@@ -150,8 +146,6 @@ def test_common_cli_aliases_and_symmetric_boolean_overrides(tmp_path):
 
     assert cfg.thinking is False
     assert cfg.deterministic is False
-    assert cfg.vllm_enforce_eager is False
-    assert cfg.vllm_enable_prefix_caching is False
     assert cfg.learning_rate == pytest.approx(0.002)
     assert cfg.evolve.learning.group_k == 4
     assert cfg.problem_config["gpu_type"] == "H100"
@@ -162,20 +156,14 @@ def test_common_cli_aliases_and_symmetric_boolean_overrides(tmp_path):
     enabled, _, _ = _fresh(
         tmp_path,
         "thinking: false\n"
-        "deterministic: false\n"
-        "vllm_enforce_eager: false\n"
-        "vllm_enable_prefix_caching: false\n",
+        "deterministic: false\n",
         cli=(
             "--thinking",
             "--deterministic",
-            "--vllm-enforce-eager",
-            "--vllm-prefix-caching",
         ),
     )
     assert enabled.thinking is True
     assert enabled.deterministic is True
-    assert enabled.vllm_enforce_eager is True
-    assert enabled.vllm_enable_prefix_caching is True
 
 
 def test_group_size_alias_rejects_disagreement(tmp_path):
@@ -328,21 +316,6 @@ def test_prefixed_compatibility_typos_are_rejected(tmp_path, typo):
         _fresh(tmp_path, f"{typo}: 1\n")
 
 
-def test_known_legacy_compatibility_keys_remain_preserved(tmp_path):
-    cfg, resolved, _ = _fresh(
-        tmp_path,
-        "memory_hygiene_profile: geometry\n"
-        "feedback_validity_target: 0.8\n"
-        "reranker_enabled: false\n"
-        "reranker_poll_interval_s: 3.0\n"
-        "_max_seq_length_includes_memory_topup: false\n",
-    )
-    assert cfg.problem_config["memory_hygiene_profile"] == "geometry"
-    assert cfg.problem_config["feedback_validity_target"] == pytest.approx(0.8)
-    assert cfg.problem_config["reranker_poll_interval_s"] == pytest.approx(3.0)
-    assert resolved["_max_seq_length_includes_memory_topup"] is False
-
-
 @pytest.mark.parametrize(
     "config_name",
     [
@@ -351,8 +324,9 @@ def test_known_legacy_compatibility_keys_remain_preserved(tmp_path):
         "circle_packing.yaml",
         "denoising.yaml",
         "erdos.yaml",
+        "evolve_toy.yaml",
+        "gpu_mode_mla.yaml",
         "gpu_mode_trimul.yaml",
-        "gpy_mode.yaml",
     ],
 )
 def test_current_problem_yamls_use_only_registered_compatibility_keys(config_name):
@@ -619,14 +593,14 @@ def test_resume_rejects_method_changes_and_implicit_config_overlay(tmp_path):
         )
 
 
-def test_resume_detects_legacy_missing_resolved_future_schema_and_tampering(tmp_path):
-    legacy = tmp_path / "legacy"
-    legacy.mkdir()
-    (legacy / "config.json").write_text(
+def test_resume_detects_non_evolve_missing_resolved_future_schema_and_tampering(tmp_path):
+    non_evolve = tmp_path / "non-evolve"
+    non_evolve.mkdir()
+    (non_evolve / "config.json").write_text(
         json.dumps({"problem": "erdos"}), encoding="utf-8"
     )
-    with pytest.raises(UnsupportedEvolveConfigError, match="legacy"):
-        load_evolve_config(["--resume", str(legacy)], cwd=tmp_path)
+    with pytest.raises(UnsupportedEvolveConfigError, match="EVOLVE"):
+        load_evolve_config(["--resume", str(non_evolve)], cwd=tmp_path)
 
     missing = tmp_path / "missing"
     missing.mkdir()
@@ -682,7 +656,7 @@ def test_resume_requires_matching_immutable_manifest(tmp_path):
         load_evolve_config(["--resume", str(mismatched)], cwd=tmp_path)
 
 
-def test_resume_rejects_legacy_gpu_string_in_authoritative_json(tmp_path):
+def test_resume_rejects_noncanonical_gpu_string_in_authoritative_json(tmp_path):
     _, resolved, _ = _fresh(tmp_path)
     resolved["gpu_ids"] = "0,2"
     resolved["num_gpus"] = 2

@@ -18,11 +18,23 @@ from evolve.archive import ScientificArchive
 from evolve.harness import HarnessRegistry
 from evolve.ids import content_id, validate_id
 from evolve.options import OptionRegistry
+from evolve.options import (
+    DIAGNOSTIC_REPAIR_STATE_MACHINE,
+    FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
+    MATCHED_CONTINUATION_STATE_MACHINE,
+)
 from evolve.types import AllocationArm, ArchiveCell, Channel, Role
 
 
 class SchedulerError(ValueError):
     """Base error for scheduler-layer failures."""
+
+
+_AUXILIARY_STATE_MACHINES = {
+    DIAGNOSTIC_REPAIR_STATE_MACHINE,
+    FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
+    MATCHED_CONTINUATION_STATE_MACHINE,
+}
 
 
 @dataclass(frozen=True)
@@ -144,6 +156,11 @@ def enumerate_candidate_arms(
             for harness_id in harness_registry.active_ids:
                 for option_id in option_registry.eligible_for(role=role, harness_id=harness_id):
                     spec = option_registry.spec(option_id)
+                    # Audit controls and nursery repairs have dedicated
+                    # channels. They must never become ordinary production
+                    # arms merely because their role/harness is eligible.
+                    if spec.state_machine in _AUXILIARY_STATE_MACHINES:
+                        continue
                     if not set(spec.prerequisites) <= satisfied:
                         continue
                     identity = ArmIdentity(

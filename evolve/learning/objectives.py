@@ -1,24 +1,26 @@
-"""OrderGrad top-m-at-K advantages, and MaxPO as their pure-max, top_m=1 form.
+"""Exact finite-batch OrderGrad likelihood-ratio advantages.
 
-Every member's advantage is a function only of its rank among the group by
-``BranchOutcome.maximum_reward`` (a branch with no admitted descendant ranks
-last): the ``top_m`` best-ranked members receive ``1 - top_m/K``, the rest
-receive ``-top_m/K``.  This is exactly centered by construction -- the
-advantages of any group sum to zero -- which is the "centering identity"
-AGENTS.md asks every objective to satisfy.  MaxPO is tracked as its own
-named, tested objective (never silently redefined) even though it is
-numerically identical to ``top_m=1`` OrderGrad.
+For a realized on-policy batch of ``N`` rewards this implementation uses the
+largest leave-one-out comparison size, ``K = N - 1``.  For each item it
+computes the include-one Top-M@K value and subtracts the valid leave-one-out
+value.  The returned multiplier includes OrderGrad's ``K`` factor, allowing
+the trainer to use its ordinary mean policy-gradient loss directly.
+
+Pure-max MaxPO uses the same canonical finite-batch Max@K advantage with
+``top_m = 1``.  It is retained as a separately versioned objective rather than
+being relabelled from a binary winner/loser rank heuristic.
 """
 
 from __future__ import annotations
 
+from itertools import combinations
 from typing import Optional, Sequence, Tuple
 
 from evolve.types import LearningObjective
 
 
-ORDERGRAD_VERSION = "ordergrad_top_m_at_k_v1"
-MAXPO_VERSION = "maxpo_centered_pure_max_v1"
+ORDERGRAD_VERSION = "ordergrad_lr_top_m_k_n_minus_1_v2"
+MAXPO_VERSION = "maxpo_canonical_max_k_n_minus_1_v2"
 
 
 class ObjectiveError(ValueError):
@@ -44,14 +46,32 @@ def rank_order(rewards: Sequence[Optional[float]]) -> Tuple[int, ...]:
 
 
 def ordergrad_advantages(rewards: Sequence[Optional[float]], *, top_m: int) -> Tuple[float, ...]:
-    k = len(rewards)
-    if k == 0:
-        raise ObjectiveError("cannot compute advantages for an empty group")
+    n = len(rewards)
+    if n < 2:
+        raise ObjectiveError("OrderGrad likelihood-ratio groups need at least two samples")
+    k = n - 1
     if isinstance(top_m, bool) or not isinstance(top_m, int) or not 1 <= top_m <= k:
-        raise ObjectiveError("top_m must be an integer in [1, group_size]")
-    ranks = rank_order(rewards)
-    fraction = top_m / k
-    return tuple((1.0 - fraction) if rank < top_m else -fraction for rank in ranks)
+        raise ObjectiveError("top_m must be an integer in [1, group_size - 1]")
+    if any(value is None for value in rewards):
+        raise ObjectiveError("OrderGrad rewards must be finite normalized gains")
+    values = tuple(float(value) for value in rewards)
+
+    def top_m_value(indices: Sequence[int]) -> float:
+        selected = sorted((values[index] for index in indices), reverse=True)
+        return sum(selected[:top_m]) / top_m
+
+    advantages = []
+    all_indices = tuple(range(n))
+    for item in all_indices:
+        others = tuple(index for index in all_indices if index != item)
+        included_values = [
+            top_m_value((item,) + subset)
+            for subset in combinations(others, k - 1)
+        ]
+        include_one = sum(included_values) / len(included_values)
+        leave_one_out = top_m_value(others)
+        advantages.append(k * (include_one - leave_one_out))
+    return tuple(advantages)
 
 
 def maxpo_advantages(rewards: Sequence[Optional[float]]) -> Tuple[float, ...]:

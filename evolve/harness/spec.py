@@ -14,6 +14,7 @@ HARNESS_SUBSYSTEM_SCHEMA_VERSION = 1
 HARNESS_SPEC_API_VERSION = "evolve_harness_spec_v1"
 HARNESS_AUDIT_CONTEXT_VERSION = "matched_harness_audit_context_v1"
 BASELINE_HARNESS_VERSION = "baseline_v1"
+DIAGNOSTIC_HARNESS_VERSION = "diagnostic_v1"
 
 
 class HarnessValidationError(ValueError):
@@ -132,6 +133,38 @@ def baseline_harness_spec() -> HarnessSpec:
             "candidate_admission_authority": "common_verifier_only",
         },
         diagnostic_feedback={"enabled": False, "max_feedback_rounds": 0},
+        tool_policy_version="no_harness_tools_v1",
+    )
+
+
+def diagnostic_harness_spec() -> HarnessSpec:
+    """A conservative structured-diagnostics candidate for matched trials."""
+
+    return create_harness_spec(
+        version=DIAGNOSTIC_HARNESS_VERSION,
+        instructions=(
+            "Execute the frozen role and option in two explicit stages: first "
+            "state the single scientific invariant or failure mode being targeted; "
+            "then produce one complete candidate that changes only what that "
+            "diagnosis requires. Local reasoning is guidance only. The independent "
+            "common verifier alone controls admission and the record."
+        ),
+        tools=(),
+        intermediate_tests=("single_target_diagnosis",),
+        scaffolding={
+            "prompt_sections": [
+                "problem",
+                "verified_start",
+                "role",
+                "option",
+                "diagnosis",
+                "candidate",
+                "horizon_and_budget",
+            ],
+            "local_score_authority": False,
+            "candidate_admission_authority": "common_verifier_only",
+        },
+        diagnostic_feedback={"enabled": True, "max_feedback_rounds": 1},
         tool_policy_version="no_harness_tools_v1",
     )
 
@@ -308,12 +341,14 @@ class MatchedHarnessAuditContext:
 
 __all__ = [
     "BASELINE_HARNESS_VERSION",
+    "DIAGNOSTIC_HARNESS_VERSION",
     "HARNESS_AUDIT_CONTEXT_VERSION",
     "HARNESS_SPEC_API_VERSION",
     "HARNESS_SUBSYSTEM_SCHEMA_VERSION",
     "HarnessValidationError",
     "MatchedHarnessAuditContext",
     "baseline_harness_spec",
+    "diagnostic_harness_spec",
     "create_harness_spec",
     "validate_harness_spec",
 ]

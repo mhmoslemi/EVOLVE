@@ -1,15 +1,14 @@
-"""
-Base classes for problems.
-The reward convention across ALL problems is "higher is better", so the PUCT
-sampler and the entropic advantage do not need to know whether the underlying
-metric is minimized or maximized. 
+"""Typed scientific-problem contract for EVOLVE.
+
+Every problem exposes a higher-is-better internal reward while preserving its
+native ``raw_score``. Admission and record changes are controlled only by
+deterministic verification of a persisted answer payload.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-import hashlib
 import inspect
 import json
 import math
@@ -27,7 +26,7 @@ from evolve.verifier.sandbox import run_code
 class SeedState:
     """One initial archive entry."""
     code: str = ""
-    value: float = 0.0                 # reward (higher=better), used by the sampler
+    value: float = 0.0                 # internal reward (higher is better)
     raw_score: Optional[float] = None  # true metric, shown in the prompt
     construction: Optional[list] = None  # injected global (height_sequence_1 / initial_h_values)
 
@@ -52,10 +51,8 @@ class RewardResult:
     stdout: str = ""
     code: str = ""
     construction: Optional[list] = None  
-    # Failure stage used only to decide whether token-level feedback applies.
-    # code = malformed source/runtime/interface bug; constraint = a runnable
-    # program rejected by the scientific verifier; timeout/infrastructure are
-    # explicitly excluded from feedback.
+    # Problem-local failure stage. The independent verifier later classifies it
+    # into scientific, code, timeout, or infrastructure evidence.
     failure_kind: str = ""
 
 
@@ -65,9 +62,8 @@ class ScientificVerification:
 
     This intentionally contains no run, branch, policy, or harness identifiers.
     The EVOLVE verifier service adds those fields when it constructs the
-    immutable EvidencePacket.  Keeping this small record in the neutral problem
-    layer lets legacy problems acquire payload hooks without importing the
-    EVOLVE engine or changing their existing reward interface.
+    immutable EvidencePacket. Keeping this record independent of the engine
+    prevents problem code from assigning archive or scheduler authority.
     """
 
     resolved: bool
@@ -159,14 +155,7 @@ def render_state_context(metric_name: str, target, parent: ParentContext,
 
 def build_problem_prompt(problem: "Problem", parent: ParentContext,
                          memory: str = "") -> List[dict]:
-    """Call old and new ``build_prompt`` implementations through one API.
-
-    Some active legacy subclasses predate the optional ``memory`` parameter.
-    With no memory this helper is byte-for-byte transparent.  With memory, a
-    modern problem receives it directly; an old problem gets a copied final
-    user message with a clearly delimited context block.  The original message
-    list is never mutated.
-    """
+    """Normalize problem prompts and append retrieved causal context safely."""
 
     method = problem.build_prompt
     parameters = inspect.signature(method).parameters.values()
@@ -230,13 +219,11 @@ class Problem(ABC):
     entrypoint: str = "run"         
     metric_name: str = "score"
     maximize: bool = True
-    # Generic adapters can exercise old problems in smoke tests, but their
-    # coarse descriptors and legacy score calls are not a production EVOLVE
-    # scientific contract.  A production-capable problem must opt in.
+    # Concrete EVOLVE problems must opt in and implement every scientific hook.
     scientific_method_complete: bool = False
     answer_schema_version: int = 1
-    descriptor_function_version: str = "legacy_coarse_v1"
-    fingerprint_function_version: str = "legacy_coarse_v1"
+    descriptor_function_version: str = "unimplemented"
+    fingerprint_function_version: str = "unimplemented"
 
     # Whether RewardResult.construction is the actual solution object and
     # therefore worth writing into every rollout's meta. True only where the
@@ -326,85 +313,29 @@ class Problem(ABC):
             "resource_requirements": resource_identity,
         }
 
+    @abstractmethod
     def serialize_answer(self, candidate: Any, evidence: Any = None) -> Any:
-        """Capture a JSON answer for a legacy problem's smoke adapter.
+        """Capture the complete finite JSON answer used for later verification."""
+        ...
 
-        Problem-specific production adapters must override this when the
-        scientific answer differs from the direct return value or needs an
-        immutable external blob.
-        """
-
-        if isinstance(candidate, RewardResult):
-            candidate = candidate.construction
-        return _json_payload(candidate)
-
+    @abstractmethod
     def verify_answer_payload(self, payload: Any,
                               policy: Optional[Mapping[str, Any]] = None
                               ) -> ScientificVerification:
-        """Coarsely rescore a saved payload for legacy smoke compatibility."""
+        """Verify a saved payload without rerunning stochastic proposal code."""
+        ...
 
-        del policy
-        try:
-            captured = self.serialize_answer(payload)
-            result = self.score(captured, "")
-        except Exception as exc:
-            return ScientificVerification(
-                resolved=True,
-                admitted=False,
-                answer_payload=None,
-                failure_kind="code",
-                message=f"payload_verification_failed: {type(exc).__name__}: {exc}",
-                flags={"method_incomplete": True},
-            )
-        return ScientificVerification(
-            resolved=True,
-            admitted=bool(result.valid),
-            answer_payload=captured,
-            internal_reward=(float(result.reward) if result.valid else None),
-            raw_score=result.raw_score,
-            failure_kind="" if result.valid else (result.failure_kind or "constraint"),
-            message=result.msg,
-            scores={"legacy_reward": float(result.reward)},
-            flags={"method_incomplete": True},
-            diagnostics={"stdout": result.stdout},
-        )
-
+    @abstractmethod
     def describe_scientific_state(self, candidate: Any,
                                   evidence: Any = None) -> Mapping[str, Any]:
-        """Return a source-free coarse descriptor for method-incomplete use."""
+        """Return source-free scientific descriptor dimensions."""
+        ...
 
-        del evidence
-        payload = self.serialize_answer(candidate)
-        if isinstance(payload, list):
-            size = len(payload)
-            size_bin = "empty" if size == 0 else ("small" if size <= 16 else "large")
-            kind = "sequence"
-        elif isinstance(payload, Mapping):
-            size_bin = "small" if len(payload) <= 8 else "large"
-            kind = "mapping"
-        else:
-            size_bin = "scalar"
-            kind = type(payload).__name__
-        return {
-            "adapter": self.descriptor_function_version,
-            "payload_kind": kind,
-            "size_bin": size_bin,
-            "method_complete": False,
-        }
-
+    @abstractmethod
     def scientific_fingerprint(self, candidate: Any,
                                evidence: Any = None) -> str:
-        """Hash verified-output structure, never source text, for smoke use."""
-
-        descriptor = self.describe_scientific_state(candidate, evidence)
-        payload = {
-            "version": self.fingerprint_function_version,
-            "descriptor": descriptor,
-            "answer": self.serialize_answer(candidate, evidence),
-        }
-        encoded = json.dumps(payload, allow_nan=False, sort_keys=True,
-                             separators=(",", ":")).encode("utf-8")
-        return hashlib.sha256(encoded).hexdigest()
+        """Return a stable verified-behavior fingerprint, never source identity."""
+        ...
 
     def record_key(self, evidence: Any) -> float:
         """Return the higher-is-better internal reward from verified evidence."""
@@ -458,8 +389,10 @@ class Problem(ABC):
     def harness_specs(self) -> List[Any]:
         return []
 
+    @abstractmethod
     def resource_requirements(self) -> ResourceRequirements:
-        return ResourceRequirements()
+        """Declare actual verifier resource and timeout semantics."""
+        ...
 
     # ---- default reward path (subprocess sandbox) --------------------
     def compute_reward(self, response_text: str, parent: ParentContext,

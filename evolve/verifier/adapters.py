@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Mapping, Optional, Protocol, runtime_checkable
+from typing import Any, Mapping, Optional, Protocol, runtime_checkable
 
 from evolve.ids import canonical_json, content_hash, content_id
 from evolve.types import FailureKind, FrozenDict
@@ -135,86 +135,8 @@ class ScientificProblemAdapter(Protocol):
         """Return a deterministic fingerprint derived from verified behavior."""
 
 
-class LegacyProblemFallbackAdapter:
-    """Coarse bridge for legacy/smoke fixtures; never production-complete."""
-
-    method_complete = False
-    descriptor_version = "legacy_verified_output_v1"
-
-    def __init__(
-        self,
-        *,
-        problem_id: str,
-        verifier_version: str,
-        verify_payload: Callable[[Any, VerificationPolicy], VerificationDecision],
-        timeout_is_scientific: bool = False,
-    ) -> None:
-        self.problem_id = str(problem_id)
-        self.verifier_version = str(verifier_version)
-        self.timeout_is_scientific = bool(timeout_is_scientific)
-        self._verify_payload = verify_payload
-        self.verifier_id = content_id(
-            "verifier",
-            {
-                "kind": "legacy_problem_fallback",
-                "problem_id": self.problem_id,
-                "verifier_version": self.verifier_version,
-            },
-        )
-
-    def verify_answer_payload(
-        self,
-        payload: Any,
-        policy: VerificationPolicy,
-    ) -> VerificationDecision:
-        return self._verify_payload(payload, policy)
-
-    def describe_scientific_state(
-        self,
-        payload: Any,
-        decision: VerificationDecision,
-    ) -> Mapping[str, Any]:
-        if isinstance(payload, Mapping):
-            shape = "mapping"
-            keys = sorted(str(key) for key in payload.keys())
-        elif isinstance(payload, (list, tuple)):
-            shape = "sequence"
-            keys = []
-        elif payload is None:
-            shape = "null"
-            keys = []
-        else:
-            shape = type(payload).__name__
-            keys = []
-        return {
-            "adapter": "legacy_fallback",
-            "payload_shape": shape,
-            "payload_keys": keys,
-            "admitted": decision.admitted,
-        }
-
-    def scientific_fingerprint(
-        self,
-        payload: Any,
-        decision: VerificationDecision,
-    ) -> str:
-        return "legacy-coarse:" + content_hash(
-            {
-                "problem_id": self.problem_id,
-                "payload": payload,
-                "admitted": decision.admitted,
-            }
-        )
-
-
 class ProblemScientificAdapter:
-    """Duck-typed bridge to the additive hooks on ``problems.base.Problem``.
-
-    The adapter deliberately does not import ``problems.base``: importing the
-    neutral problem layer currently pulls in legacy sandbox dependencies.  A
-    compatible object is validated by attributes and callables, then only its
-    saved-payload scientific hooks are exposed to the verifier service.
-    """
+    """Validated bridge to the scientific hooks on ``problems.base.Problem``."""
 
     def __init__(
         self,
@@ -303,8 +225,8 @@ class ProblemScientificAdapter:
     def validate_frozen_identity(self) -> None:
         """Fail closed if retained problem or adapter behavior has drifted.
 
-        Problems remain ordinary mutable Python objects for legacy
-        compatibility.  Recomputing their complete identity before every
+        Problems remain ordinary mutable Python objects. Recomputing their
+        complete identity before every
         verifier invocation prevents a cfg/resource/version mutation from
         running new behavior under an old content-addressed verifier ID.
         """
@@ -531,7 +453,6 @@ class ProblemScientificAdapter:
 
 
 __all__ = [
-    "LegacyProblemFallbackAdapter",
     "ProblemScientificAdapter",
     "ScientificProblemAdapter",
 ]

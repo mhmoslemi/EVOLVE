@@ -30,17 +30,20 @@ from .builtins import (
     CHALLENGER_ATTACK_STATE_MACHINE,
     DIAGNOSTIC_REPAIR_STATE_MACHINE,
     EXPLORE_STATE_MACHINE,
+    FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
     MECHANIST_DEVELOP_STATE_MACHINE,
     MATCHED_CONTINUATION_STATE_MACHINE,
     PROPOSE_CAPABILITY,
     ChallengerAttackOption,
     DiagnosticRepairOption,
     ExploreOption,
+    FreshRefinementControlOption,
     MechanistDevelopOption,
     MatchedContinuationOption,
     create_challenger_attack_option_spec,
     create_diagnostic_repair_option_spec,
     create_explore_option_spec,
+    create_fresh_refinement_control_option_spec,
     create_mechanist_develop_option_spec,
     create_matched_continuation_option_spec,
 )
@@ -110,6 +113,14 @@ def production_option_registry(
         ),
         DiagnosticRepairOption,
     )
+    registry = registry.register(
+        create_fresh_refinement_control_option_spec(
+            hard_cost={"verifier_calls": 1.0},
+            expected_cost={"verifier_calls": 1.0},
+            harness_eligibility=harness_ids,
+        ),
+        FreshRefinementControlOption,
+    )
     return registry
 
 
@@ -117,6 +128,7 @@ __all__ = [
     "CHALLENGER_ATTACK_STATE_MACHINE",
     "DIAGNOSTIC_REPAIR_STATE_MACHINE",
     "EXPLORE_STATE_MACHINE",
+    "FRESH_REFINEMENT_CONTROL_STATE_MACHINE",
     "MECHANIST_DEVELOP_STATE_MACHINE",
     "MATCHED_CONTINUATION_STATE_MACHINE",
     "OPTION_EXECUTION_SCHEMA_VERSION",
@@ -131,6 +143,7 @@ __all__ = [
     "DiagnosticRepairOption",
     "ExecutableOption",
     "ExploreOption",
+    "FreshRefinementControlOption",
     "MechanistDevelopOption",
     "MatchedContinuationOption",
     "OptionContext",
@@ -148,6 +161,7 @@ __all__ = [
     "create_challenger_attack_option_spec",
     "create_diagnostic_repair_option_spec",
     "create_explore_option_spec",
+    "create_fresh_refinement_control_option_spec",
     "create_mechanist_develop_option_spec",
     "create_matched_continuation_option_spec",
     "create_option_spec",

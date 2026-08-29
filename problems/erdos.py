@@ -135,8 +135,8 @@ class ErdosMinOverlap(Problem):
         if type(limit) is not int or limit < 1:
             raise ValueError("scientific_max_points must be a positive integer")
         # Verification uses an O(n^2) full correlation.  This limit applies
-        # only to the saved-answer path and comfortably covers all legacy
-        # seeds (40--99 points) without changing their behavior.
+        # only to the saved-answer path and comfortably covers all registered
+        # seeds (40--99 points).
         self.scientific_max_points = limit
         # Materialize the default in the copied problem cfg. The common
         # verifier content-addresses scientific_verifier_identity(), which

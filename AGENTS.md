@@ -2,24 +2,22 @@
 
 ## Mission
 
-Build EVOLVE end to end while preserving problem YAMLs, streamed multi-worker generation, concurrent verification, complete artifacts, completed-barrier legacy resume, reporting, and plots. This is not a PUCT facelift. Search verified scientific states, allocate by posterior record value, isolate three roles, treat harnesses as arms, learn memory from matched audits, and train homogeneous on-policy max-seeking groups. Migrate additively, keep `legacy` runnable, and never reinterpret existing runs.
+Build EVOLVE end to end while preserving problem YAMLs, streamed multi-worker generation, concurrent verification, complete artifacts, completed-barrier EVOLVE resume, reporting, and plots. This is not a PUCT facelift. Search verified scientific states, allocate by posterior record value, isolate three roles, treat harnesses as arms, learn memory from matched audits, and train homogeneous on-policy max-seeking groups. This repository is EVOLVE-only; never reinterpret existing runs.
 
 ## Scope and source of truth
 
-This file governs the repository and is the method source of truth. Local instructions may add rules but not weaken these invariants. The current README, memory design, sampler, advantage, feedback, and memory code specify only the legacy path.
+This file governs the repository and is the method source of truth. Local instructions may add rules but not weaken these invariants.
 
-`legacy` is global PUCT, one LoRA, the entropic objective, one-step memory credit, and self-likelihood feedback. `evolve` is this specification. An arm chooses cell, role, option, harness, horizon, and cost. An epoch is a frozen cycle, a branch executes one arm, an audit pair is randomized and matched, and the record is the best confirmed admissible reward.
+`evolve` is this specification. An arm chooses cell, role, option, harness, horizon, and cost. An epoch is a frozen cycle, a branch executes one arm, an audit pair is randomized and matched, and the record is the best confirmed admissible reward.
 
 ## Repository facts that must be preserved
 
-Read the relevant implementation before editing it. The active legacy path is rooted at `train_multy.py`.
+Read the relevant implementation before editing it. The active entrypoint is `train_evolve.py`.
 
-- Preserve `run.sh`, argument forwarding, and `train_multy.py` as the legacy entrypoint.
-- Reuse `gen_workers.py`, `model_backend.py`, `experiment_io.py`, `sandbox.py`, and the typed problem contract in `problems/base.py` through tested adapters.
+- Preserve `run.sh`, final argument forwarding, and `train_evolve.py` as the EVOLVE entrypoint.
+- Reuse the typed problem contract in `problems/base.py` through tested EVOLVE adapters.
 - Keep problem registration in `problems/registry.py` and one YAML per problem or subtype in `configs/`.
-- `dpuct/` is a standalone tested search library. Reuse it behind an adapter when useful for branch-local tree decisions. Do not create a third generic PUCT implementation and do not use D-PUCT as the global EVOLVE allocation rule.
-- Preserve old plot and analysis readers.
-- `_old_stuff_/`, `sampler-puct.py`, and `memory/train_multy.py` are historical. Never make them production dependencies.
+- Keep plotting and analysis readers schema-aware and artifact-only.
 - `runs/` contains user-owned evidence. Never edit, normalize, rename, or delete an existing run.
 
 The configuration precedence is a compatibility contract.
@@ -92,7 +90,7 @@ Reserve randomized audits, every role, empty or under-tested cells, harness cali
 
 Log sufficient statistics, hierarchy fallback, RNG seed, expected gain and cost, uncertainty, correlation penalty, reservations, and final choice so the plan reproduces exactly.
 
-Do not use raw historical maximum PUCT, archive-wide rank alone, or an LLM judge score as the EVOLVE scheduler. D-PUCT may select actions within a bounded option tree after the global arm has been assigned.
+Do not use raw historical maximum PUCT, archive-wide rank alone, or an LLM judge score as the EVOLVE scheduler.
 
 ### Causal option memory
 
@@ -108,11 +106,11 @@ Private role working memory may summarize the current branch, but it is ephemera
 
 Train at barriers only from persisted homogeneous on-policy groups matching role and policy snapshot, start cell or context, option, harness, horizon, cost, generation settings, frozen threshold, and production, audit, or refinement channel. Reject rather than mix roles, versions, budgets, audit halves, or refinement attempts. A `PolicyTrace` stores every role-policy prompt, response segment, token mask, log probability, and adapter hash. Branch log probability sums all same-role policy decisions, and descendant gain credits that complete trace while excluding tools, verifier text, and other-role tokens.
 
-Learn from branch descendant maxima using exact, independently tested OrderGrad for top-m-at-K. Pure-max mode may use exactly centered MaxPO. KL or entropy is explicit and secondary. Never relabel the entropic legacy surrogate or improvise equations. Check the primary papers, enumerated distributions, centering identities, and finite-difference or Monte Carlo tests.
+Learn from branch descendant maxima using exact, independently tested OrderGrad for top-m-at-K. Pure-max mode may use exactly centered MaxPO. KL or entropy is explicit and secondary. Never improvise equations. Check the primary papers, enumerated distributions, centering identities, and finite-difference or Monte Carlo tests.
 
 Update only the generating role. Record objective version, group members, advantages, masks, KL, gradient norm, optimizer step, and before and after adapter hashes. Save inputs before backward.
 
-The legacy self-likelihood feedback update is not part of EVOLVE. Verifier diagnostics can guide allocation or enter bounded refinement, but learning from a repair requires an executed and independently verified improvement under the refinement protocol.
+Self-likelihood feedback is not part of EVOLVE. Verifier diagnostics can guide allocation or enter bounded refinement, but learning from a repair requires an executed and independently verified improvement under the refinement protocol.
 
 ### Bounded refinement nursery
 
@@ -164,7 +162,7 @@ evolve/
   viz/            record, archive, provenance, allocation, audits, roles
 ```
 
-Use small typed services and pure decisions, not another monolithic step. Adapt the problem verifier, worker stream, sandbox, run I/O, and old readers under compatibility tests. Use D-PUCT only locally. Extract tested neutral helpers rather than importing `train_multy.py` as a library.
+Use small typed services and pure decisions, not another monolithic step. Adapt the problem verifier, worker stream, sandbox, and run I/O through typed boundaries.
 
 ## Required typed records and invariants
 
@@ -193,7 +191,7 @@ harness_specs() -> list[HarnessSpec]
 resource_requirements() -> ResourceRequirements
 ```
 
-Smoke and legacy adapters may derive a coarse verified-output descriptor, but must be marked method-incomplete. Production EVOLVE requires problem-defined scientific descriptors, fingerprints, answer serialization, and deterministic payload verification. Source text never assigns a cell.
+Test-only adapters may derive a coarse verified-output descriptor, but must be marked method-incomplete. Production EVOLVE requires problem-defined scientific descriptors, fingerprints, answer serialization, and deterministic payload verification. Source text never assigns a cell.
 
 Adding a problem requires `problems/<name>.py`, registry aliases, a matching problem or subtype YAML, deterministic seed and verifier-direction tests, descriptor and fingerprint tests, a best-answer renderer or text fallback, and an explicit resource declaration.
 
@@ -258,7 +256,7 @@ sh run.sh --resume /absolute/path/to/runs/RUN_NAME
 sh run.sh --resume /absolute/path/to/runs/RUN_NAME --num-steps 150
 ```
 
-Preserve final `"$@"` forwarding. `run.sh` resolves and removes dispatcher-only flags before calling legacy. Runs without an engine field are legacy. Fresh defaults never become implicit resume overrides, especially backend, GPU IDs, or CUDA masks. A resume derives engine and topology from its versioned effective config unless the user explicitly overrides a supported resource field, then writes a new config version and checkpoint hash without replacing the initial manifest. In EVOLVE, `--num-steps N` is a compatibility alias for total target epochs, not N additional epochs. Keep `train_multy.py` for legacy and add `train_evolve.py`; change the fresh default only after all gates and user agreement.
+Preserve final `"$@"` forwarding. `run.sh` calls `train_evolve.py`, and run metadata without an explicit `engine: evolve` declaration is rejected. Fresh defaults never become implicit resume overrides, especially backend, GPU IDs, or CUDA masks. A resume derives topology from its versioned effective config unless the user explicitly overrides a supported resource field, then writes a new config version and checkpoint hash without replacing the initial manifest. `--num-steps N` is a compatibility alias for total target epochs, not N additional epochs.
 
 Do not launch a real multi-GPU or long model run as part of ordinary implementation or testing. Such a run requires explicit user authorization and an agreed config.
 
@@ -312,7 +310,7 @@ final.summary.json
 best_code.py, best_construction.json
 ```
 
-Treat `stepNN` as EVOLVE epoch NN and `allocation_plan.json` as authoritative. `stepNN.parents.json` is a compatibility view. Give every allocation hop, audit side, refinement attempt, retry, group, and rollout a deterministic globally unique epoch index so flat files never overwrite. Preserve legacy fields and add EVOLVE IDs. `config.json` is an explicit top-level compatibility projection tested with existing plotters, while `config.resolved.json` is authoritative.
+Treat `stepNN` as EVOLVE epoch NN and `allocation_plan.json` as authoritative. `stepNN.parents.json` is a compact compatibility view. Give every allocation hop, audit side, refinement attempt, retry, group, and rollout a deterministic globally unique epoch index so flat files never overwrite. Preserve stable compatibility fields and add EVOLVE IDs. `config.json` is an explicit top-level compatibility projection, while `config.resolved.json` is authoritative.
 
 One controller-owned serialized writer assigns monotonic event sequences and idempotency keys. Workers never append JSONL directly. Persist each response on arrival and evidence after verification, flush assignments and evidence before use, keep complete bounded verifier traces separately, and content-address repeated prompts while retaining readable compatibility files.
 
@@ -341,7 +339,7 @@ At every barrier that commits a confirmed new record, atomically update `best/`,
 
 Generate headless plots from stored artifacts only. Plot record against tokens, verifier calls, and time, archive coverage and quality, provenance with record lineage, allocation by cell, role, option, and harness, posterior calibration, audit effects and memory state, role learning, failures, and resources. Plot failures never abort discovery.
 
-Retain old plotting commands. Add one schema-aware command such as
+Provide one schema-aware plotting command such as
 
 ```bash
 python -m evolve.viz.run RUN_DIR --all
@@ -353,31 +351,30 @@ It must work after a run and while a run is active by reading committed snapshot
 
 Work in vertical slices. Keep the repository runnable after every phase. Maintain `docs/EVOLVE_IMPLEMENTATION.md` with this checklist, decisions, schema versions, tests, and remaining gaps. Do not mark a phase complete from interfaces alone.
 
-0. **Protect legacy behavior.** Characterize config precedence, rollout counts, artifact order, score direction, best tracking, and checkpoint pointers. Add schema detection, a tiny fixture, and correct test ignore rules.
+0. **Protect EVOLVE evidence behavior.** Characterize config precedence, rollout counts, artifact order, score direction, best tracking, and checkpoint pointers. Add strict schema detection and a tiny fixture.
 1. **Build foundations.** Add typed records, strict config, IDs, budget, events, atomic writes, manifest, `train_evolve.py --validate-config --dry-plan`, and engine dispatch.
 2. **Make evidence scientific.** Adapt verifier output, confirmation, descriptors, fingerprints, cells, local competition, record, and provenance. Add a deterministic multi-cell toy problem.
 3. **Isolate roles.** Add three adapters, optimizers, RNGs, role-aware HF and vLLM jobs, non-aliasing IDs, and full restore tests.
-4. **Execute options.** Add immutable harnesses, option state machines, frozen branches, hard bounds, intermediate evidence, and optional local D-PUCT.
+4. **Execute options.** Add immutable harnesses, option state machines, frozen branches, hard bounds, and intermediate evidence.
 5. **Allocate for records.** Add hierarchical admission and tail models, horizon-aware expected improvement, costs, reservations, correlation-aware portfolio choice, and reproducible logs.
 6. **Learn causal memory.** Add persisted randomization, matched pair closure, effects, promotion, quarantine, drift, contextual retrieval, and no-memory audits.
 7. **Learn role policies.** Add strict groups, tested OrderGrad and optional MaxPO, one-role barrier updates, objective logs, and isolation checks.
 8. **Bound refinement.** Add minimal Challenger repairs, TTL, depth, attempts, cost, blinded verification, no re-entry, and separate groups.
 9. **Compose and recover.** Build `EvolveEngine`, frozen manifests, bounded asynchronous execution, barriers, shutdown, idempotent crash recovery, and compatibility artifacts.
 10. **Report.** Add live status, periodic best artifacts, generic plots, renderers, and active-run fixture tests.
-11. **Establish readiness.** Run legacy, D-PUCT, EVOLVE, fake end-to-end, and resume suites. After CPU gates, run only an explicitly authorized tiny model smoke test. Changing the fresh-run default needs all gates and user agreement. Old resumes always retain their saved engine.
+11. **Establish readiness.** Run EVOLVE, fake end-to-end, and resume suites. After CPU gates, run only an explicitly authorized tiny model smoke test. Non-EVOLVE resumes remain unsupported and read-only.
 
 ## Test requirements
 
-Most tests must be CPU-only, deterministic, and fast. Use fakes and skip marked GPU or vLLM tests. Add root pytest configuration with explicit active test paths so `_old_stuff_` is never collected, and fix `.gitignore` before trusting new tests.
+Most tests must be CPU-only, deterministic, and fast. Use fakes and skip marked GPU or vLLM tests. Keep root pytest configuration restricted to active EVOLVE test paths, and fix `.gitignore` before trusting new tests.
 
-Cover config precedence and hashing, IDs and schema round-trips, event and budget idempotency, verifier classification, archive cells and provenance, role isolation, exact worker counts and seeds, frozen harnesses and bounded options, posterior allocation and reservations, randomized audit effects and no-memory persistence, group and objective correctness, nursery limits, barrier crash recovery, legacy readers, and active and complete run plots.
+Cover config precedence and hashing, IDs and schema round-trips, event and budget idempotency, verifier classification, archive cells and provenance, role isolation, exact worker counts and seeds, frozen harnesses and bounded options, posterior allocation and reservations, randomized audit effects and no-memory persistence, group and objective correctness, nursery limits, barrier crash recovery, and active and complete run plots.
 
 Common lightweight checks should remain available.
 
 ```bash
 python -m compileall evolve problems train_evolve.py
-python -m pytest tests evolve/tests -q -p no:cacheprovider
-python -m pytest dpuct/tests -q
+python -m pytest evolve/tests -q -p no:cacheprovider
 sh -n run.sh
 ```
 
@@ -388,13 +385,13 @@ If the full suite is too slow, document and run the smallest relevant set during
 - Inspect and characterize before changing interfaces. Prefer additive typed adapters and pure policy services over a rewrite or controller monolith.
 - Use atomic, content-hashed persistence. Preserve user work, unrelated files, and generated runs. Never use destructive Git operations or edit evidence to pass a test.
 - Prefer existing or standard-library code. Pin and explain necessary dependencies.
-- Never hide a fallback to legacy, infrastructure error, schema mismatch, partial checkpoint, adapter alias, or budget overrun.
+- Never hide a non-EVOLVE fallback, infrastructure error, schema mismatch, partial checkpoint, adapter alias, or budget overrun.
 - Prefer deterministic verification over LLM judgment. Never launch jobs or reserve GPUs without user authorization. Keep public commands documented.
 
 When a design question is ambiguous, protect scientific validity first. Persist enough information to reconstruct the decision, separate observational production evidence from randomized causal evidence, and keep final verification independent from the mechanism that proposed the candidate.
 
 ## Definition of done
 
-Done means both engines start and resume to their documented guarantees, problem compatibility holds, role isolation, archive, provenance, bounded branches, harnesses, posterior allocation, common verification, audit-only memory, homogeneous top-rank learning, refinement, deterministic EVOLVE recovery, complete artifacts, live answers, plots, and all CPU compatibility and crash tests work together.
+Done means EVOLVE starts and resumes to its documented guarantees, problem compatibility holds, role isolation, archive, provenance, bounded branches, harnesses, posterior allocation, common verification, audit-only memory, homogeneous top-rank learning, refinement, deterministic recovery, complete artifacts, live answers, plots, and all CPU and crash tests work together.
 
 Until these conditions hold, describe the work as an implementation in progress. Do not claim that EVOLVE improves scientific discovery from architecture or mock tests alone.

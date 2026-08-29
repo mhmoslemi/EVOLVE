@@ -12,7 +12,6 @@ from evolve.ids import canonical_json, content_hash, content_id
 from evolve.types import EvidencePacket, FailureKind, FrozenDict, Proposal
 from evolve.verifier import (
     ExecutionCapture,
-    LegacyProblemFallbackAdapter,
     PersistedAnswerPayload,
     ProblemScientificAdapter,
     VerificationDecision,
@@ -782,33 +781,7 @@ def test_failed_confirmation_is_durable_unconfirmed_evidence_without_a_state():
     assert failed.state is None
 
 
-def test_legacy_fallback_is_rejected_in_production_but_explicit_in_test_mode():
-    calls = []
-
-    def callback(payload, policy):
-        calls.append((payload, policy.policy_id))
-        return _success()
-
-    adapter = LegacyProblemFallbackAdapter(
-        problem_id="toy",
-        verifier_version="legacy_v1",
-        verify_payload=callback,
-    )
-    with pytest.raises(VerificationServiceError, match="method-incomplete"):
-        _verify(adapter=adapter)
-    assert calls == []
-
-    result = _verify(
-        adapter=adapter,
-        policy=VerificationPolicy.create(version="test_v1", production=False),
-    )
-    assert len(calls) == 1
-    assert result.evidence.admitted is True
-    assert result.evidence.flags["method_incomplete"] is True
-    assert result.descriptor.method_complete is False
-
-
-def test_problem_hook_adapter_converts_neutral_result_without_legacy_controller_imports():
+def test_problem_hook_adapter_converts_neutral_result_without_controller_imports():
     class DuckProblem:
         name = "duck"
         answer_schema_version = 2

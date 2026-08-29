@@ -7,10 +7,9 @@ This module supplies that boundary without importing torch, transformers,
 PEFT or Transformers. Runtime integrations and CPU fakes
 used by the tests satisfy the same small duck-typed protocol.
 
-The port is deliberately limited to an already resolved ``backend.name ==
-"hf"`` backend.  In particular, it never converts ``auto`` or ``unsloth`` to
-HF behind the caller's back.  Backend resolution is configuration state and
-must be persisted before this capability is constructed.
+The port is deliberately limited to an already resolved PEFT-capable ``hf`` or
+``unsloth`` backend. Backend resolution is configuration state and is persisted
+before this capability is constructed; no automatic backend conversion occurs.
 """
 
 from __future__ import annotations
@@ -509,11 +508,11 @@ class NamedAdapterBackendPort:
 
     @classmethod
     def _validate_capabilities(cls, backend: Any, adapter_config: Any) -> None:
-        # Resolution is external state.  Never turn auto/Unsloth into HF here.
-        if getattr(backend, "name", None) != "hf":
+        # Resolution is external state. Never convert an unknown backend here.
+        if getattr(backend, "name", None) not in {"hf", "unsloth"}:
             raise RoleBackendCapabilityError(
-                "EVOLVE named adapters require an explicitly resolved HF backend; "
-                "auto and unsloth are not silently converted"
+                "EVOLVE named adapters require an explicitly resolved HF or "
+                "Unsloth PEFT backend"
             )
         model = getattr(backend, "model", None)
         if model is None:
@@ -549,7 +548,7 @@ class NamedAdapterBackendPort:
 
     @property
     def backend_name(self) -> str:
-        return "hf"
+        return self._backend.name
 
     @property
     def backbone_id(self) -> str:
@@ -682,7 +681,7 @@ class NamedAdapterBackendPort:
                 raise RoleBackendError("dispatch parameter manifest does not match role")
             return RoleBackendBinding(
                 role=owner,
-                backend_name="hf",
+                backend_name=self._backend.name,
                 backend_version=ROLE_BACKEND_VERSION,
                 backbone_id=self.backbone_id,
                 adapter_name=manifest.adapter_name,
@@ -719,7 +718,7 @@ class NamedAdapterBackendPort:
                 self.assert_isolation(active_role=owner if training else None, training=training)
                 yield RoleBackendBinding(
                     role=owner,
-                    backend_name="hf",
+                    backend_name=self._backend.name,
                     backend_version=ROLE_BACKEND_VERSION,
                     backbone_id=self.backbone_id,
                     adapter_name=ROLE_ADAPTER_NAMES[owner.value],

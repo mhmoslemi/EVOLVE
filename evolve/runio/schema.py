@@ -1,8 +1,8 @@
-"""Read-only legacy/EVOLVE run schema detection.
+"""Read-only EVOLVE run schema detection.
 
-Detection is deliberately strict for EVOLVE runs because a resume must never
-guess which method or schema produced scientific evidence.  Legacy runs predate
-schema declarations, so a config without an ``engine`` key remains legacy.
+Detection is deliberately strict because a resume must never guess which
+method or schema produced scientific evidence. A missing or non-EVOLVE engine
+is rejected; historical run formats are outside this EVOLVE-only repository.
 
 This module only reads a run directory.  Migration and manifest creation belong
 to explicit write paths elsewhere; detection never creates, updates, or
@@ -28,7 +28,7 @@ SUPPORTED_CONFIG_SCHEMA_VERSIONS = frozenset(
 SUPPORTED_MANIFEST_SCHEMA_VERSIONS = frozenset(
     {CURRENT_MANIFEST_SCHEMA_VERSION}
 )
-SUPPORTED_ENGINES = frozenset({"legacy", "evolve"})
+SUPPORTED_ENGINES = frozenset({"evolve"})
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _RESUME_METADATA_NAMES = {
     "resolved_config": ("config.resolved.resume", re.compile(r"^config\.resolved\.resume(\d+)\.json$")),
@@ -73,10 +73,6 @@ class RunSchema:
     manifest_schema_version: Optional[int]
 
     @property
-    def is_legacy(self) -> bool:
-        return self.engine == "legacy"
-
-    @property
     def is_evolve(self) -> bool:
         return self.engine == "evolve"
 
@@ -116,9 +112,11 @@ def _read_json_object(path: Path) -> Dict[str, Any]:
 
 
 def _declared_engine(document: Dict[str, Any], path: Path) -> str:
-    """Return the declared engine, applying the legacy missing-key contract."""
+    """Return the explicit EVOLVE engine declaration."""
     if "engine" not in document:
-        return "legacy"
+        raise UnsupportedRunSchemaError(
+            f"run metadata has no explicit engine='evolve' declaration in {path}"
+        )
     value = document["engine"]
     if not isinstance(value, str) or not value:
         raise MalformedRunError(f"engine must be a non-empty string in {path}")
@@ -357,9 +355,7 @@ def resolve_effective_run_metadata(
 
     detected = detect_run_schema(run_dir)
     if not detected.is_evolve:
-        raise UnsupportedRunSchemaError(
-            "effective EVOLVE metadata requested for a legacy run"
-        )
+        raise UnsupportedRunSchemaError("run is not an EVOLVE run")
     root = detected.run_dir
     requested_path = root / "config.requested.yaml"
     try:
@@ -509,11 +505,9 @@ def resolve_effective_run_metadata(
 def detect_run_schema(run_dir: Union[str, Path]) -> RunSchema:
     """Inspect an existing run without changing it.
 
-    ``config.json`` is required for both methods because it is the compatibility
-    identity of every run.  A missing engine key means legacy.  An explicit
-    EVOLVE run additionally requires the authoritative ``config.resolved.json``
-    and ``manifest.json``; all three documents must agree on ``engine=evolve``
-    and declare supported schema versions.
+    ``config.json`` remains the compatibility identity. The authoritative
+    ``config.resolved.json`` and ``manifest.json`` are also required; all three
+    documents must agree on ``engine=evolve`` and supported schema versions.
     """
     root = Path(run_dir).expanduser()
     if not root.is_dir():
@@ -551,52 +545,51 @@ def detect_run_schema(run_dir: Union[str, Path]) -> RunSchema:
             )
 
     is_evolve = config_engine == "evolve"
-    if is_evolve and resolved is None:
+    if resolved is None:
         raise MalformedRunError(
             "explicit evolve run has no authoritative config.resolved.json"
         )
-    if is_evolve and manifest is None:
+    if manifest is None:
         raise MalformedRunError("explicit evolve run has no manifest.json")
 
-    if is_evolve:
-        assert resolved is not None and manifest is not None
-        # Reject future method schemas before attempting to interpret or hash
-        # their content with today's rules.
-        _schema_version(
-            config, config_path, required=True,
-            supported=SUPPORTED_CONFIG_SCHEMA_VERSIONS, kind="config",
+    assert resolved is not None and manifest is not None
+    # Reject future method schemas before interpreting or hashing them with
+    # today's rules.
+    _schema_version(
+        config, config_path, required=True,
+        supported=SUPPORTED_CONFIG_SCHEMA_VERSIONS, kind="config",
+    )
+    _schema_version(
+        resolved, resolved_path, required=True,
+        supported=SUPPORTED_CONFIG_SCHEMA_VERSIONS, kind="config",
+    )
+    _schema_version(
+        manifest, manifest_path, required=True,
+        supported=SUPPORTED_MANIFEST_SCHEMA_VERSIONS, kind="manifest",
+    )
+    resolved_hash = resolved.get("config_hash")
+    if not isinstance(resolved_hash, str) or not _SHA256_RE.fullmatch(resolved_hash):
+        raise MalformedRunError(
+            "explicit evolve config.resolved.json has no valid config_hash"
         )
-        _schema_version(
-            resolved, resolved_path, required=True,
-            supported=SUPPORTED_CONFIG_SCHEMA_VERSIONS, kind="config",
+    hash_input = dict(resolved)
+    hash_input.pop("config_hash", None)
+    if content_hash(hash_input) != resolved_hash:
+        raise MalformedRunError(
+            "config.resolved.json config_hash does not match its content"
         )
-        _schema_version(
-            manifest, manifest_path, required=True,
-            supported=SUPPORTED_MANIFEST_SCHEMA_VERSIONS, kind="manifest",
+    if config.get("config_hash") != resolved_hash:
+        raise MalformedRunError(
+            "config.json compatibility hash does not match authoritative config"
         )
-        resolved_hash = resolved.get("config_hash")
-        if not isinstance(resolved_hash, str) or not _SHA256_RE.fullmatch(resolved_hash):
-            raise MalformedRunError(
-                "explicit evolve config.resolved.json has no valid config_hash"
-            )
-        hash_input = dict(resolved)
-        hash_input.pop("config_hash", None)
-        if content_hash(hash_input) != resolved_hash:
-            raise MalformedRunError(
-                "config.resolved.json config_hash does not match its content"
-            )
-        if config.get("config_hash") != resolved_hash:
-            raise MalformedRunError(
-                "config.json compatibility hash does not match authoritative config"
-            )
-        if manifest.get("config_hash") != resolved_hash:
-            raise MalformedRunError(
-                "manifest config_hash does not match authoritative config"
-            )
-        try:
-            validate_id(manifest.get("run_id"), "run")
-        except (TypeError, ValueError) as exc:
-            raise MalformedRunError(f"manifest has invalid run_id: {exc}") from exc
+    if manifest.get("config_hash") != resolved_hash:
+        raise MalformedRunError(
+            "manifest config_hash does not match authoritative config"
+        )
+    try:
+        validate_id(manifest.get("run_id"), "run")
+    except (TypeError, ValueError) as exc:
+        raise MalformedRunError(f"manifest has invalid run_id: {exc}") from exc
 
     config_version = _schema_version(
         config,

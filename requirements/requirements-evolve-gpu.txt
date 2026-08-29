@@ -1,0 +1,11 @@
+# EVOLVE model-runtime overlay. Install in a CUDA/PyTorch environment whose
+# versions match the host driver. Unsloth's installer may select a more specific
+# CUDA/Torch wheel combination; see README.md.
+pyyaml
+torch
+transformers
+peft
+accelerate
+bitsandbytes
+vllm
+unsloth

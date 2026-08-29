@@ -1,8 +1,12 @@
+# H100 TriMul Triton-kernel search. `problems/gpu_mode.py` owns scientific
+# fingerprints, saved-kernel verification, benchmark evidence, and rendering.
 engine: evolve
 schema_version: 1
 problem: gpu_mode
 problem_type: trimul
-gpu_type: L40S
+
+# Benchmark/verifier layer.
+gpu_type: H100
 triton_version: 3.3.1
 task_yaml: examples/gpu_mode/lib/bioml/trimul/task.yml
 lib_dir: examples/gpu_mode/lib
@@ -10,30 +14,79 @@ kernel_log_chars: 4000
 num_seed_states: 8
 sandbox_timeout_s: 100
 kernel_timeout_s: 900
-reward_workers: 1
-kernel_gpu_id: 1
+reward_workers: 1       # Benchmark verification is exclusive and serial.
+kernel_gpu_id: 1        # LAST GPU: evaluation only; generation cannot see it.
+kernel_eval_isolation: true
+
+# Frozen backbone and isolated role-LoRAs.
 model_name: Qwen/Qwen3-Coder-30B-A3B-Instruct
 backend: hf
-generation_backend: hf
+generation_backend: vllm
 max_seq_length: 32000
 max_new_tokens: 8000
 temperature: 1.0
 top_p: 1.0
+load_in_4bit: true  # HF training only; never forwarded to vLLM.
+lora_rank: 32
+lora_alpha: 32
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
 learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
+gen_micro_batch: 1
+
+# GPU 0 owns generation/training phases. GPU 1 is benchmark-only.
 gpu_ids: [0]
 num_gpus: 1
+vllm_tensor_parallel_size: 1
+vllm_quantization: auto  # vLLM checkpoint choice; not HF load_in_4bit.
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 4
+vllm_max_num_batched_tokens: 8192
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 4
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
 seed: 42
 deterministic: false
+
 evolve:
-  budget: {epochs: 30, verifier_calls: 3000, audit_fraction: 0.15, refinement_fraction: 0.05}
-  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
-  roles: {enabled: [scout, mechanist, challenger]}
-  options: {max_horizon: 3, branch_budget: 24}
-  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
-  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
-  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
-  learning: {objective: ordergrad, top_m: 1, group_k: 4}
-  refinement: {max_attempts: 3, max_depth: 2}
-  reporting: {status_every_verifications: 10, plots_every_epochs: 1}
-  workers: {max_inflight_branches: 8}
+  budget:
+    epochs: 30
+    verifier_calls: 3000
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  # Descriptor-indexed archive of confirmed kernel states.
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  roles:
+    enabled: [scout, mechanist, challenger]
+  options:
+    max_horizon: 3
+    branch_budget: 24
+  # Harness is frozen per branch and calibrated only in matched contexts.
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  # Causal option memory requires randomized matched audit pairs.
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 5
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 4
+  # One-change challenger repairs with strict attempt/depth limits.
+  refinement:
+    max_attempts: 3
+    max_depth: 2
+  reporting:
+    status_every_verifications: 10
+    plots_every_epochs: 1
+  workers:
+    max_inflight_branches: 12

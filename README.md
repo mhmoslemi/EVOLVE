@@ -31,7 +31,31 @@ sh run.sh --resume /absolute/path/to/runs/RUN_NAME --num-steps 150
 
 `--num-steps` is a compatibility spelling for the total target epoch count.
 Use `EVOLVE_PYTHON=/path/to/python` to choose an interpreter. GPU visibility is
-controlled explicitly by the YAML `gpu_ids` field and the caller's environment.
+controlled by the YAML `gpu_ids` field. Do not provide a contradictory
+`CUDA_VISIBLE_DEVICES` value.
+
+For vLLM, EVOLVE starts one model sharded across all `gpu_ids`, and requires
+`vllm_tensor_parallel_size == len(gpu_ids)`. HF or Unsloth is loaded only for
+barrier learning; it is released before vLLM starts, and vLLM is shut down
+before learning resumes. `load_in_4bit` applies only to the HF/Unsloth training
+loader and is never forwarded to vLLM. A pre-quantized BitsAndBytes checkpoint
+is rejected with multi-GPU tensor parallelism; use a native/MXFP4 base there.
+`vllm_quantization` is the independent inference setting; the gpt-oss examples
+use `auto` so vLLM reads checkpoint-native MXFP4.
+
+Kernel configurations reserve the last/highest physical GPU as
+`kernel_gpu_id`. It is excluded from generation visibility and exposed only to
+the isolated, spawned, serial benchmark process. H100 is the default GPU type.
+
+Install the GPU runtime overlay only inside a CUDA/PyTorch environment that
+matches the machine:
+
+```sh
+python -m pip install -r requirements/requirements-evolve-gpu.txt
+```
+
+For Unsloth, follow its CUDA/PyTorch-specific installer when it recommends a
+more specific command than the generic overlay.
 
 ## Configuration
 

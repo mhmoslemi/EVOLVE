@@ -1,33 +1,87 @@
+# Poisson denoising scientific search. `problems/denoising.py` owns deterministic
+# payload verification and descriptors; exclusive evaluation resources are enforced.
 engine: evolve
 schema_version: 1
 problem: denoising
+
+# Problem/verifier layer. This benchmark deliberately uses one archive cell.
 single_cell: true
 target: 0.97
 eval_seed: 42
 num_seed_states: 8
 sandbox_timeout_s: 530
-model_name: openai/gpt-oss-120b
-backend: hf
-generation_backend: hf
+
+# Frozen backbone and isolated role-LoRAs.
+model_name: unsloth/gpt-oss-120b
+backend: unsloth
+generation_backend: vllm
 max_seq_length: 32000
 max_new_tokens: 26000
 temperature: 1.0
 top_p: 1.0
+load_in_4bit: true  # Training only; never forwarded to vLLM.
+lora_rank: 32
+lora_alpha: 32
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
 learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
-gpu_ids: [0, 1, 2, 3, 4, 5, 6, 7]
-num_gpus: 8
+gen_micro_batch: 1
+
+# GPUs 0-3 form ONE TP=4 vLLM engine and host Unsloth learning at barriers.
+# On a seven-H100 host, GPUs 4-6 are deliberately unassigned. GPT-OSS has 64
+# attention heads, so TP=7 is invalid; TP=4 is a supported exact partition.
+gpu_type: H100
+gpu_ids: [0, 1, 2, 3]
+num_gpus: 4
+vllm_tensor_parallel_size: 4
+vllm_quantization: auto  # Native GPT-OSS MXFP4; unrelated to training QLoRA.
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 4
+vllm_max_num_batched_tokens: 8192
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 4
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
 seed: 42
 deterministic: false
+
 evolve:
-  budget: {epochs: 50, verifier_calls: 25000, audit_fraction: 0.15, refinement_fraction: 0.05}
-  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
-  roles: {enabled: [scout, mechanist, challenger]}
-  options: {max_horizon: 4, branch_budget: 64}
-  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
-  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
-  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
-  learning: {objective: ordergrad, top_m: 1, group_k: 8}
-  refinement: {max_attempts: 3, max_depth: 2}
-  reporting: {status_every_verifications: 25, plots_every_epochs: 1}
-  workers: {max_inflight_branches: 16}
+  # Barrier and verifier budget with matched audit/refinement reserves.
+  budget:
+    epochs: 50
+    verifier_calls: 25000
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  roles:
+    enabled: [scout, mechanist, challenger]
+  options:
+    max_horizon: 4
+    branch_budget: 64
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  # Posterior optimizes expected final verified record improvement.
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 5
+  # On-policy groups never mix roles, snapshots, options, harnesses, or budgets.
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 8
+  refinement:
+    max_attempts: 3
+    max_depth: 2
+  reporting:
+    status_every_verifications: 25
+    plots_every_epochs: 1
+  workers:
+    max_inflight_branches: 20

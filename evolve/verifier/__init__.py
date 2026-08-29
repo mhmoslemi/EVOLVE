@@ -1,10 +1,6 @@
 """Independent, payload-only scientific verification for EVOLVE."""
 
-from .adapters import (
-    LegacyProblemFallbackAdapter,
-    ProblemScientificAdapter,
-    ScientificProblemAdapter,
-)
+from .adapters import ProblemScientificAdapter, ScientificProblemAdapter
 from .evidence import (
     ScientificVerificationResult,
     bounded_diagnostics,
@@ -33,7 +29,6 @@ from .service import (
 __all__ = [
     "ExecutionCapture",
     "FailureClassification",
-    "LegacyProblemFallbackAdapter",
     "PersistedAnswerPayload",
     "ProblemScientificAdapter",
     "ScientificProblemAdapter",

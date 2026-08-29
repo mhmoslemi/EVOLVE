@@ -200,12 +200,12 @@ def _owned_flags(port, model):
     }
 
 
-@pytest.mark.parametrize("backend_name", ["auto", "unsloth", "vllm"])
-def test_backend_must_be_explicitly_resolved_hf_before_any_adapter_mutation(backend_name):
+@pytest.mark.parametrize("backend_name", ["auto", "vllm"])
+def test_backend_must_be_explicitly_peft_capable_before_any_adapter_mutation(backend_name):
     backend = _FakeHFBackend()
     backend.name = backend_name
 
-    with pytest.raises(RoleBackendCapabilityError, match="explicitly resolved HF"):
+    with pytest.raises(RoleBackendCapabilityError, match="explicitly resolved HF or Unsloth"):
         NamedAdapterBackendPort(
             backend, backbone=_backbone(), adapter_config={"rank": 2}
         )
@@ -408,4 +408,3 @@ def test_adapter_load_validates_role_backbone_and_bytes_before_model_mutation(tm
             expected_artifact_hash=artifact.artifact_hash,
         )
     assert backend.model.calls == before_calls
-

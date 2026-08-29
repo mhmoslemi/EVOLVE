@@ -55,13 +55,32 @@ from evolve.causal_memory import (
     stratify_drift,
 )
 from evolve.config import EvolveConfig
-from evolve.harness import HarnessRegistry, default_harness_registry
+from evolve.harness import (
+    HarnessPromotionError,
+    HarnessRegistry,
+    HarnessTrialRecord,
+    MatchedHarnessAuditContext,
+    default_harness_registry,
+)
 from evolve.ids import content_hash, content_id, derive_seed, rollout_seed
 from evolve.learning import GroupMember, build_learning_groups
 from evolve.learning.trainer import GradientStepFn, train_barrier
-from evolve.options import OptionRegistry, build_option_context, execute_branch, production_option_registry
+from evolve.options import (
+    DIAGNOSTIC_REPAIR_STATE_MACHINE,
+    FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
+    OptionRegistry,
+    build_option_context,
+    execute_branch,
+    production_option_registry,
+)
 from evolve.options.branch import BranchExecution, BranchStepExecutor
-from evolve.refinement import NurseryEntry
+from evolve.refinement import (
+    NurseryEntry,
+    NurseryPolicy,
+    expire_entry,
+    open_entry,
+    record_attempt,
+)
 from evolve.roles import RoleRegistry
 from evolve.runio import (
     ControllerEventWriter,
@@ -73,6 +92,7 @@ from evolve.runio import (
     write_immutable_json,
     write_immutable_text,
     write_initial_run_metadata,
+    write_resume_run_metadata,
 )
 from evolve.scheduler import AllocationPlan, PosteriorStore, plan_epoch
 from evolve.types import (
@@ -83,6 +103,7 @@ from evolve.types import (
     BudgetLedger,
     Channel,
     EpochManifest,
+    FailureKind,
     Proposal,
     Role,
 )
@@ -92,10 +113,6 @@ from evolve.verifier.models import VerificationPolicy
 
 class EngineError(RuntimeError):
     """The composed engine cannot proceed as configured."""
-
-
-class EngineWorkerWiringError(EngineError):
-    """Production workers are not wired to a live backend in this build."""
 
 
 COMPONENT_SCHEMA_VERSIONS: Mapping[str, int] = {
@@ -247,6 +264,61 @@ def _retargeted_arm(
     )
 
 
+def _retargeted_harness_arm(
+    arm: AllocationArm,
+    *,
+    harness_id: str,
+    channel: Channel,
+) -> AllocationArm:
+    """Rebuild an arm with one frozen harness and unchanged scientific factors."""
+
+    from evolve.scheduler.arms import ArmIdentity, make_allocation_arm
+
+    identity = ArmIdentity(
+        cell_id=arm.cell_id,
+        role=arm.role,
+        option_id=arm.option_id,
+        harness_id=harness_id,
+        horizon=arm.horizon,
+        cost_class=arm.cost_class,
+    )
+    return make_allocation_arm(
+        identity,
+        channel=channel,
+        expected_cost=arm.expected_cost,
+        hard_cost=arm.hard_cost,
+    )
+
+
+def _special_option_arm(
+    base: AllocationArm,
+    *,
+    role: Role,
+    option_id: str,
+    channel: Channel,
+    option_registry: OptionRegistry,
+) -> AllocationArm:
+    """Build a dedicated audit/refinement arm from a production context."""
+
+    from evolve.scheduler.arms import ArmIdentity, make_allocation_arm
+
+    spec = option_registry.spec(option_id)
+    identity = ArmIdentity(
+        cell_id=base.cell_id,
+        role=role,
+        option_id=option_id,
+        harness_id=base.harness_id,
+        horizon=spec.max_horizon,
+        cost_class="refinement_fixed",
+    )
+    return make_allocation_arm(
+        identity,
+        channel=channel,
+        expected_cost=spec.expected_cost,
+        hard_cost=spec.hard_cost,
+    )
+
+
 def _build_epoch_manifest(
     *,
     run_id: str,
@@ -362,6 +434,8 @@ class EvolveEngine:
         )
         if workers.persist_roles is not None:
             workers.persist_roles(state)
+        if self.metadata.get("mode") != "resume":
+            self._commit_bootstrap(layout, state)
         target_epochs = self.config.evolve.budget.epochs
         try:
             while state.epoch < target_epochs:
@@ -399,7 +473,7 @@ class EvolveEngine:
     def _build_adapter(self) -> ProblemScientificAdapter:
         try:
             from problems.registry import get_problem
-        except ImportError as exc:  # pragma: no cover - depends on legacy layout
+        except ImportError as exc:  # pragma: no cover - packaging failure
             raise EngineError(f"cannot import problems.registry: {exc}") from exc
         problem = get_problem(
             self.config.problem, dict(self.config.problem_runtime_config)
@@ -436,14 +510,34 @@ class EvolveEngine:
             command=list(sys.argv),
             environment=_environment_document(),
             git_state=_git_state(),
-            model={"model_name": self.config.model_name, "backend": self.config.backend},
+            model={
+                "model_name": self.config.model_name,
+                "training_backend": self.config.backend,
+                "generation_backend": self.config.generation_backend,
+                "training_load_in_4bit": self.config.load_in_4bit,
+            },
             package_versions=_package_versions(),
             host=_host_document(),
             gpus=[
-                {"physical_id": gpu_id, "purpose": "generation"}
+                {
+                    "physical_id": gpu_id,
+                    "gpu_type": self.config.gpu_type,
+                    "purpose": "tensor_parallel_generation_and_barrier_learning",
+                }
                 for gpu_id in self.config.gpu_ids
-            ],
-            worker_topology={"max_inflight_branches": self.config.evolve.workers.max_inflight_branches},
+            ] + ([{
+                "physical_id": self.config.kernel_gpu_id,
+                "gpu_type": self.config.gpu_type,
+                "purpose": "exclusive_evaluation",
+            }] if self.config.kernel_gpu_id is not None else []),
+            worker_topology={
+                "max_inflight_branches": self.config.evolve.workers.max_inflight_branches,
+                "generation_backend": self.config.generation_backend,
+                "tensor_parallel_size": self.config.vllm_tensor_parallel_size,
+                "vllm_quantization": self.config.vllm_quantization,
+                "generation_gpu_ids": list(self.config.gpu_ids),
+                "exclusive_evaluation_gpu_id": self.config.kernel_gpu_id,
+            },
             seeds={"base_seed": self.config.seed},
             versions={"schema_version": self.config.schema_version, "config_hash": self.resolved_config.get("config_hash", "")},
             run_id=run_id,
@@ -455,32 +549,73 @@ class EvolveEngine:
         checkpoint = _checkpoint_payload(state)
         checkpoint_path = layout.path("checkpoints/checkpoint_epoch000.json")
         atomic_write_json(checkpoint_path, checkpoint)
-        checkpoint_hash = content_hash(checkpoint)
-        atomic_write_json(
-            layout.path("checkpoints/latest.json"),
-            {
-                "schema_version": 1,
-                "epoch": 0,
-                "checkpoint": checkpoint_path.name,
-                "checkpoint_hash": checkpoint_hash,
-            },
-        )
-        atomic_write_json(
-            layout.path("bootstrap.summary.json"),
-            {
-                "schema_version": 1,
-                "epoch": 0,
-                "checkpoint": checkpoint_path.name,
-                "checkpoint_hash": checkpoint_hash,
-            },
-        )
         return layout, state
+
+    def _commit_bootstrap(self, layout: RunLayout, state: EpochState) -> None:
+        """Publish epoch zero only after all three role artifacts are durable."""
+
+        checkpoint_path = layout.path("checkpoints/checkpoint_epoch000.json")
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        checkpoint_hash = content_hash(checkpoint)
+        pointer = {
+            "schema_version": 1,
+            "epoch": 0,
+            "committed_epoch": 0,
+            "checkpoint": checkpoint_path.name,
+            "checkpoint_hash": checkpoint_hash,
+        }
+        atomic_write_json(layout.path("checkpoints/latest.json"), pointer)
+        atomic_write_json(layout.path("bootstrap.summary.json"), pointer)
 
     def _attach_resume(self) -> Tuple[RunLayout, EpochState]:
         resume_dir = Path(self.metadata["resume_dir"])
         layout = open_existing_run_layout(resume_dir, resume=True)
         checkpoint_path = _latest_completed_checkpoint(layout)
         checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        write_resume_run_metadata(
+            layout.run_dir,
+            resume_index=int(self.metadata.get("effective_resume_index", 0)) + 1,
+            resolved_config=self.resolved_config,
+            command=list(sys.argv),
+            environment=_environment_document(),
+            git_state=_git_state(),
+            model={
+                "model_name": self.config.model_name,
+                "training_backend": self.config.backend,
+                "generation_backend": self.config.generation_backend,
+                "training_load_in_4bit": self.config.load_in_4bit,
+            },
+            package_versions=_package_versions(),
+            host=_host_document(),
+            gpus=[
+                {
+                    "physical_id": gpu_id,
+                    "gpu_type": self.config.gpu_type,
+                    "purpose": "tensor_parallel_generation_and_barrier_learning",
+                }
+                for gpu_id in self.config.gpu_ids
+            ] + ([{
+                "physical_id": self.config.kernel_gpu_id,
+                "gpu_type": self.config.gpu_type,
+                "purpose": "exclusive_evaluation",
+            }] if self.config.kernel_gpu_id is not None else []),
+            worker_topology={
+                "max_inflight_branches": (
+                    self.config.evolve.workers.max_inflight_branches
+                ),
+                "generation_backend": self.config.generation_backend,
+                "tensor_parallel_size": self.config.vllm_tensor_parallel_size,
+                "vllm_quantization": self.config.vllm_quantization,
+                "generation_gpu_ids": list(self.config.gpu_ids),
+                "exclusive_evaluation_gpu_id": self.config.kernel_gpu_id,
+            },
+            seeds={"base_seed": self.config.seed},
+            versions={
+                "schema_version": self.config.schema_version,
+                "config_hash": self.resolved_config.get("config_hash", ""),
+            },
+            checkpoint_hash=content_hash(checkpoint),
+        )
         state = _state_from_checkpoint(checkpoint, config=self.config)
         return layout, state
 
@@ -507,7 +642,7 @@ class EvolveEngine:
             active_versions=self.config.evolve.harnesses.active_versions
         )
         option_registry = production_option_registry(
-            harness_eligibility=harness_registry.active_ids,
+            harness_eligibility=tuple(sorted(harness_registry.specs)),
             max_horizon=self.config.evolve.options.max_horizon,
         )
         budget_ledger = BudgetService.create(
@@ -621,21 +756,34 @@ class EvolveEngine:
         from evolve.verifier.models import PersistedAnswerPayload
         from evolve.verifier.service import confirm_persisted_answer
 
-        try:
-            persisted = PersistedAnswerPayload.create(
-                problem_id=evidence.problem_id,
-                artifact_uri=evidence.flags["answer_artifact_uri"],
-                payload=evidence.answer_payload,
-            )
-            return confirm_persisted_answer(
-                adapter=adapter,
-                proposal=proposal,
-                persisted_answer=persisted,
-                prior_evidence=evidence,
-                verification_policy=verification_policy,
-            )
-        except Exception:
-            return None
+        persisted = PersistedAnswerPayload.create(
+            problem_id=evidence.problem_id,
+            artifact_uri=evidence.flags["answer_artifact_uri"],
+            payload=evidence.answer_payload,
+        )
+        last_result = None
+        errors = []
+        for attempt in range(1, 3):
+            try:
+                result = confirm_persisted_answer(
+                    adapter=adapter,
+                    proposal=proposal,
+                    persisted_answer=persisted,
+                    prior_evidence=evidence,
+                    verification_policy=verification_policy,
+                )
+            except Exception as exc:
+                errors.append(f"{type(exc).__name__}: {exc}")
+                continue
+            last_result = result
+            if result.evidence.failure_kind != FailureKind.INFRASTRUCTURE:
+                return result, attempt
+        if last_result is not None:
+            return last_result, 2
+        raise EngineError(
+            "record confirmation failed as infrastructure on both bounded "
+            "attempts: " + " | ".join(errors)
+        )
 
     # -- one epoch -------------------------------------------------------
 
@@ -679,12 +827,19 @@ class EvolveEngine:
         )
         # An allocation arm may execute a homogeneous replica group. This is
         # required for on-policy max-seeking learning: one rollout cannot
-        # produce a centered rank advantage. Every role still receives at
+        # produce an OrderGrad rank advantage. Every role still receives at
         # least one branch, while one role rotates as the learning role.
         enabled_roles = [Role(name) for name in settings.roles.enabled]
         learning_role = enabled_roles[epoch % len(enabled_roles)]
         selected_plans = []
         projected_branches = 0
+        production_capacity = max(
+            0,
+            settings.workers.max_inflight_branches
+            - plan.reservation_slots.audit_branch_slots
+            - plan.reservation_slots.refinement_slots
+            - plan.reservation_slots.harness_trial_slots,
+        )
         for role in enabled_roles:
             candidate = next(
                 (item for item in plan.planned_arms if item.arm.role == role),
@@ -693,7 +848,7 @@ class EvolveEngine:
             if candidate is None or candidate in selected_plans:
                 continue
             replicas = settings.learning.group_k if role == learning_role else 1
-            if projected_branches + replicas <= settings.workers.max_inflight_branches:
+            if projected_branches + replicas <= production_capacity:
                 selected_plans.append(candidate)
                 projected_branches += replicas
         for candidate in plan.planned_arms:
@@ -704,7 +859,7 @@ class EvolveEngine:
                 if candidate.arm.role == learning_role
                 else 1
             )
-            if projected_branches + replicas > settings.workers.max_inflight_branches:
+            if projected_branches + replicas > production_capacity:
                 continue
             selected_plans.append(candidate)
             projected_branches += replicas
@@ -717,6 +872,11 @@ class EvolveEngine:
         provenance = state.provenance
         budget_ledger = state.budget_ledger
         memory = state.memory
+        harness_registry = state.harness_registry
+        nursery = {
+            entry_id: expire_entry(entry, epoch=epoch)
+            for entry_id, entry in state.nursery.items()
+        }
         record = state.record
         previous_record = state.record
 
@@ -737,6 +897,7 @@ class EvolveEngine:
         arms_by_id: Dict[str, AllocationArm] = {}
         audit_pairs: List[AuditPair] = []
         audit_sides: Dict[str, AuditSide] = {}
+        refinement_sources: List[Tuple[AllocationArm, BranchSpec, Any]] = []
 
         branch_ordinal = 0
         for allocation_index, planned in enumerate(plan.planned_arms):
@@ -798,7 +959,19 @@ class EvolveEngine:
                     layout, branch=branch, execution=execution, ordinal=index
                 )
                 executions.append(execution)
-                archive, provenance, record, posterior = self._fold_execution(
+                already_entered = {
+                    entry.source_evidence_id for entry in nursery.values()
+                }
+                for observation in execution.observations:
+                    source_evidence = observation.verification.evidence
+                    if (
+                        not source_evidence.admitted
+                        and source_evidence.failure_kind
+                        not in (FailureKind.INFRASTRUCTURE, FailureKind.TIMEOUT)
+                        and source_evidence.evidence_id not in already_entered
+                    ):
+                        refinement_sources.append((arm, branch, observation))
+                archive, provenance, record, posterior, budget_ledger = self._fold_execution(
                     execution=execution,
                     arm=arm,
                     identity_archive=archive,
@@ -808,6 +981,7 @@ class EvolveEngine:
                     record_threshold=record_threshold,
                     adapter=adapter,
                     verification_policy=verification_policy,
+                    budget_ledger=budget_ledger,
                 )
                 if execution.policy_trace is not None:
                     group_members.append(
@@ -828,13 +1002,19 @@ class EvolveEngine:
         for pair_index in range(pairs_to_run):
             planned = audit_candidates[pair_index]
             arm = planned.arm
-            eligible_options = [
-                option_id for option_id in state.option_registry.eligible_for(role=arm.role, harness_id=arm.harness_id)
-                if option_id != arm.option_id
+            control_options = [
+                option_id
+                for option_id in state.option_registry.eligible_for(
+                    role=arm.role, harness_id=arm.harness_id
+                )
+                if state.option_registry.spec(option_id).state_machine
+                == "matched_continuation_v1"
             ]
-            if not eligible_options:
+            if not control_options:
                 continue
-            control_option_id = sorted(eligible_options)[0]
+            control_option_id = control_options[0]
+            if control_option_id == arm.option_id:
+                continue
             audit_seed = derive_seed("audit_seed", state.run_id, epoch, pair_index, base_seed=self.config.seed)
             intervention_option, control_option, probability = assign_audit_sides(
                 option_a=arm.option_id, option_b=control_option_id, seed=audit_seed
@@ -847,14 +1027,13 @@ class EvolveEngine:
                 arm, option_id=control_option, channel=Channel.AUDIT,
                 option_registry=state.option_registry,
             )
-            no_memory = pair_index < plan.reservation_slots.no_memory_audit_slots
-
             intervention_branch, intervention_snapshot = self._freeze_branch(
                 state=state, arm=intervention_arm, role_snapshots=role_snapshots,
                 record_threshold=record_threshold, index=1000 + pair_index * 2,
                 epoch_seed=audit_seed, budget=arm.hard_cost, channel=Channel.AUDIT,
                 verifier_id=adapter.verifier_id,
                 verifier_version=adapter.verifier_version,
+                memory_enabled=False,
             )
             control_branch, _ = self._freeze_branch(
                 state=state, arm=control_arm, role_snapshots=role_snapshots,
@@ -863,6 +1042,7 @@ class EvolveEngine:
                 shared_seed=intervention_branch.seed,
                 verifier_id=adapter.verifier_id,
                 verifier_version=adapter.verifier_version,
+                memory_enabled=False,
             )
             try:
                 pair = create_audit_pair(
@@ -913,12 +1093,12 @@ class EvolveEngine:
             intervention_execution = self._execute_one_branch(
                 branch=intervention_branch, arm=intervention_arm, role_snapshot=intervention_snapshot,
                 option_registry=state.option_registry, workers=workers,
-                start_verified=True, cell_empty=False, memory_enabled=not no_memory,
+                start_verified=True, cell_empty=False, memory_enabled=False,
             )
             control_execution = self._execute_one_branch(
                 branch=control_branch, arm=control_arm, role_snapshot=intervention_snapshot,
                 option_registry=state.option_registry, workers=workers,
-                start_verified=True, cell_empty=False, memory_enabled=not no_memory,
+                start_verified=True, cell_empty=False, memory_enabled=False,
             )
             self._persist_branch_execution(
                 layout,
@@ -954,10 +1134,11 @@ class EvolveEngine:
                 audit_sides[side_branch.branch_id] = side
                 arms_by_id.setdefault(intervention_arm.arm_id, intervention_arm)
                 arms_by_id.setdefault(control_arm.arm_id, control_arm)
-                archive, provenance, record, posterior = self._fold_execution(
+                archive, provenance, record, posterior, budget_ledger = self._fold_execution(
                     execution=execution, arm=intervention_arm if side == AuditSide.INTERVENTION else control_arm,
                     identity_archive=archive, provenance=provenance, record=record, posterior=posterior,
                     record_threshold=record_threshold, adapter=adapter, verification_policy=verification_policy,
+                    budget_ledger=budget_ledger,
                 )
                 if execution.policy_trace is not None:
                     group_members.append(
@@ -990,6 +1171,483 @@ class EvolveEngine:
             memory_record = stratify_drift(memory_record, current_epoch=epoch)
             memory_record = evaluate_promotion(memory_record)
             memory = memory.upsert(memory_record)
+
+        # -- bounded refinement nursery and equal-cost fresh controls -----
+        repair_option_id = next(
+            (
+                option_id
+                for option_id in state.option_registry.option_ids()
+                if state.option_registry.spec(option_id).state_machine
+                == DIAGNOSTIC_REPAIR_STATE_MACHINE
+            ),
+            None,
+        )
+        fresh_option_id = next(
+            (
+                option_id
+                for option_id in state.option_registry.option_ids()
+                if state.option_registry.spec(option_id).state_machine
+                == FRESH_REFINEMENT_CONTROL_STATE_MACHINE
+            ),
+            None,
+        )
+        refinement_pairs_to_run = min(
+            plan.reservation_slots.refinement_slots // 2,
+            len(refinement_sources),
+        )
+        if repair_option_id is None or fresh_option_id is None:
+            refinement_pairs_to_run = 0
+        nursery_policy = NurseryPolicy(
+            max_attempts=settings.refinement.max_attempts,
+            max_depth=settings.refinement.max_depth,
+            fixed_cost={"verifier_calls": 1.0},
+            ttl_epochs=2,
+        )
+        for pair_index in range(refinement_pairs_to_run):
+            source_arm, source_branch, source_observation = refinement_sources[
+                pair_index
+            ]
+            source_evidence = source_observation.verification.evidence
+            entry = open_entry(
+                source_evidence=source_evidence,
+                branch_id=source_branch.branch_id,
+                epoch=epoch,
+                policy=nursery_policy,
+            )
+            repair_base = _special_option_arm(
+                source_arm,
+                role=Role.CHALLENGER,
+                option_id=repair_option_id,
+                channel=Channel.REFINEMENT,
+                option_registry=state.option_registry,
+            )
+            fresh_base = _special_option_arm(
+                source_arm,
+                role=Role.CHALLENGER,
+                option_id=fresh_option_id,
+                channel=Channel.REFINEMENT,
+                option_registry=state.option_registry,
+            )
+            refinement_seed = derive_seed(
+                "refinement_audit_seed",
+                state.run_id,
+                epoch,
+                pair_index,
+                source_evidence.evidence_id,
+                base_seed=self.config.seed,
+            )
+            intervention_option, control_option, probability = assign_audit_sides(
+                option_a=repair_option_id,
+                option_b=fresh_option_id,
+                seed=refinement_seed,
+            )
+            arms_by_option = {
+                repair_option_id: repair_base,
+                fresh_option_id: fresh_base,
+            }
+            intervention_arm = arms_by_option[intervention_option]
+            control_arm = arms_by_option[control_option]
+            frozen_refinement = {
+                "refinement_source": source_observation.proposal.source_text,
+                "refinement_source_evidence_id": source_evidence.evidence_id,
+                "refinement_diagnostics": dict(source_evidence.diagnostics),
+            }
+            parent_state_id = source_observation.proposal.parent_state_id
+            if parent_state_id is None:
+                continue
+            intervention_branch, challenger_snapshot = self._freeze_branch(
+                state=state,
+                arm=intervention_arm,
+                role_snapshots=role_snapshots,
+                record_threshold=record_threshold,
+                index=3000 + pair_index * 2,
+                epoch_seed=refinement_seed,
+                budget=intervention_arm.hard_cost,
+                channel=Channel.REFINEMENT,
+                verifier_id=adapter.verifier_id,
+                verifier_version=adapter.verifier_version,
+                memory_enabled=False,
+                start_state_id=parent_state_id,
+                generation_overrides=frozen_refinement,
+            )
+            control_branch, _ = self._freeze_branch(
+                state=state,
+                arm=control_arm,
+                role_snapshots=role_snapshots,
+                record_threshold=record_threshold,
+                index=3000 + pair_index * 2 + 1,
+                epoch_seed=refinement_seed,
+                budget=control_arm.hard_cost,
+                channel=Channel.REFINEMENT,
+                verifier_id=adapter.verifier_id,
+                verifier_version=adapter.verifier_version,
+                shared_seed=intervention_branch.seed,
+                memory_enabled=False,
+                start_state_id=parent_state_id,
+                generation_overrides=frozen_refinement,
+            )
+            pair = create_audit_pair(
+                run_id=state.run_id,
+                cell_id=source_arm.cell_id,
+                intervention_branch=intervention_branch,
+                control_branch=control_branch,
+                assignment_probability=probability,
+                assignment_seed=refinement_seed,
+            )
+            refinement_dir = step_dir / "refinement" / entry.entry_id
+            refinement_dir.mkdir(parents=True, exist_ok=True)
+            write_immutable_json(
+                refinement_dir / "entry.opened.json", vars(entry)
+            )
+            write_immutable_json(
+                refinement_dir / "pair.preassigned.json", pair.to_dict()
+            )
+            required = sum(
+                float(item.hard_cost.get("verifier_calls", 1.0))
+                for item in (intervention_arm, control_arm)
+            )
+            if required > budget_ledger.remaining("verifier_calls"):
+                nursery[entry.entry_id] = entry
+                continue
+            debit_records = []
+            for side, refinement_arm in (
+                ("intervention", intervention_arm),
+                ("control", control_arm),
+            ):
+                key = (
+                    f"epoch{epoch}:refinement{pair.audit_id}:"
+                    f"{side}:verifier_calls"
+                )
+                budget_ledger = BudgetService.debit(
+                    budget_ledger,
+                    resource="verifier_calls",
+                    amount=float(
+                        refinement_arm.hard_cost.get("verifier_calls", 1.0)
+                    ),
+                    transaction_key=key,
+                )
+                debit_records.append(key)
+            intervention_execution = self._execute_one_branch(
+                branch=intervention_branch,
+                arm=intervention_arm,
+                role_snapshot=challenger_snapshot,
+                option_registry=state.option_registry,
+                workers=workers,
+                start_verified=True,
+                cell_empty=False,
+                memory_enabled=False,
+            )
+            control_execution = self._execute_one_branch(
+                branch=control_branch,
+                arm=control_arm,
+                role_snapshot=challenger_snapshot,
+                option_registry=state.option_registry,
+                workers=workers,
+                start_verified=True,
+                cell_empty=False,
+                memory_enabled=False,
+            )
+            for offset, (refinement_branch, refinement_arm, execution) in enumerate(
+                (
+                    (intervention_branch, intervention_arm, intervention_execution),
+                    (control_branch, control_arm, control_execution),
+                )
+            ):
+                self._persist_branch_execution(
+                    layout,
+                    branch=refinement_branch,
+                    execution=execution,
+                    ordinal=3000 + pair_index * 2 + offset,
+                )
+                executions.append(execution)
+                arms_by_id[refinement_arm.arm_id] = refinement_arm
+                archive, provenance, record, posterior, budget_ledger = self._fold_execution(
+                    execution=execution,
+                    arm=refinement_arm,
+                    identity_archive=archive,
+                    provenance=provenance,
+                    record=record,
+                    posterior=posterior,
+                    record_threshold=record_threshold,
+                    adapter=adapter,
+                    verification_policy=verification_policy,
+                    budget_ledger=budget_ledger,
+                )
+            for debit_key, execution in zip(
+                debit_records, (intervention_execution, control_execution)
+            ):
+                unused = float(
+                    execution.outcome.unused_budget.get("verifier_calls", 0.0)
+                )
+                if unused > 0.0:
+                    budget_ledger = BudgetService.refund(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=unused,
+                        transaction_key=f"{debit_key}:refund",
+                        debit_transaction_key=debit_key,
+                    )
+            repair_execution = (
+                intervention_execution
+                if intervention_arm.option_id == repair_option_id
+                else control_execution
+            )
+            if repair_execution.observations:
+                entry = record_attempt(
+                    entry,
+                    repair_evidence=(
+                        repair_execution.observations[0].verification.evidence
+                    ),
+                    epoch=epoch,
+                )
+            nursery[entry.entry_id] = entry
+            write_immutable_json(
+                refinement_dir / "entry.closed.json", vars(entry)
+            )
+            try:
+                closed_pair = close_audit_pair(
+                    pair,
+                    intervention_outcome=intervention_execution.outcome,
+                    control_outcome=control_execution.outcome,
+                )
+            except AuditEffectError:
+                audit_pairs.append(pair)
+                continue
+            audit_pairs.append(closed_pair)
+            effect = compute_audit_effect(
+                closed_pair,
+                intervention_gain=default_gain(
+                    intervention_execution.outcome,
+                    frozen_record_threshold=record_threshold,
+                ),
+                control_gain=default_gain(
+                    control_execution.outcome,
+                    frozen_record_threshold=record_threshold,
+                ),
+            )
+            context = {
+                "role": Role.CHALLENGER.value,
+                "cell_id": source_arm.cell_id,
+                "channel": Channel.REFINEMENT.value,
+            }
+            memory_record_id = memory_id_for(
+                context=context,
+                intervention_option_id=closed_pair.intervention_option_id,
+            )
+            memory_record = memory.get(memory_record_id) or new_memory_record(
+                context=context,
+                intervention_option_id=closed_pair.intervention_option_id,
+                scope="refinement_cell",
+                recency_epoch=epoch,
+                promotion_min_support=settings.audits.min_pairs_for_promotion,
+            )
+            memory_record = add_effect(
+                memory_record,
+                pair=closed_pair,
+                effect=effect,
+                recency_epoch=epoch,
+            )
+            memory = memory.upsert(evaluate_promotion(stratify_drift(
+                memory_record, current_epoch=epoch
+            )))
+
+        # -- matched harness calibration ---------------------------------
+        inactive_harnesses = tuple(
+            harness_id
+            for harness_id in sorted(harness_registry.specs)
+            if harness_id not in harness_registry.active_ids
+        )
+        harness_pairs_to_run = min(
+            plan.reservation_slots.harness_trial_slots // 2,
+            1 if plan.planned_arms and inactive_harnesses else 0,
+        )
+        for pair_index in range(harness_pairs_to_run):
+            base_arm = plan.planned_arms[pair_index % len(plan.planned_arms)].arm
+            candidate_harness_id = inactive_harnesses[
+                pair_index % len(inactive_harnesses)
+            ]
+            incumbent_arm = _retargeted_harness_arm(
+                base_arm,
+                harness_id=base_arm.harness_id,
+                channel=Channel.AUDIT,
+            )
+            candidate_arm = _retargeted_harness_arm(
+                base_arm,
+                harness_id=candidate_harness_id,
+                channel=Channel.AUDIT,
+            )
+            trial_seed = derive_seed(
+                "harness_trial_seed",
+                state.run_id,
+                epoch,
+                pair_index,
+                base_seed=self.config.seed,
+            )
+            incumbent_branch, snapshot = self._freeze_branch(
+                state=state,
+                arm=incumbent_arm,
+                role_snapshots=role_snapshots,
+                record_threshold=record_threshold,
+                index=2000 + pair_index * 2,
+                epoch_seed=trial_seed,
+                budget=incumbent_arm.hard_cost,
+                channel=Channel.AUDIT,
+                verifier_id=adapter.verifier_id,
+                verifier_version=adapter.verifier_version,
+                memory_enabled=False,
+            )
+            candidate_branch, _ = self._freeze_branch(
+                state=state,
+                arm=candidate_arm,
+                role_snapshots=role_snapshots,
+                record_threshold=record_threshold,
+                index=2000 + pair_index * 2 + 1,
+                epoch_seed=trial_seed,
+                budget=candidate_arm.hard_cost,
+                channel=Channel.AUDIT,
+                verifier_id=adapter.verifier_id,
+                verifier_version=adapter.verifier_version,
+                shared_seed=incumbent_branch.seed,
+                memory_enabled=False,
+            )
+            context = MatchedHarnessAuditContext.create(
+                incumbent_branch=incumbent_branch,
+                incumbent_arm=incumbent_arm,
+                candidate_branch=candidate_branch,
+                candidate_arm=candidate_arm,
+                assignment_probability=0.5,
+                assignment_seed=trial_seed,
+            )
+            harness_dir = step_dir / "audits" / context.context_id
+            harness_dir.mkdir(parents=True, exist_ok=True)
+            write_immutable_json(
+                harness_dir / "harness.preassigned.json", context.to_dict()
+            )
+            required = sum(
+                float(item.hard_cost.get("verifier_calls", 1.0))
+                for item in (incumbent_arm, candidate_arm)
+            )
+            if required > budget_ledger.remaining("verifier_calls"):
+                continue
+            debit_records = []
+            for label, trial_arm in (
+                ("incumbent", incumbent_arm),
+                ("candidate", candidate_arm),
+            ):
+                key = (
+                    f"epoch{epoch}:harness{context.context_id}:"
+                    f"{label}:verifier_calls"
+                )
+                budget_ledger = BudgetService.debit(
+                    budget_ledger,
+                    resource="verifier_calls",
+                    amount=float(
+                        trial_arm.hard_cost.get("verifier_calls", 1.0)
+                    ),
+                    transaction_key=key,
+                )
+                debit_records.append((key, trial_arm))
+
+            incumbent_execution = self._execute_one_branch(
+                branch=incumbent_branch,
+                arm=incumbent_arm,
+                role_snapshot=snapshot,
+                option_registry=state.option_registry,
+                workers=workers,
+                start_verified=True,
+                cell_empty=False,
+                memory_enabled=False,
+            )
+            candidate_execution = self._execute_one_branch(
+                branch=candidate_branch,
+                arm=candidate_arm,
+                role_snapshot=snapshot,
+                option_registry=state.option_registry,
+                workers=workers,
+                start_verified=True,
+                cell_empty=False,
+                memory_enabled=False,
+            )
+            for offset, (trial_branch, trial_arm, trial_execution) in enumerate(
+                (
+                    (incumbent_branch, incumbent_arm, incumbent_execution),
+                    (candidate_branch, candidate_arm, candidate_execution),
+                )
+            ):
+                self._persist_branch_execution(
+                    layout,
+                    branch=trial_branch,
+                    execution=trial_execution,
+                    ordinal=2000 + pair_index * 2 + offset,
+                )
+                executions.append(trial_execution)
+                arms_by_id[trial_arm.arm_id] = trial_arm
+                archive, provenance, record, posterior, budget_ledger = self._fold_execution(
+                    execution=trial_execution,
+                    arm=trial_arm,
+                    identity_archive=archive,
+                    provenance=provenance,
+                    record=record,
+                    posterior=posterior,
+                    record_threshold=record_threshold,
+                    adapter=adapter,
+                    verification_policy=verification_policy,
+                    budget_ledger=budget_ledger,
+                )
+            for (debit_key, _trial_arm), trial_execution in zip(
+                debit_records, (incumbent_execution, candidate_execution)
+            ):
+                unused = float(
+                    trial_execution.outcome.unused_budget.get(
+                        "verifier_calls", 0.0
+                    )
+                )
+                if unused > 0.0:
+                    budget_ledger = BudgetService.refund(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=unused,
+                        transaction_key=f"{debit_key}:refund",
+                        debit_transaction_key=debit_key,
+                    )
+            trial = HarnessTrialRecord.from_context(
+                context,
+                epoch=epoch,
+                incumbent_gain=default_gain(
+                    incumbent_execution.outcome,
+                    frozen_record_threshold=record_threshold,
+                ),
+                candidate_gain=default_gain(
+                    candidate_execution.outcome,
+                    frozen_record_threshold=record_threshold,
+                ),
+                incumbent_cost=incumbent_execution.outcome.costs,
+                candidate_cost=candidate_execution.outcome.costs,
+                incumbent_valid=(
+                    incumbent_execution.outcome.maximum_state_id is not None
+                ),
+                candidate_valid=(
+                    candidate_execution.outcome.maximum_state_id is not None
+                ),
+                incumbent_failure_kind=(
+                    "infrastructure"
+                    if incumbent_execution.outcome.infrastructure_aborted
+                    else "none"
+                ),
+                candidate_failure_kind=(
+                    "infrastructure"
+                    if candidate_execution.outcome.infrastructure_aborted
+                    else "none"
+                ),
+            )
+            harness_registry = harness_registry.record_trial(trial)
+            try:
+                harness_registry = harness_registry.promote(
+                    candidate_harness_id,
+                    min_trials=settings.audits.min_pairs_for_promotion,
+                )
+            except HarnessPromotionError:
+                pass
 
         # -- role-isolated learning ------------------------------------
         traces_by_id = {member.trace.trace_id: member.trace for member in group_members}
@@ -1040,6 +1698,8 @@ class EvolveEngine:
             provenance=provenance,
             posterior=posterior,
             memory=memory,
+            harness_registry=harness_registry,
+            nursery=nursery,
             role_registry=role_registry,
             budget_ledger=budget_ledger,
             record=record,
@@ -1135,9 +1795,13 @@ class EvolveEngine:
         verifier_version: str,
         shared_seed: Optional[int] = None,
         memory_enabled: bool = True,
+        start_state_id: Optional[str] = None,
+        generation_overrides: Optional[Mapping[str, Any]] = None,
     ) -> Tuple[BranchSpec, Any]:
         role_snapshot = role_snapshots[arm.role]
-        start_state_id = self._pick_start_state(state.archive, arm.cell_id)
+        frozen_start_state_id = start_state_id or self._pick_start_state(
+            state.archive, arm.cell_id
+        )
         seed = shared_seed if shared_seed is not None else rollout_seed(
             run_id=state.run_id, epoch=state.epoch, allocation_id=arm.arm_id,
             branch_step=index, sample_index=0, role=arm.role.value, base_seed=self.config.seed,
@@ -1177,11 +1841,13 @@ class EvolveEngine:
             "max_new_tokens": self.config.max_new_tokens,
             "memory_records": memory_payload,
         }
+        if generation_overrides:
+            generation_settings.update(dict(generation_overrides))
         branch = BranchSpec(
             branch_id=branch_id,
             arm_id=arm.arm_id,
             epoch=state.epoch,
-            start_state_id=start_state_id,
+            start_state_id=frozen_start_state_id,
             frozen_record_threshold=record_threshold,
             role_snapshot_id=role_snapshot.snapshot_id,
             option_id=arm.option_id,
@@ -1247,7 +1913,14 @@ class EvolveEngine:
         record_threshold: float,
         adapter: ProblemScientificAdapter,
         verification_policy: VerificationPolicy,
-    ) -> Tuple[ScientificArchive, ProvenanceStore, ConfirmedRecordTracker, PosteriorStore]:
+        budget_ledger: BudgetLedger,
+    ) -> Tuple[
+        ScientificArchive,
+        ProvenanceStore,
+        ConfirmedRecordTracker,
+        PosteriorStore,
+        BudgetLedger,
+    ]:
         archive = identity_archive
         provenance = provenance.with_branch(execution.outcome.branch_id)
         for result in execution.observations:
@@ -1272,18 +1945,49 @@ class EvolveEngine:
                 evidence.internal_reward is not None
                 and evidence.internal_reward > record_threshold
             ):
-                confirmation = self._confirm(
+                confirmation_debit = (
+                    f"epoch-confirm:{execution.outcome.branch_id}:"
+                    f"{evidence.evidence_id}"
+                )
+                # Confirmation may make one bounded infrastructure retry. Reserve
+                # both calls first so a possible record can never overrun the
+                # global verifier ledger, then return the unused retry.
+                try:
+                    budget_ledger = BudgetService.debit(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=2.0,
+                        transaction_key=confirmation_debit,
+                    )
+                except BudgetOverrun:
+                    continue
+                confirmation, attempts = self._confirm(
                     result.proposal, evidence, adapter=adapter, verification_policy=verification_policy
                 )
-                if confirmation is not None and confirmation.evidence.confirmed and confirmation.state is not None:
+                if attempts < 2:
+                    budget_ledger = BudgetService.refund(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=float(2 - attempts),
+                        transaction_key=f"{confirmation_debit}:refund",
+                        debit_transaction_key=confirmation_debit,
+                    )
+                archive = replace(
+                    archive,
+                    artifacts=archive.artifacts.add_observation(
+                        result.proposal, confirmation.evidence
+                    ),
+                )
+                if confirmation.evidence.confirmed and confirmation.state is not None:
                     try:
                         archive, decision = archive.offer(
                             confirmation.descriptor, result.proposal, confirmation.state, confirmation.evidence
                         )
                     except ArchiveAdmissionError:
-                        confirmation = None
-                    if confirmation is not None:
-                        record = record.consider(confirmation.state, confirmation.evidence, archive=archive)
+                        continue
+                    record = record.consider(
+                        confirmation.state, confirmation.evidence, archive=archive
+                    )
         if execution.provenance_edges:
             provenance = provenance.with_artifacts(archive.artifacts)
             for edge in execution.provenance_edges:
@@ -1306,7 +2010,7 @@ class EvolveEngine:
             gain=gain,
             costs=execution.outcome.costs,
         )
-        return archive, provenance, record, posterior
+        return archive, provenance, record, posterior, budget_ledger
 
     # -- barrier commit + reporting --------------------------------------
 
@@ -1319,6 +2023,7 @@ class EvolveEngine:
         adapter: ProblemScientificAdapter,
         workers: EngineWorkers,
     ) -> None:
+        self._publish_snapshots(layout, state)
         if workers.persist_roles is not None:
             workers.persist_roles(state)
         checkpoint_dir = layout.path("checkpoints")
@@ -1377,6 +2082,76 @@ class EvolveEngine:
             self._publish_best(layout, state, adapter=adapter)
         self._write_status(
             layout, state, note=f"epoch {report.epoch} committed", report=report
+        )
+        if state.epoch % self.config.evolve.reporting.plots_every_epochs == 0:
+            try:
+                from evolve.viz.run import generate_plots
+
+                generate_plots(
+                    layout.run_dir,
+                    names=(
+                        "record",
+                        "archive",
+                        "provenance",
+                        "allocation",
+                        "audits",
+                        "roles",
+                    ),
+                    out_dir=layout.path("plots"),
+                )
+            except Exception:
+                # Barrier durability and discovery never depend on plotting.
+                pass
+
+    def _publish_snapshots(self, layout: RunLayout, state: EpochState) -> None:
+        """Publish complete committed subsystem views before the checkpoint."""
+
+        archive_document = {
+            "schema_version": 1,
+            "epoch": state.epoch,
+            "cell_map_version": state.archive.cell_map_version,
+            "descriptors": [
+                item.to_dict() for item in state.archive.descriptors
+            ],
+            "cells": [item.to_dict() for item in state.archive.cells],
+            "proposals": [
+                item.to_dict() for item in state.archive.artifacts.proposals
+            ],
+            "evidence": [
+                item.to_dict() for item in state.archive.artifacts.evidence
+            ],
+            "states": [
+                item.to_dict() for item in state.archive.artifacts.states
+            ],
+            "provenance": [item.to_dict() for item in state.provenance.edges],
+        }
+        atomic_write_json(
+            layout.path("archive/cells.json"),
+            {
+                "schema_version": 1,
+                "epoch": state.epoch,
+                "cells": archive_document["cells"],
+            },
+        )
+        write_immutable_json(
+            layout.path(f"archive/snapshots/epoch{state.epoch:03d}.json"),
+            archive_document,
+        )
+        write_immutable_json(
+            layout.path(
+                f"causal_memory/snapshots/epoch{state.epoch:03d}.json"
+            ),
+            {
+                "schema_version": 1,
+                "epoch": state.epoch,
+                "records": [
+                    record.to_dict()
+                    for record in sorted(
+                        state.memory.records.values(),
+                        key=lambda item: item.memory_id,
+                    )
+                ],
+            },
         )
 
     def _publish_best(
@@ -1603,7 +2378,8 @@ def _state_from_checkpoint(checkpoint: Mapping[str, Any], *, config: EvolveConfi
     )
     harness_registry = HarnessRegistry.from_dict(checkpoint["harness_registry"])
     option_registry = production_option_registry(
-        harness_eligibility=harness_registry.active_ids, max_horizon=config.evolve.options.max_horizon
+        harness_eligibility=tuple(sorted(harness_registry.specs)),
+        max_horizon=config.evolve.options.max_horizon,
     )
     return EpochState(
         run_id=checkpoint["run_id"], epoch=checkpoint["epoch"], archive=archive,
@@ -1674,7 +2450,7 @@ def _package_versions() -> Mapping[str, Any]:
         from importlib import metadata as importlib_metadata
     except ImportError:  # pragma: no cover - Python < 3.8
         return versions
-    for package in ("torch", "transformers", "peft", "vllm", "numpy", "pyyaml"):
+    for package in ("torch", "transformers", "peft", "numpy", "pyyaml"):
         try:
             versions[package] = importlib_metadata.version(package)
         except Exception:
@@ -1701,7 +2477,6 @@ def _environment_document() -> Mapping[str, Any]:
 __all__ = [
     "COMPONENT_SCHEMA_VERSIONS",
     "EngineError",
-    "EngineWorkerWiringError",
     "EngineWorkers",
     "EpochReport",
     "EpochState",

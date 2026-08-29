@@ -281,7 +281,7 @@ def ensure_python3_on_path() -> Optional[str]:
         return os.path.join(exe_dir, "python3")
 
     try:
-        shim = tempfile.mkdtemp(prefix="ttt-py3-")
+        shim = tempfile.mkdtemp(prefix="evolve-py3-")
         link = os.path.join(shim, "python3")
         os.symlink(os.path.abspath(sys.executable), link)
         os.environ["PATH"] = shim + os.pathsep + os.environ["PATH"]
@@ -305,6 +305,22 @@ def _eval_child(conn, code: str, lib_dir: str, task_yaml: str,
     """
     out = {"ok": False, "msg": "unknown", "logs": "", "score_us": None}
     if gpu_id is not None:
+        # The spawned evaluator must not inherit distributed-generation state.
+        # It sees exactly one physical GPU, which becomes logical cuda:0.
+        for key in list(os.environ):
+            if (
+                key in {
+                    "LOCAL_RANK",
+                    "RANK",
+                    "WORLD_SIZE",
+                    "MASTER_ADDR",
+                    "MASTER_PORT",
+                }
+                or key.startswith("VLLM_")
+                or key.startswith("RAY_")
+            ):
+                os.environ.pop(key, None)
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     py3 = ensure_python3_on_path()
     try:
@@ -464,6 +480,9 @@ class GpuMode(Problem):
         # which is the training GPU: correct only if nothing else is on it.
         gid = cfg.get("kernel_gpu_id", None)
         self.kernel_gpu_id = None if gid is None else int(gid)
+        self.kernel_eval_isolation = bool(
+            cfg.get("kernel_eval_isolation", True)
+        )
         # entrypoint is implicit (custom_kernel inside submission.py)
         self.entrypoint = "custom_kernel"
 
@@ -547,15 +566,14 @@ Rules:
         return out
 
     # ------------------------------------------------------------------
-    # EVOLVE scientific-answer contract.  These methods are deliberately
-    # additive: the legacy compute_reward path below retains its historical
-    # parsing, inline fallback, messages, and reward behavior.
+    # EVOLVE scientific-answer contract. Proposal execution and independent
+    # saved-kernel verification remain separate paths.
     def _scientific_timeout_s(self) -> float:
         timeout = float(self.kernel_timeout_s or 0.0)
         if timeout <= 0.0:
             timeout = float(self.cfg.get("sandbox_timeout_s", 0.0) or 0.0)
-        # EVOLVE never permits the unbounded legacy inline fallback.  A config
-        # that supplied neither timeout gets a conservative finite boundary.
+        # EVOLVE never permits an unbounded verifier. A config that supplied
+        # neither timeout gets a conservative finite boundary.
         return timeout if timeout > 0.0 and math.isfinite(timeout) else 900.0
 
     @staticmethod
@@ -689,6 +707,7 @@ Rules:
                 # benchmark lease used for a measured record.  It is not used
                 # as a proxy for architecture.
                 "kernel_gpu_id": self.kernel_gpu_id,
+                "exclusive_evaluation": self.kernel_eval_isolation,
             },
             "evaluator": self._evaluator_snapshot(),
         }
@@ -1266,22 +1285,25 @@ Rules:
                 f"same directory as task.yml.", failure_kind="infrastructure")
 
         timeout = float(self.kernel_timeout_s or 0.0) or float(timeout_s or 0.0)
-        if timeout > 0:
-            out = run_eval_with_timeout(code, self.lib_dir, self.task_yaml,
-                                        self.problem_type, self.log_chars,
-                                        timeout, self.kernel_gpu_id)
-        else:
-            # timeout disabled: run inline, the original behaviour
-            import multiprocessing.connection as _c
-
-            class _Sink:
-                def send(self, v): self.v = v
-                def close(self): pass
-            sink = _Sink()
-            _eval_child(sink, code, self.lib_dir, self.task_yaml,
-                        self.problem_type, self.log_chars, self.kernel_gpu_id)
-            out = getattr(sink, "v", {"ok": False, "msg": "no result",
-                                      "logs": "", "score_us": None})
+        if (
+            not self.kernel_eval_isolation
+            or self.kernel_gpu_id is None
+            or timeout <= 0.0
+        ):
+            return self._fail(
+                "kernel evaluation requires an exclusive kernel_gpu_id, "
+                "kernel_eval_isolation=true, and a positive timeout",
+                failure_kind="infrastructure",
+            )
+        out = run_eval_with_timeout(
+            code,
+            self.lib_dir,
+            self.task_yaml,
+            self.problem_type,
+            self.log_chars,
+            timeout,
+            self.kernel_gpu_id,
+        )
 
         if not out.get("ok"):
             msg = str(out.get("msg", "run failed"))
@@ -1316,17 +1338,16 @@ Rules:
     def seed_states(self) -> List[SeedState]:
         if self.problem_type == "mla_decode_nvidia":
             # MLA_DECODE_INITIAL_VALUE is a measured H200 runtime. On other
-            # hardware it is simply wrong, and it seeds the whole tree with a
-            # reward the search can never reproduce.
+            # hardware it must never be treated as evidence. If no measured
+            # hint was configured, use an unscored seed: EVOLVE immediately
+            # verifies the saved kernel on the isolated evaluation GPU before
+            # it can enter the archive.
             if self.gpu_type.strip().lower() not in ("h200",):
                 seed_us = self.cfg.get("mla_seed_runtime_us")
                 if seed_us is None:
-                    raise ValueError(
-                        f"problem_type=mla_decode_nvidia seeds the tree with an "
-                        f"H200 runtime ({abs(float(MLA_DECODE_INITIAL_VALUE))} us) "
-                        f"but gpu_type={self.gpu_type}. Benchmark the initial "
-                        f"state on your hardware and set mla_seed_runtime_us, or "
-                        f"use problem_type=trimul, which seeds from empty code.")
+                    return [SeedState(code=MLA_DECODE_INITIAL_STATE, value=0.0,
+                                      raw_score=None, construction=[])
+                            for _ in range(self.num_seed_states)]
                 us = abs(float(seed_us))
                 reward = float(self.score_scale / us) if us > 0 else 0.0
                 return [SeedState(code=MLA_DECODE_INITIAL_STATE, value=reward,

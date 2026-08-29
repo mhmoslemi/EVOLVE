@@ -71,7 +71,13 @@ def _bucket_key(
 
 
 def _chunks(members: Sequence[GroupMember], size: int) -> List[List[GroupMember]]:
-    return [list(members[index : index + size]) for index in range(0, len(members), size)]
+    # A partial tail has a different finite-batch objective and cannot be
+    # silently mixed into the configured on-policy group definition.
+    return [
+        list(members[index : index + size])
+        for index in range(0, len(members), size)
+        if len(members[index : index + size]) == size
+    ]
 
 
 def _group_id_for(
@@ -163,7 +169,16 @@ def _build_one_group(
         if member.outcome.branch_id != member.branch.branch_id:
             raise LearningGroupError("branch outcome does not belong to its branch")
 
-    rewards = [member.outcome.maximum_reward for member in chunk]
+    # The EVOLVE learning signal is descendant record gain over the branch's
+    # frozen threshold. Non-admitted branches therefore contribute zero,
+    # never negative infinity or an infrastructure-derived pseudo-score.
+    threshold = first.branch.frozen_record_threshold
+    rewards = [
+        max(0.0, float(member.outcome.maximum_reward) - threshold)
+        if member.outcome.maximum_reward is not None
+        else 0.0
+        for member in chunk
+    ]
     advantages = advantages_for_objective(rewards, objective=objective, top_m=top_m)
 
     branch_ids = tuple(member.branch.branch_id for member in chunk)

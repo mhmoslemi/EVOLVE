@@ -34,6 +34,7 @@ MECHANIST_DEVELOP_STATE_MACHINE = "mechanist_develop_v1"
 CHALLENGER_ATTACK_STATE_MACHINE = "challenger_attack_v1"
 MATCHED_CONTINUATION_STATE_MACHINE = "matched_continuation_v1"
 DIAGNOSTIC_REPAIR_STATE_MACHINE = "diagnostic_repair_v1"
+FRESH_REFINEMENT_CONTROL_STATE_MACHINE = "fresh_refinement_control_v1"
 
 PROPOSE_CAPABILITY = "propose"
 
@@ -287,21 +288,67 @@ class DiagnosticRepairOption(ExecutableOption):
         )
 
 
+def create_fresh_refinement_control_option_spec(
+    *,
+    hard_cost: Mapping[str, Any],
+    harness_eligibility: Any,
+    expected_cost: Mapping[str, Any] = None,
+) -> OptionSpec:
+    return create_option_spec(
+        version=FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
+        state_machine=FRESH_REFINEMENT_CONTROL_STATE_MACHINE,
+        allowed_roles=(Role.CHALLENGER,),
+        capabilities=(PROPOSE_CAPABILITY,),
+        initiation={"allow_empty_cell": False, "allow_verified_start": True},
+        step_policy={"fresh_equal_cost_continuation": True},
+        stop_rule={"max_attempts_per_branch": 1},
+        max_horizon=1,
+        expected_cost=dict(expected_cost or hard_cost),
+        hard_cost=dict(hard_cost),
+        harness_eligibility=tuple(harness_eligibility),
+        prerequisites=("verified_start",),
+        output_contract={"produces": "fresh_equal_cost_candidate"},
+    )
+
+
+class FreshRefinementControlOption(ExecutableOption):
+    STATE_MACHINE = FRESH_REFINEMENT_CONTROL_STATE_MACHINE
+    BEHAVIOR_VERSION = FRESH_REFINEMENT_CONTROL_STATE_MACHINE
+
+    def _check_initiation(self, context: OptionContext) -> None:
+        _require_started_from_verified(context)
+
+    def _plan_action(self, state, step_input: OptionStepInput) -> _ActionPlan:
+        return _ActionPlan(
+            action="fresh_equal_cost_continuation",
+            capability=PROPOSE_CAPABILITY,
+            next_phase="continued",
+            prompt_metadata={
+                "mode": "fresh_continuation",
+                "ignore_failed_candidate": True,
+                "step_index": state.step_index,
+            },
+        )
+
+
 __all__ = [
     "CHALLENGER_ATTACK_STATE_MACHINE",
     "DIAGNOSTIC_REPAIR_STATE_MACHINE",
     "EXPLORE_STATE_MACHINE",
+    "FRESH_REFINEMENT_CONTROL_STATE_MACHINE",
     "MECHANIST_DEVELOP_STATE_MACHINE",
     "MATCHED_CONTINUATION_STATE_MACHINE",
     "PROPOSE_CAPABILITY",
     "ChallengerAttackOption",
     "DiagnosticRepairOption",
     "ExploreOption",
+    "FreshRefinementControlOption",
     "MechanistDevelopOption",
     "MatchedContinuationOption",
     "create_challenger_attack_option_spec",
     "create_diagnostic_repair_option_spec",
     "create_explore_option_spec",
+    "create_fresh_refinement_control_option_spec",
     "create_mechanist_develop_option_spec",
     "create_matched_continuation_option_spec",
 ]

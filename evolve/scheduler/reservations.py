@@ -44,6 +44,13 @@ def _slots(inflight: int, fraction: float) -> int:
     return int(math.ceil(inflight * fraction)) if fraction > 0.0 else 0
 
 
+def _paired_slots(inflight: int, fraction: float) -> int:
+    requested = _slots(inflight, fraction)
+    if requested == 0:
+        return 0
+    return requested if requested % 2 == 0 else requested + 1
+
+
 @dataclass(frozen=True)
 class ReservationSlots:
     """Slot counts reserved out of one epoch's ``max_inflight_branches``."""
@@ -90,12 +97,18 @@ def compute_reservation_slots(
     ):
         raise ReservationError("max_inflight_branches must be a positive integer")
     inflight = max_inflight_branches
-    audit_slots = _slots(inflight, _fraction(audit_fraction, "audit_fraction"))
+    audit_slots = _paired_slots(
+        inflight, _fraction(audit_fraction, "audit_fraction")
+    )
     no_memory_slots = min(
         audit_slots, _slots(inflight, _fraction(no_memory_fraction, "no_memory_fraction"))
     )
-    refinement_slots = _slots(inflight, _fraction(refinement_fraction, "refinement_fraction"))
-    harness_slots = _slots(inflight, _fraction(harness_trial_fraction, "harness_trial_fraction"))
+    refinement_slots = _paired_slots(
+        inflight, _fraction(refinement_fraction, "refinement_fraction")
+    )
+    harness_slots = _paired_slots(
+        inflight, _fraction(harness_trial_fraction, "harness_trial_fraction")
+    )
     empty_cell_slots = _slots(inflight, _fraction(empty_cell_fraction, "empty_cell_fraction"))
     exploration_slots = _slots(
         inflight, _fraction(global_exploration_fraction, "global_exploration_fraction")

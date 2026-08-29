@@ -166,7 +166,7 @@ def _string_tuple(value: Any, name: str, *, nonempty: bool = True) -> Tuple[str,
 
 
 def parse_gpu_ids(value: Any) -> Tuple[int, ...]:
-    """Normalize legacy comma strings and JSON arrays to physical GPU IDs."""
+    """Normalize comma strings and JSON arrays to physical GPU IDs."""
     if value is None:
         return ()
     if isinstance(value, str):
@@ -342,8 +342,11 @@ class LearningConfig:
             )
         _int(self.group_k, "evolve.learning.group_k", minimum=2)
         _int(self.top_m, "evolve.learning.top_m", minimum=1)
-        if self.top_m > self.group_k:
-            raise EvolveConfigError("evolve.learning.top_m cannot exceed group_k")
+        if self.top_m >= self.group_k:
+            raise EvolveConfigError(
+                "evolve.learning.top_m must be smaller than group_k because "
+                "the exact likelihood-ratio estimator uses K=group_k-1"
+            )
         if objective == "maxpo" and self.top_m != 1:
             raise EvolveConfigError("MaxPO is pure-max and requires learning.top_m=1")
 
@@ -382,7 +385,7 @@ class ReportingConfig:
 
 @dataclass(frozen=True)
 class WorkersConfig:
-    max_inflight_branches: int = 16
+    max_inflight_branches: int = 20
 
     def __post_init__(self) -> None:
         _int(
@@ -406,6 +409,38 @@ class EvolveSettings:
     reporting: ReportingConfig = field(default_factory=ReportingConfig)
     workers: WorkersConfig = field(default_factory=WorkersConfig)
 
+    def __post_init__(self) -> None:
+        """Reject plans that cannot fit the reserved matched work and one group.
+
+        Audit, harness-calibration, and refinement comparisons execute in pairs.
+        Their reservations are therefore rounded up to an even number of branch
+        slots.  Production must still have room for one complete homogeneous
+        learning group plus one forced allocation for each other role.
+        """
+
+        total = self.workers.max_inflight_branches
+
+        def paired_slots(fraction: float) -> int:
+            if fraction <= 0.0:
+                return 0
+            slots = int(math.ceil(total * fraction))
+            return slots if slots % 2 == 0 else slots + 1
+
+        reserved = (
+            paired_slots(self.budget.audit_fraction)
+            + paired_slots(self.budget.refinement_fraction)
+            + paired_slots(self.harnesses.trial_fraction)
+        )
+        production = total - reserved
+        required = self.learning.group_k + len(self.roles.enabled) - 1
+        if production < required:
+            raise EvolveConfigError(
+                "evolve.workers.max_inflight_branches leaves only "
+                f"{production} production slot(s) after paired audit, refinement, "
+                f"and harness reservations; at least {required} are required for "
+                "one homogeneous learning group and coverage of every role"
+            )
+
 
 @dataclass(frozen=True)
 class EvolveConfig:
@@ -417,8 +452,22 @@ class EvolveConfig:
     num_seed_states: int = 8
 
     model_name: str = "Qwen/Qwen3-8B"
-    backend: str = "auto"
+    backend: str = "hf"
     generation_backend: str = "hf"
+    # A value of zero is accepted only at the request boundary and is resolved
+    # to len(gpu_ids). Persisted configs always contain the effective TP size.
+    vllm_tensor_parallel_size: int = 0
+    # Independent inference quantization. "auto" reads the model checkpoint;
+    # it is never derived from training-only load_in_4bit.
+    vllm_quantization: str = "auto"
+    vllm_gpu_memory_utilization: float = 0.85
+    vllm_max_num_seqs: int = 4
+    vllm_max_num_batched_tokens: int = 8192
+    vllm_cpu_offload_gb: float = 0.0
+    vllm_swap_space_gb: float = 4.0
+    vllm_enforce_eager: bool = True
+    vllm_enable_prefix_caching: bool = True
+    vllm_fully_sharded_loras: bool = True
     max_seq_length: int = 32_000
     max_new_tokens: int = 4_200
     temperature: float = 1.0
@@ -443,13 +492,12 @@ class EvolveConfig:
     sandbox_timeout_s: float = 30.0
     kernel_timeout_s: Optional[float] = None
     reward_workers: int = 0
+    gpu_type: str = "H100"
     gpu_ids: Tuple[int, ...] = (0,)
     num_gpus: int = 1
     kernel_gpu_id: Optional[int] = None
+    kernel_eval_isolation: bool = True
     gen_micro_batch: int = 0
-    vllm_gpu_memory_utilization: float = 0.9
-    vllm_enforce_eager: bool = False
-    vllm_enable_prefix_caching: bool = True
     seed: int = 42
     deterministic: bool = False
     checkpoint_path: Optional[str] = None
@@ -489,9 +537,11 @@ class EvolveConfig:
                 "sandbox_timeout_s": self.sandbox_timeout_s,
                 "kernel_timeout_s": self.kernel_timeout_s,
                 "reward_workers": self.reward_workers,
+                "gpu_type": self.gpu_type,
                 "gpu_ids": list(self.gpu_ids),
                 "num_gpus": self.num_gpus,
                 "kernel_gpu_id": self.kernel_gpu_id,
+                "kernel_eval_isolation": self.kernel_eval_isolation,
             }
         )
         return _FrozenConfigMapping(values)
@@ -512,6 +562,16 @@ class EvolveConfig:
             "model_name": self.model_name,
             "backend": self.backend,
             "generation_backend": self.generation_backend,
+            "vllm_tensor_parallel_size": self.vllm_tensor_parallel_size,
+            "vllm_quantization": self.vllm_quantization,
+            "vllm_gpu_memory_utilization": self.vllm_gpu_memory_utilization,
+            "vllm_max_num_seqs": self.vllm_max_num_seqs,
+            "vllm_max_num_batched_tokens": self.vllm_max_num_batched_tokens,
+            "vllm_cpu_offload_gb": self.vllm_cpu_offload_gb,
+            "vllm_swap_space_gb": self.vllm_swap_space_gb,
+            "vllm_enforce_eager": self.vllm_enforce_eager,
+            "vllm_enable_prefix_caching": self.vllm_enable_prefix_caching,
+            "vllm_fully_sharded_loras": self.vllm_fully_sharded_loras,
             "max_seq_length": self.max_seq_length,
             "max_new_tokens": self.max_new_tokens,
             "temperature": self.temperature,
@@ -527,13 +587,12 @@ class EvolveConfig:
             "sandbox_timeout_s": self.sandbox_timeout_s,
             "kernel_timeout_s": self.kernel_timeout_s,
             "reward_workers": self.reward_workers,
+            "gpu_type": self.gpu_type,
             "gpu_ids": list(self.gpu_ids),
             "num_gpus": self.num_gpus,
             "kernel_gpu_id": self.kernel_gpu_id,
+            "kernel_eval_isolation": self.kernel_eval_isolation,
             "gen_micro_batch": self.gen_micro_batch,
-            "vllm_gpu_memory_utilization": self.vllm_gpu_memory_utilization,
-            "vllm_enforce_eager": self.vllm_enforce_eager,
-            "vllm_enable_prefix_caching": self.vllm_enable_prefix_caching,
             "seed": self.seed,
             "deterministic": self.deterministic,
             "checkpoint_path": self.checkpoint_path,
@@ -683,6 +742,16 @@ _COMMON_KEYS = {
     "model_name",
     "backend",
     "generation_backend",
+    "vllm_tensor_parallel_size",
+    "vllm_quantization",
+    "vllm_gpu_memory_utilization",
+    "vllm_max_num_seqs",
+    "vllm_max_num_batched_tokens",
+    "vllm_cpu_offload_gb",
+    "vllm_swap_space_gb",
+    "vllm_enforce_eager",
+    "vllm_enable_prefix_caching",
+    "vllm_fully_sharded_loras",
     "max_seq_length",
     "max_new_tokens",
     "temperature",
@@ -698,13 +767,12 @@ _COMMON_KEYS = {
     "sandbox_timeout_s",
     "kernel_timeout_s",
     "reward_workers",
+    "gpu_type",
     "gpu_ids",
     "num_gpus",
     "kernel_gpu_id",
+    "kernel_eval_isolation",
     "gen_micro_batch",
-    "vllm_gpu_memory_utilization",
-    "vllm_enforce_eager",
-    "vllm_enable_prefix_caching",
     "seed",
     "deterministic",
     "checkpoint_path",
@@ -728,7 +796,6 @@ _ALLOWED_PROBLEM_KEYS = {
     "fail_score",
     "degenerate_threshold",
     "score_scale",
-    "gpu_type",
     "triton_version",
     "task_yaml",
     "lib_dir",
@@ -739,107 +806,6 @@ _ALLOWED_PROBLEM_KEYS = {
     "show_launch_note",
 }
 
-
-# Explicit compatibility inventories. These are the fields implemented by the
-# active legacy modules and present in the repository's problem YAMLs. Prefix
-# matching is intentionally forbidden: a misspelling must fail before model
-# loading instead of becoming inert persisted configuration.
-_LEGACY_MEMORY_KEYS = {
-    "memory",
-    "memory_lookup_mode",
-    "memory_lookup_max_select",
-    "memory_lookup_max_new_tokens",
-    "memory_lookup_temperature",
-    "memory_lookup_fallback",
-    "memory_catalog_max_lessons",
-    "memory_catalog_chars",
-    "memory_inject_mode",
-    "memory_token_budget",
-    "memory_grant_context",
-    "memory_arm_control_fraction",
-    "memory_arm_explore_fraction",
-    "memory_arm_max_lessons",
-    "memory_arm_exploration_c",
-    "memory_outcome_credit",
-    "memory_text_reinforce",
-    "memory_extract_mode",
-    "memory_extract_from",
-    "memory_lessons_per_call",
-    "memory_require_full_lessons",
-    "memory_max_examples_per_call",
-    "memory_max_chars_per_example",
-    "memory_feedback_chars",
-    "memory_reinforce_delta",
-    "memory_max_new_tokens",
-    "memory_temperature",
-    "memory_top_p",
-    "memory_use_gen_pool",
-    "memory_forbid_constructions",
-    "memory_hygiene_profile",
-    "memory_max_code_lines",
-    "memory_global_scope_allows_code",
-    "memory_curate_every",
-    "memory_curate_min_bank",
-    "memory_curate_max_items",
-    "memory_curate_max_new_tokens",
-    "memory_curate_min_keep_frac",
-    "memory_max_lessons",
-    "memory_dedup_jaccard",
-    "memory_persist",
-}
-
-_LEGACY_FEEDBACK_KEYS = {
-    "feedback",
-    "feedback_lambda",
-    "feedback_anneal_steps",
-    "feedback_anneal_shape",
-    "feedback_lambda_final",
-    "feedback_clip",
-    "feedback_chars",
-    "feedback_max_per_step",
-    "feedback_auto_fraction",
-    "feedback_include_constant_groups",
-    "feedback_inject_mode",
-    "feedback_normalize",
-    "feedback_adaptive",
-    "feedback_validity_floor",
-    "feedback_validity_target",
-    "feedback_max_reward_ratio",
-    "feedback_reward_scale_floor",
-    "feedback_max_per_signature",
-    "feedback_auto_signature_fraction",
-}
-
-_LEGACY_RERANKER_KEYS = {
-    "reranker_enabled",
-    "reranker_backend",
-    "reranker_model",
-    "reranker_base_url",
-    "reranker_api_key",
-    "reranker_api_key_env",
-    "reranker_temperature",
-    "reranker_max_tokens",
-    "reranker_request_timeout_s",
-    "reranker_judge_gpu",
-    "reranker_judge_batch_size",
-    "reranker_judge_load_in_4bit",
-    "reranker_top_p",
-    "reranker_max_seq_length",
-    "reranker_top_k",
-    "reranker_debate",
-    "reranker_tournament_mode",
-    "reranker_num_random_matches",
-    "reranker_both_orders",
-    "reranker_judge_concurrency",
-    "reranker_max_code_chars",
-    "reranker_elo_init",
-    "reranker_elo_k",
-    "reranker_elo_softmax_temp",
-    "reranker_prior_weight",
-    "reranker_poll_interval_s",
-    "reranker_min_states_to_rank",
-    "reranker_goal",
-}
 
 def _allowed_problem_key(key: str) -> bool:
     return key in _ALLOWED_PROBLEM_KEYS
@@ -894,8 +860,37 @@ def _validate_cross_section(config: EvolveConfig) -> None:
         raise EvolveConfigError(
             "kernel_gpu_id is exclusive and must not appear in authoritative gpu_ids"
         )
-    if config.generation_backend == "vllm" and not config.gpu_ids:
-        raise EvolveConfigError("vLLM generation requires at least one gpu_id")
+    if config.backend not in {"hf", "unsloth"} or config.generation_backend not in {"hf", "vllm"}:
+        raise UnsupportedEvolveConfigError(
+            "EVOLVE role learning requires backend='hf' or 'unsloth'; "
+            "generation_backend must be 'hf' or 'vllm'"
+        )
+    if config.generation_backend == "vllm":
+        if config.num_gpus < 1:
+            raise EvolveConfigError("vLLM generation requires at least one gpu_id")
+        if config.vllm_tensor_parallel_size != config.num_gpus:
+            raise EvolveConfigError(
+                "vllm_tensor_parallel_size must equal len(gpu_ids). EVOLVE "
+                "intentionally shards one model across every generation GPU; "
+                "it never starts one full model replica per GPU"
+            )
+        if config.vllm_max_num_batched_tokens > config.max_seq_length:
+            raise EvolveConfigError(
+                "vllm_max_num_batched_tokens cannot exceed max_seq_length"
+            )
+        if "gpt-oss" in config.model_name.lower():
+            tp = config.vllm_tensor_parallel_size
+            if tp & (tp - 1):
+                raise EvolveConfigError(
+                    "gpt-oss requires a power-of-two vLLM tensor-parallel size "
+                    "because its attention heads must divide evenly; supported "
+                    "single-node examples use TP 1, 2, 4, or 8 (not TP 7)"
+                )
+            if config.vllm_quantization not in {"auto", "mxfp4"}:
+                raise EvolveConfigError(
+                    "gpt-oss vLLM inference must use native auto/MXFP4 "
+                    "quantization; training load_in_4bit remains independent"
+                )
 
     gpu_problem = config.problem.lower() in {
         "gpu_mode",
@@ -914,16 +909,24 @@ def _validate_cross_section(config: EvolveConfig) -> None:
             raise EvolveConfigError(
                 "gpu_mode EVOLVE runs require reward_workers=1 for comparable timings"
             )
+        if not config.kernel_eval_isolation:
+            raise EvolveConfigError(
+                "gpu_mode requires kernel_eval_isolation=true"
+            )
+        if config.kernel_timeout_s is None:
+            raise EvolveConfigError(
+                "gpu_mode requires kernel_timeout_s so evaluation always runs "
+                "in a spawned, bounded child process"
+            )
+        if config.gpu_ids and config.kernel_gpu_id <= max(config.gpu_ids):
+            raise EvolveConfigError(
+                "kernel_gpu_id must be the last/highest allocated physical GPU; "
+                "all lower gpu_ids belong exclusively to generation/training"
+            )
         if "task_yaml" not in config.problem_config:
             raise EvolveConfigError("gpu_mode requires problem key task_yaml")
         if not ({"lib_dir", "kernel_lib_dir"} & set(config.problem_config)):
             raise EvolveConfigError("gpu_mode requires problem key lib_dir")
-
-    if config.problem_config.get("reranker_enabled") is True:
-        raise UnsupportedEvolveConfigError(
-            "the legacy LLM/Elo reranker is not an EVOLVE allocation signal"
-        )
-
 
 def _config_from_mapping(
     raw: Mapping[str, Any],
@@ -977,16 +980,66 @@ def _config_from_mapping(
     num_seed_states = _int(raw.get("num_seed_states", 8), "num_seed_states", minimum=1)
 
     model_name = _string(raw.get("model_name", "Qwen/Qwen3-8B"), "model_name")
-    backend = _string(raw.get("backend", "auto"), "backend").lower()
+    backend = _string(raw.get("backend", "hf"), "backend").lower()
     generation_backend = _string(
         raw.get("generation_backend", "hf"), "generation_backend"
     ).lower()
-    if backend == "vllm":
-        backend, generation_backend = "hf", "vllm"
-    if backend not in ("auto", "unsloth", "hf"):
-        raise EvolveConfigError("backend must be auto, unsloth, hf, or vllm")
-    if generation_backend not in ("hf", "vllm"):
-        raise EvolveConfigError("generation_backend must be 'hf' or 'vllm'")
+    if backend not in {"hf", "unsloth"} or generation_backend not in {"hf", "vllm"}:
+        raise UnsupportedEvolveConfigError(
+            "backend must be 'hf' or 'unsloth' for role learning and "
+            "generation_backend must be either 'hf' or 'vllm'"
+        )
+
+    requested_vllm_tp = _int(
+        raw.get("vllm_tensor_parallel_size", 0),
+        "vllm_tensor_parallel_size",
+        minimum=0,
+    )
+    vllm_quantization = _string(
+        raw.get("vllm_quantization", "auto"), "vllm_quantization"
+    ).lower()
+    if vllm_quantization not in {
+        "auto", "bitsandbytes", "fp8", "mxfp4", "awq", "gptq"
+    }:
+        raise EvolveConfigError(
+            "vllm_quantization must be auto, bitsandbytes, fp8, mxfp4, awq, or gptq"
+        )
+    vllm_gpu_memory_utilization = _fraction(
+        raw.get("vllm_gpu_memory_utilization", 0.85),
+        "vllm_gpu_memory_utilization",
+        allow_one=False,
+    )
+    if vllm_gpu_memory_utilization <= 0.0:
+        raise EvolveConfigError("vllm_gpu_memory_utilization must be > 0")
+    vllm_max_num_seqs = _int(
+        raw.get("vllm_max_num_seqs", 4), "vllm_max_num_seqs", minimum=1
+    )
+    vllm_max_num_batched_tokens = _int(
+        raw.get("vllm_max_num_batched_tokens", 8192),
+        "vllm_max_num_batched_tokens",
+        minimum=1,
+    )
+    vllm_cpu_offload_gb = _number(
+        raw.get("vllm_cpu_offload_gb", 0.0), "vllm_cpu_offload_gb"
+    )
+    vllm_swap_space_gb = _number(
+        raw.get("vllm_swap_space_gb", 4.0), "vllm_swap_space_gb"
+    )
+    if vllm_cpu_offload_gb < 0.0 or vllm_swap_space_gb < 0.0:
+        raise EvolveConfigError(
+            "vllm_cpu_offload_gb and vllm_swap_space_gb must be >= 0"
+        )
+    vllm_enforce_eager = _bool(
+        raw.get("vllm_enforce_eager", True), "vllm_enforce_eager"
+    )
+    vllm_enable_prefix_caching = _bool(
+        raw.get("vllm_enable_prefix_caching", True),
+        "vllm_enable_prefix_caching",
+    )
+    vllm_fully_sharded_loras = _bool(
+        raw.get("vllm_fully_sharded_loras", True),
+        "vllm_fully_sharded_loras",
+    )
 
     max_seq_length = _int(raw.get("max_seq_length", 32_000), "max_seq_length", minimum=2)
     max_new_tokens = _int(raw.get("max_new_tokens", 4_200), "max_new_tokens", minimum=1)
@@ -1019,6 +1072,7 @@ def _config_from_mapping(
         else _positive_number(kernel_timeout_raw, "kernel_timeout_s")
     )
     reward_workers = _int(raw.get("reward_workers", 0), "reward_workers", minimum=0)
+    gpu_type = _string(raw.get("gpu_type", "H100"), "gpu_type")
     gpu_ids = parse_gpu_ids(raw.get("gpu_ids", [0]))
     declared_num_gpus = _int(raw.get("num_gpus", len(gpu_ids)), "num_gpus", minimum=0)
     num_gpus = len(gpu_ids)
@@ -1034,18 +1088,15 @@ def _config_from_mapping(
         if kernel_gpu_raw is None
         else _int(kernel_gpu_raw, "kernel_gpu_id", minimum=0)
     )
+    kernel_eval_isolation = _bool(
+        raw.get("kernel_eval_isolation", True), "kernel_eval_isolation"
+    )
+    vllm_tensor_parallel_size = (
+        num_gpus
+        if generation_backend == "vllm" and requested_vllm_tp == 0
+        else requested_vllm_tp
+    )
     gen_micro_batch = _int(raw.get("gen_micro_batch", 0), "gen_micro_batch", minimum=0)
-    vllm_util = _number(
-        raw.get("vllm_gpu_memory_utilization", 0.9),
-        "vllm_gpu_memory_utilization",
-    )
-    if not 0.0 < vllm_util <= 1.0:
-        raise EvolveConfigError("vllm_gpu_memory_utilization must be in (0, 1]")
-    vllm_eager = _bool(raw.get("vllm_enforce_eager", False), "vllm_enforce_eager")
-    vllm_prefix = _bool(
-        raw.get("vllm_enable_prefix_caching", True),
-        "vllm_enable_prefix_caching",
-    )
     seed = _int(raw.get("seed", 42), "seed", minimum=0)
     deterministic = _bool(raw.get("deterministic", False), "deterministic")
     checkpoint_path = _optional_path(raw.get("checkpoint_path"), "checkpoint_path", cwd)
@@ -1094,6 +1145,16 @@ def _config_from_mapping(
         model_name=model_name,
         backend=backend,
         generation_backend=generation_backend,
+        vllm_tensor_parallel_size=vllm_tensor_parallel_size,
+        vllm_quantization=vllm_quantization,
+        vllm_gpu_memory_utilization=vllm_gpu_memory_utilization,
+        vllm_max_num_seqs=vllm_max_num_seqs,
+        vllm_max_num_batched_tokens=vllm_max_num_batched_tokens,
+        vllm_cpu_offload_gb=vllm_cpu_offload_gb,
+        vllm_swap_space_gb=vllm_swap_space_gb,
+        vllm_enforce_eager=vllm_enforce_eager,
+        vllm_enable_prefix_caching=vllm_enable_prefix_caching,
+        vllm_fully_sharded_loras=vllm_fully_sharded_loras,
         max_seq_length=max_seq_length,
         max_new_tokens=max_new_tokens,
         temperature=temperature,
@@ -1109,13 +1170,12 @@ def _config_from_mapping(
         sandbox_timeout_s=sandbox_timeout_s,
         kernel_timeout_s=kernel_timeout_s,
         reward_workers=reward_workers,
+        gpu_type=gpu_type,
         gpu_ids=gpu_ids,
         num_gpus=num_gpus,
         kernel_gpu_id=kernel_gpu_id,
+        kernel_eval_isolation=kernel_eval_isolation,
         gen_micro_batch=gen_micro_batch,
-        vllm_gpu_memory_utilization=vllm_util,
-        vllm_enforce_eager=vllm_eager,
-        vllm_enable_prefix_caching=vllm_prefix,
         seed=seed,
         deterministic=deterministic,
         checkpoint_path=checkpoint_path,
@@ -1184,7 +1244,7 @@ def _apply_compatibility_aliases(layer: Mapping[str, Any]) -> Dict[str, Any]:
         evolve["learning"] = learning
         if "group_size" in out and "group_k" not in learning:
             learning["group_k"] = out["group_size"]
-    # Preserve the legacy convenience spelling: num_gpus alone expands to
+    # Preserve the CLI convenience spelling: num_gpus alone expands to
     # physical devices 0..N-1.  When gpu_ids is present, it stays authoritative.
     if "num_gpus" in out and "gpu_ids" not in out:
         count = _int(out["num_gpus"], "num_gpus", minimum=0)
@@ -1212,33 +1272,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-plan", action="store_true")
 
     parser.add_argument("--model-name", default=None)
-    parser.add_argument("--backend", choices=("auto", "unsloth", "hf", "vllm"), default=None)
+    parser.add_argument("--backend", choices=("hf", "unsloth"), default=None)
     parser.add_argument("--generation-backend", choices=("hf", "vllm"), default=None)
-    parser.add_argument("--max-seq-length", type=int, default=None)
-    parser.add_argument("--max-new-tokens", type=int, default=None)
-    parser.add_argument("--temperature", type=float, default=None)
-    parser.add_argument("--top-p", type=float, default=None)
+    parser.add_argument("--vllm-tensor-parallel-size", type=int, default=None)
     parser.add_argument(
-        "--thinking", dest="thinking", action="store_const", const=True, default=None
+        "--vllm-quantization",
+        choices=("auto", "bitsandbytes", "fp8", "mxfp4", "awq", "gptq"),
+        default=None,
     )
-    parser.add_argument(
-        "--no-thinking", dest="thinking", action="store_const", const=False
-    )
-    parser.add_argument("--load-in-4bit", action="store_const", const=True, default=None)
-    parser.add_argument("--lora-rank", type=int, default=None)
-    parser.add_argument("--lora-alpha", type=int, default=None)
-    parser.add_argument("--lora-dropout", type=float, default=None)
-    parser.add_argument("--target-modules", default=None, help="comma-separated PEFT modules")
-    parser.add_argument("--learning-rate", "--lr", dest="learning_rate", type=float, default=None)
-    parser.add_argument("--kl-penalty-coef", type=float, default=None)
-    parser.add_argument("--sandbox-timeout-s", type=float, default=None)
-    parser.add_argument("--kernel-timeout-s", type=float, default=None)
-    parser.add_argument("--reward-workers", type=int, default=None)
-    parser.add_argument("--gpu-ids", default=None)
-    parser.add_argument("--num-gpus", type=int, default=None)
-    parser.add_argument("--kernel-gpu-id", type=int, default=None)
-    parser.add_argument("--gen-micro-batch", type=int, default=None)
     parser.add_argument("--vllm-gpu-memory-utilization", type=float, default=None)
+    parser.add_argument("--vllm-max-num-seqs", type=int, default=None)
+    parser.add_argument("--vllm-max-num-batched-tokens", type=int, default=None)
+    parser.add_argument("--vllm-cpu-offload-gb", type=float, default=None)
+    parser.add_argument("--vllm-swap-space-gb", type=float, default=None)
     parser.add_argument(
         "--vllm-enforce-eager",
         dest="vllm_enforce_eager",
@@ -1265,6 +1311,56 @@ def _parser() -> argparse.ArgumentParser:
         action="store_const",
         const=False,
     )
+    parser.add_argument(
+        "--vllm-fully-sharded-loras",
+        dest="vllm_fully_sharded_loras",
+        action="store_const",
+        const=True,
+        default=None,
+    )
+    parser.add_argument(
+        "--no-vllm-fully-sharded-loras",
+        dest="vllm_fully_sharded_loras",
+        action="store_const",
+        const=False,
+    )
+    parser.add_argument("--max-seq-length", type=int, default=None)
+    parser.add_argument("--max-new-tokens", type=int, default=None)
+    parser.add_argument("--temperature", type=float, default=None)
+    parser.add_argument("--top-p", type=float, default=None)
+    parser.add_argument(
+        "--thinking", dest="thinking", action="store_const", const=True, default=None
+    )
+    parser.add_argument(
+        "--no-thinking", dest="thinking", action="store_const", const=False
+    )
+    parser.add_argument("--load-in-4bit", action="store_const", const=True, default=None)
+    parser.add_argument("--lora-rank", type=int, default=None)
+    parser.add_argument("--lora-alpha", type=int, default=None)
+    parser.add_argument("--lora-dropout", type=float, default=None)
+    parser.add_argument("--target-modules", default=None, help="comma-separated PEFT modules")
+    parser.add_argument("--learning-rate", "--lr", dest="learning_rate", type=float, default=None)
+    parser.add_argument("--kl-penalty-coef", type=float, default=None)
+    parser.add_argument("--sandbox-timeout-s", type=float, default=None)
+    parser.add_argument("--kernel-timeout-s", type=float, default=None)
+    parser.add_argument("--reward-workers", type=int, default=None)
+    parser.add_argument("--gpu-ids", default=None)
+    parser.add_argument("--num-gpus", type=int, default=None)
+    parser.add_argument("--kernel-gpu-id", type=int, default=None)
+    parser.add_argument(
+        "--kernel-eval-isolation",
+        dest="kernel_eval_isolation",
+        action="store_const",
+        const=True,
+        default=None,
+    )
+    parser.add_argument(
+        "--no-kernel-eval-isolation",
+        dest="kernel_eval_isolation",
+        action="store_const",
+        const=False,
+    )
+    parser.add_argument("--gen-micro-batch", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--deterministic",
@@ -1329,6 +1425,16 @@ _TOP_LEVEL_CLI = {
     "model_name": "model_name",
     "backend": "backend",
     "generation_backend": "generation_backend",
+    "vllm_tensor_parallel_size": "vllm_tensor_parallel_size",
+    "vllm_quantization": "vllm_quantization",
+    "vllm_gpu_memory_utilization": "vllm_gpu_memory_utilization",
+    "vllm_max_num_seqs": "vllm_max_num_seqs",
+    "vllm_max_num_batched_tokens": "vllm_max_num_batched_tokens",
+    "vllm_cpu_offload_gb": "vllm_cpu_offload_gb",
+    "vllm_swap_space_gb": "vllm_swap_space_gb",
+    "vllm_enforce_eager": "vllm_enforce_eager",
+    "vllm_enable_prefix_caching": "vllm_enable_prefix_caching",
+    "vllm_fully_sharded_loras": "vllm_fully_sharded_loras",
     "max_seq_length": "max_seq_length",
     "max_new_tokens": "max_new_tokens",
     "temperature": "temperature",
@@ -1346,10 +1452,8 @@ _TOP_LEVEL_CLI = {
     "gpu_ids": "gpu_ids",
     "num_gpus": "num_gpus",
     "kernel_gpu_id": "kernel_gpu_id",
+    "kernel_eval_isolation": "kernel_eval_isolation",
     "gen_micro_batch": "gen_micro_batch",
-    "vllm_gpu_memory_utilization": "vllm_gpu_memory_utilization",
-    "vllm_enforce_eager": "vllm_enforce_eager",
-    "vllm_enable_prefix_caching": "vllm_enable_prefix_caching",
     "seed": "seed",
     "deterministic": "deterministic",
     "checkpoint_path": "checkpoint_path",
@@ -1443,6 +1547,13 @@ _RESUME_MUTABLE_ARGS = {
     "num_gpus",
     "kernel_gpu_id",
     "reward_workers",
+    "vllm_tensor_parallel_size",
+    "vllm_quantization",
+    "vllm_gpu_memory_utilization",
+    "vllm_max_num_seqs",
+    "vllm_max_num_batched_tokens",
+    "vllm_cpu_offload_gb",
+    "vllm_swap_space_gb",
     "epochs",
     "num_steps",
     "max_inflight_branches",
@@ -1547,7 +1658,9 @@ def load_evolve_config(
                 f"method/generation settings: {sorted(unsupported)}"
             )
         if args.engine not in (None, ENGINE_NAME):
-            raise UnsupportedEvolveConfigError("an EVOLVE run cannot resume as legacy")
+            raise UnsupportedEvolveConfigError(
+                "an EVOLVE run cannot resume with a different engine"
+            )
         if args.schema_version not in (None, CONFIG_SCHEMA_VERSION):
             raise UnsupportedEvolveConfigError("resume cannot migrate config schema implicitly")
 
@@ -1617,6 +1730,13 @@ def load_evolve_config(
         merged = copy.deepcopy(saved)
         merged.pop("config_hash", None)
         merged = _deep_merge(merged, cli)
+        if (
+            args.gpu_ids is not None
+            and args.vllm_tensor_parallel_size is None
+            and merged.get("generation_backend") == "vllm"
+        ):
+            merged["vllm_tensor_parallel_size"] = len(cli["gpu_ids"])
+            cli_record["vllm_tensor_parallel_size"] = len(cli["gpu_ids"])
         # Keep compatibility aliases synchronized after a supported epoch change.
         merged["num_steps"] = merged["evolve"]["budget"]["epochs"]
         merged["group_size"] = merged["evolve"]["learning"]["group_k"]

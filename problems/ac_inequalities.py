@@ -138,7 +138,7 @@ class ACInequalities(Problem):
             )
         # Both AC evaluators use full convolution/correlation.  Bound the
         # independent saved-answer verifier before any O(n^2) NumPy work while
-        # covering every active legacy seed (1000--7999 coefficients).
+        # covering every registered seed (1000--7999 coefficients).
         self.scientific_max_coefficients = limit
         # The common adapter hashes the resolved copied cfg into verifier_id.
         # Persisting the default here prevents implicit/default-equivalent
@@ -331,8 +331,8 @@ Make sure to think and return the final program between ```python and ```.'''
                 ) from exc
             if not np.isfinite(number):
                 raise ValueError(f"sequence[{index}] must be finite")
-            # The legacy AC1 evaluator clips negatives to zero. EVOLVE makes the
-            # stated nonnegative scientific constraint explicit instead.
+            # The scientific AC1 contract requires nonnegative coefficients;
+            # enforce it before independent verification.
             if number < 0.0:
                 raise ValueError(f"sequence[{index}] must be nonnegative")
             sequence.append(0.0 if number == 0.0 else number)

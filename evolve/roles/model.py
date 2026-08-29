@@ -26,7 +26,10 @@ class HFBackbone:
         tokenizer.padding_side = "left"
         model_options = {
             "torch_dtype": torch.bfloat16,
-            "device_map": {"": 0},
+            # One logical backbone may be sharded across every authoritative
+            # generation GPU. It is still a single model and a single set of
+            # three named role adapters, not one backbone per role/device.
+            "device_map": "auto" if self.config.num_gpus > 1 else {"": 0},
             "trust_remote_code": True,
         }
         if self.config.load_in_4bit:
@@ -73,4 +76,62 @@ class HFBackbone:
         return disabled if hasattr(disabled, "__enter__") else contextlib.nullcontext()
 
 
-__all__ = ["HFBackbone"]
+class UnslothBackbone:
+    """Unsloth training backend with the same named-PEFT adapter contract."""
+
+    name = "unsloth"
+
+    def __init__(self, config):
+        self.config = config
+        self.model = None
+        self.tokenizer = None
+        self._fast_language_model = None
+
+    def load(self):
+        try:
+            from unsloth import FastLanguageModel
+        except ImportError as exc:
+            raise RuntimeError(
+                "backend=unsloth requires the unsloth package compatible with "
+                "the installed PyTorch and CUDA versions"
+            ) from exc
+
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=self.config.model_name,
+            max_seq_length=self.config.max_seq_length,
+            dtype=None,
+            load_in_4bit=self.config.load_in_4bit,
+            full_finetuning=False,
+        )
+        model = FastLanguageModel.get_peft_model(
+            model,
+            r=self.config.lora_rank,
+            target_modules=list(self.config.target_modules),
+            lora_alpha=self.config.lora_alpha,
+            lora_dropout=self.config.lora_dropout,
+            bias="none",
+            use_gradient_checkpointing="unsloth",
+            random_state=self.config.seed,
+            use_rslora=False,
+            loftq_config=None,
+        )
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "left"
+        self._fast_language_model = FastLanguageModel
+        self.model = model
+        self.tokenizer = tokenizer
+        return model, tokenizer
+
+    def set_inference_mode(self):
+        self._fast_language_model.for_inference(self.model)
+
+    def set_training_mode(self):
+        self._fast_language_model.for_training(self.model)
+
+    def disable_adapter(self):
+        disabled = self.model.disable_adapter()
+        return disabled if hasattr(disabled, "__enter__") else contextlib.nullcontext()
+
+
+__all__ = ["HFBackbone", "UnslothBackbone"]

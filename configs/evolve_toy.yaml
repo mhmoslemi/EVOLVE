@@ -1,7 +1,17 @@
+# Deterministic CPU fixture for config validation, dry planning, and small tests.
+# `fixture/evolve-toy` is not a downloadable model: do not start a live run with
+# this file unless you explicitly replace the model/resource fields.
 engine: evolve
 schema_version: 1
 problem: evolve_toy
+
+# Tiny scientific problem implemented by `problems/evolve_toy.py`.
 target: 0.0
+num_seed_states: 8
+sandbox_timeout_s: 2
+reward_workers: 2
+
+# Placeholder HF topology used only by model-free validation/dry-plan commands.
 model_name: fixture/evolve-toy
 backend: hf
 generation_backend: hf
@@ -9,22 +19,65 @@ max_seq_length: 512
 max_new_tokens: 128
 temperature: 1.0
 top_p: 1.0
-deterministic: true
-seed: 42
-sandbox_timeout_s: 2
-reward_workers: 2
-num_seed_states: 8
+load_in_4bit: false
+lora_rank: 8
+lora_alpha: 8
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj]
+learning_rate: 4.0e-5
+kl_penalty_coef: 0.1
+gen_micro_batch: 1
+# No GPUs are used. These vLLM fields are inactive while generation_backend=hf.
+gpu_type: H100
 gpu_ids: []
 num_gpus: 0
+vllm_tensor_parallel_size: 0
+vllm_quantization: auto
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 1
+vllm_max_num_batched_tokens: 512
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 0
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
+seed: 42
+deterministic: true
+
 evolve:
-  budget: {epochs: 2, verifier_calls: 64, audit_fraction: 0.15, refinement_fraction: 0.05}
-  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
-  roles: {enabled: [scout, mechanist, challenger]}
-  options: {max_horizon: 2, branch_budget: 8}
-  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
-  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
-  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 2}
-  learning: {objective: ordergrad, top_m: 1, group_k: 4}
-  refinement: {max_attempts: 2, max_depth: 2}
-  reporting: {status_every_verifications: 4, plots_every_epochs: 1}
-  workers: {max_inflight_branches: 4}
+  # Two tiny barriers and paired evidence reservations.
+  budget:
+    epochs: 2
+    verifier_calls: 64
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  roles:
+    enabled: [scout, mechanist, challenger]
+  options:
+    max_horizon: 2
+    branch_budget: 8
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 2
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 4
+  refinement:
+    max_attempts: 2
+    max_depth: 2
+  reporting:
+    status_every_verifications: 4
+    plots_every_epochs: 1
+  # K=4 plus three paired reservation channels and all-role coverage.
+  workers:
+    max_inflight_branches: 12

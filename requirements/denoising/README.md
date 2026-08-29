@@ -11,7 +11,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 **Important**: Use Python 3.11 (not 3.12+).
 
 ```bash
-cd /path/to/ttt-continuous
+cd /path/to/EVOLVE
 
 uv venv .venv --python 3.11
 source .venv/bin/activate
@@ -51,7 +51,7 @@ The `openproblems_api_fix.patch` fixes three issues:
 Set `OPENPROBLEMS_CACHE_DIR` to persist downloaded datasets:
 
 ```bash
-export OPENPROBLEMS_CACHE_DIR="/path/to/ttt-continuous/.openproblems_cache"
+export OPENPROBLEMS_CACHE_DIR="/path/to/EVOLVE/.openproblems_cache"
 ```
 
 This avoids re-downloading data on each run and is required for distributed training where `/tmp` isn't shared across nodes.

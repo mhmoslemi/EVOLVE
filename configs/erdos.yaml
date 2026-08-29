@@ -1,35 +1,94 @@
+# Erdos C5-free graph search. `problems/erdos.py` owns parsing, scientific
+# descriptors/fingerprints, saved-answer verification, and best-answer rendering.
 engine: evolve
 schema_version: 1
 problem: erdos
+
+# Problem/verifier layer: target is the native density record to exceed.
 target: 0.380876
 budget_s: 100
 eval_cpus: 10
 num_seed_states: 8
 sandbox_timeout_s: 120
 
+# Frozen backbone and three isolated role-LoRAs (scout/mechanist/challenger).
 model_name: Qwen/Qwen3-8B
 backend: hf
-generation_backend: hf
+generation_backend: vllm
 max_seq_length: 32000
 max_new_tokens: 30000
 temperature: 1.0
 top_p: 1.0
+load_in_4bit: true  # HF training only; vLLM loads its own inference base.
+lora_rank: 32
+lora_alpha: 32
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
 learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
+gen_micro_batch: 1
+
+# GPU 0 owns both phases sequentially: vLLM generation, then HF role learning.
+gpu_type: H100
 gpu_ids: [0]
 num_gpus: 1
+vllm_tensor_parallel_size: 1
+vllm_quantization: auto  # vLLM checkpoint choice; not HF load_in_4bit.
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 4
+vllm_max_num_batched_tokens: 8192
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 4
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
 seed: 42
 deterministic: false
 
 evolve:
-  budget: {epochs: 30, verifier_calls: 4000, audit_fraction: 0.15, refinement_fraction: 0.05}
-  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
-  roles: {enabled: [scout, mechanist, challenger]}
-  options: {max_horizon: 4, branch_budget: 64}
-  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
-  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
-  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
-  learning: {objective: ordergrad, top_m: 1, group_k: 8}
-  refinement: {max_attempts: 3, max_depth: 2}
-  reporting: {status_every_verifications: 25, plots_every_epochs: 1}
-  workers: {max_inflight_branches: 16}
+  # Epoch barriers and total common-verifier budget; fractions reserve paired work.
+  budget:
+    epochs: 30
+    verifier_calls: 4000
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  # Descriptor-indexed quality-diversity archive.
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  # Production EVOLVE always owns exactly these three isolated adapters.
+  roles:
+    enabled: [scout, mechanist, challenger]
+  # Versioned branch state machines and their hard bounds.
+  options:
+    max_horizon: 4
+    branch_budget: 64
+  # Harness is part of each allocation arm; alternatives enter through matched audits.
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  # Hierarchical admission/tail posterior and portfolio exploration reserve.
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  # Matched randomized evidence controls causal-memory promotion.
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 5
+  # Homogeneous, on-policy, per-role top-rank learning groups.
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 8
+  # Challenger-only bounded repair nursery.
+  refinement:
+    max_attempts: 3
+    max_depth: 2
+  # Atomic live status and artifact-only plots.
+  reporting:
+    status_every_verifications: 25
+    plots_every_epochs: 1
+  # Total epoch plan capacity. 20 leaves room for paired reservations, one K=8
+  # learning group, and coverage of all three roles.
+  workers:
+    max_inflight_branches: 20

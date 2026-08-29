@@ -238,7 +238,7 @@ Make sure to /think step by step, first give your strategy between <strategy> an
                 for _ in range(self.num_seed_states)]
 
     # ------------------------------------------------------------------
-    # EVOLVE saved-answer hooks. These do not participate in legacy scoring.
+    # EVOLVE saved-answer hooks used by the independent common verifier.
     def _answer_arrays(self, candidate: Any) -> Tuple[np.ndarray, np.ndarray]:
         if isinstance(candidate, Mapping):
             schema_version = candidate.get("schema_version")

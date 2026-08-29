@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 def load_epoch_summaries(run_dir: Path) -> List[Dict[str, Any]]:
     summaries = []
-    for path in sorted(Path(run_dir).glob("step*.summary.json")):
+    for path in sorted(Path(run_dir).glob("step*/step*.summary.json")):
         try:
             summaries.append(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError):

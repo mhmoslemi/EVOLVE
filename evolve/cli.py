@@ -26,14 +26,25 @@ def build_dry_plan(config: EvolveConfig, config_hash: str) -> Dict[str, Any]:
 
     settings = config.evolve
     inflight = settings.workers.max_inflight_branches
-    audit_slots = int(math.ceil(inflight * settings.budget.audit_fraction))
-    refinement_slots = int(
-        math.ceil(inflight * settings.budget.refinement_fraction)
-    )
-    harness_slots = int(math.ceil(inflight * settings.harnesses.trial_fraction))
+
+    def slots(fraction: float) -> int:
+        return int(math.ceil(inflight * fraction)) if fraction > 0.0 else 0
+
+    def paired_slots(fraction: float) -> int:
+        requested = slots(fraction)
+        return requested if requested % 2 == 0 else requested + 1
+
+    audit_slots = paired_slots(settings.budget.audit_fraction)
+    refinement_slots = paired_slots(settings.budget.refinement_fraction)
+    harness_slots = paired_slots(settings.harnesses.trial_fraction)
+    empty_cell_slots = slots(settings.archive.empty_cell_fraction)
     exploration_slots = int(
         math.ceil(inflight * settings.scheduler.global_exploration_fraction)
     )
+    no_memory_slots = min(
+        audit_slots, slots(settings.audits.no_memory_fraction)
+    )
+    production_slots = inflight - audit_slots - refinement_slots - harness_slots
     return {
         "schema_version": 1,
         "engine": "evolve",
@@ -59,16 +70,32 @@ def build_dry_plan(config: EvolveConfig, config_hash: str) -> Dict[str, Any]:
             "audits": audit_slots,
             "refinement": refinement_slots,
             "harness_calibration": harness_slots,
+            "empty_or_under_tested_cells": empty_cell_slots,
             "global_exploration": exploration_slots,
             "every_role": len(settings.roles.enabled),
-            "no_memory_audits": (
-                1 if settings.audits.no_memory_fraction > 0.0 else 0
-            ),
+            "no_memory_audits": no_memory_slots,
         },
+        "production_branch_slots": production_slots,
         "posterior": settings.scheduler.posterior,
         "learning_objective": settings.learning.objective,
         "learning_group_k": settings.learning.group_k,
         "top_m": settings.learning.top_m,
+        "model": {
+            "name": config.model_name,
+            "training_backend": config.backend,
+            "generation_backend": config.generation_backend,
+            "training_load_in_4bit": config.load_in_4bit,
+            "lora_rank": config.lora_rank,
+        },
+        "resources": {
+            "gpu_type": config.gpu_type,
+            "generation_gpu_ids": list(config.gpu_ids),
+            "vllm_tensor_parallel_size": config.vllm_tensor_parallel_size,
+            "vllm_quantization": config.vllm_quantization,
+            "vllm_gpu_memory_utilization": config.vllm_gpu_memory_utilization,
+            "exclusive_evaluation_gpu_id": config.kernel_gpu_id,
+            "kernel_eval_isolation": config.kernel_eval_isolation,
+        },
         "model_loading": False,
         "writes_run_directory": False,
     }
