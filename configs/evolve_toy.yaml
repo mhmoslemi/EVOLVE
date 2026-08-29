@@ -1,0 +1,30 @@
+engine: evolve
+schema_version: 1
+problem: evolve_toy
+target: 0.0
+model_name: fixture/evolve-toy
+backend: hf
+generation_backend: hf
+max_seq_length: 512
+max_new_tokens: 128
+temperature: 1.0
+top_p: 1.0
+deterministic: true
+seed: 42
+sandbox_timeout_s: 2
+reward_workers: 2
+num_seed_states: 8
+gpu_ids: []
+num_gpus: 0
+evolve:
+  budget: {epochs: 2, verifier_calls: 64, audit_fraction: 0.15, refinement_fraction: 0.05}
+  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
+  roles: {enabled: [scout, mechanist, challenger]}
+  options: {max_horizon: 2, branch_budget: 8}
+  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
+  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
+  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 2}
+  learning: {objective: ordergrad, top_m: 1, group_k: 4}
+  refinement: {max_attempts: 2, max_depth: 2}
+  reporting: {status_every_verifications: 4, plots_every_epochs: 1}
+  workers: {max_inflight_branches: 4}

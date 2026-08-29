@@ -1,0 +1,39 @@
+engine: evolve
+schema_version: 1
+problem: gpu_mode
+problem_type: mla_decode_nvidia
+gpu_type: H200
+score_scale: 5000
+target: 1700
+task_yaml: examples/gpu_mode/lib/mla-decode/task.yml
+lib_dir: examples/gpu_mode/lib
+num_seed_states: 8
+sandbox_timeout_s: 1300
+kernel_timeout_s: 1200
+reward_workers: 1
+kernel_gpu_id: 2
+model_name: openai/gpt-oss-120b
+backend: hf
+generation_backend: hf
+max_seq_length: 32000
+max_new_tokens: 26000
+temperature: 1.0
+top_p: 1.0
+learning_rate: 4.0e-5
+kl_penalty_coef: 0.1
+gpu_ids: [0, 1]
+num_gpus: 2
+seed: 42
+deterministic: false
+evolve:
+  budget: {epochs: 50, verifier_calls: 5000, audit_fraction: 0.15, refinement_fraction: 0.05}
+  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
+  roles: {enabled: [scout, mechanist, challenger]}
+  options: {max_horizon: 3, branch_budget: 24}
+  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
+  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
+  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
+  learning: {objective: ordergrad, top_m: 1, group_k: 4}
+  refinement: {max_attempts: 3, max_depth: 2}
+  reporting: {status_every_verifications: 10, plots_every_epochs: 1}
+  workers: {max_inflight_branches: 8}

@@ -1,0 +1,33 @@
+engine: evolve
+schema_version: 1
+problem: ac1
+problem_type: ac1
+target: 1.503
+budget_s: 1000
+num_seed_states: 8
+sandbox_timeout_s: 1100
+model_name: openai/gpt-oss-120b
+backend: hf
+generation_backend: hf
+max_seq_length: 32000
+max_new_tokens: 26000
+temperature: 1.0
+top_p: 1.0
+learning_rate: 4.0e-5
+kl_penalty_coef: 0.1
+gpu_ids: [0, 1, 2, 3, 4, 5, 6, 7]
+num_gpus: 8
+seed: 42
+deterministic: false
+evolve:
+  budget: {epochs: 50, verifier_calls: 25000, audit_fraction: 0.15, refinement_fraction: 0.05}
+  archive: {elites_per_cell: 3, empty_cell_fraction: 0.10}
+  roles: {enabled: [scout, mechanist, challenger]}
+  options: {max_horizon: 4, branch_budget: 64}
+  harnesses: {trial_fraction: 0.05, active_versions: [baseline_v1]}
+  scheduler: {posterior: zero_inflated_tail, global_exploration_fraction: 0.10}
+  audits: {no_memory_fraction: 0.05, min_pairs_for_promotion: 5}
+  learning: {objective: ordergrad, top_m: 1, group_k: 8}
+  refinement: {max_attempts: 3, max_depth: 2}
+  reporting: {status_every_verifications: 25, plots_every_epochs: 1}
+  workers: {max_inflight_branches: 16}
