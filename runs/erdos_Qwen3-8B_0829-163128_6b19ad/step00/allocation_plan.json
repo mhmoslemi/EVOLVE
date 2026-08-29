@@ -1,0 +1,19 @@
+{
+  "epoch": 0,
+  "planned_arms": [],
+  "portfolio_version": "gaussian_copula_joint_max_v1",
+  "posterior_version": "zero_inflated_tail_v1",
+  "reservation_slots": {
+    "audit_branch_slots": 4,
+    "empty_cell_slots": 2,
+    "global_exploration_slots": 2,
+    "harness_trial_slots": 2,
+    "no_memory_audit_slots": 1,
+    "refinement_slots": 2,
+    "remaining_production_slots": 5,
+    "role_guaranteed_slots": 3,
+    "total_inflight": 20
+  },
+  "reservations_version": "epoch_reservations_v1",
+  "seed": 9215976994550618770
+}

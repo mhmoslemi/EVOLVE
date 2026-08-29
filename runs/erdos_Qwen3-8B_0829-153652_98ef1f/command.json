@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--config",
+    "configs/erdos.yaml"
+  ],
+  "schema_version": 1
+}

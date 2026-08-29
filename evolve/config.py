@@ -492,8 +492,14 @@ class EvolveConfig:
     sandbox_timeout_s: float = 30.0
     kernel_timeout_s: Optional[float] = None
     reward_workers: int = 0
-    gpu_type: str = "H100"
+    # Scientific GPU-mode benchmarks must pin this explicitly. Ordinary
+    # problems leave it as auto because their verifier is hardware-independent.
+    gpu_type: str = "auto"
     gpu_ids: Tuple[int, ...] = (0,)
+    # Optional physical device dedicated to the HF/Unsloth barrier-learning
+    # phase. None preserves the legacy behavior where training may use every
+    # authoritative generation GPU. An explicit value enables split placement.
+    training_gpu_id: Optional[int] = None
     num_gpus: int = 1
     kernel_gpu_id: Optional[int] = None
     kernel_eval_isolation: bool = True
@@ -515,6 +521,29 @@ class EvolveConfig:
     @property
     def method_incomplete(self) -> bool:
         return self.evolve.roles.method_incomplete
+
+    @property
+    def runtime_gpu_ids(self) -> Tuple[int, ...]:
+        """Physical GPUs visible to the controller, in stable logical order."""
+
+        if self.training_gpu_id is None:
+            return self.gpu_ids
+        return tuple(dict.fromkeys((self.training_gpu_id, *self.gpu_ids)))
+
+    @property
+    def training_device_index(self) -> Optional[int]:
+        """Logical CUDA index for explicit single-device role learning."""
+
+        if self.training_gpu_id is None:
+            return None
+        return self.runtime_gpu_ids.index(self.training_gpu_id)
+
+    @property
+    def vllm_device_indices(self) -> Tuple[int, ...]:
+        """Logical CUDA indices assigned to vLLM within runtime_gpu_ids."""
+
+        positions = {gpu_id: index for index, gpu_id in enumerate(self.runtime_gpu_ids)}
+        return tuple(positions[gpu_id] for gpu_id in self.gpu_ids)
 
     @property
     def problem_runtime_config(self) -> Mapping[str, Any]:
@@ -539,6 +568,7 @@ class EvolveConfig:
                 "reward_workers": self.reward_workers,
                 "gpu_type": self.gpu_type,
                 "gpu_ids": list(self.gpu_ids),
+                "training_gpu_id": self.training_gpu_id,
                 "num_gpus": self.num_gpus,
                 "kernel_gpu_id": self.kernel_gpu_id,
                 "kernel_eval_isolation": self.kernel_eval_isolation,
@@ -598,6 +628,10 @@ class EvolveConfig:
             "checkpoint_path": self.checkpoint_path,
             "evolve": _settings_dict(self.evolve),
         }
+        # Preserve hashes and resume compatibility for schema-v1 runs created
+        # before split training/generation placement was introduced.
+        if self.training_gpu_id is not None:
+            out["training_gpu_id"] = self.training_gpu_id
         for key, value in self.problem_config.items():
             if key not in out:
                 out[key] = _json_safe(value)
@@ -769,6 +803,7 @@ _COMMON_KEYS = {
     "reward_workers",
     "gpu_type",
     "gpu_ids",
+    "training_gpu_id",
     "num_gpus",
     "kernel_gpu_id",
     "kernel_eval_isolation",
@@ -839,6 +874,14 @@ def _optional_path(value: Any, name: str, cwd: Path) -> Optional[str]:
 
 def _validate_cross_section(config: EvolveConfig) -> None:
     e = config.evolve
+    gpu_problem = config.problem.lower() in {
+        "gpu_mode",
+        "kernel",
+        "kernel_engineering",
+        "trimul",
+        "mla_decode_nvidia",
+        "mla",
+    }
     reservations = (
         e.budget.audit_fraction
         + e.budget.refinement_fraction
@@ -856,9 +899,19 @@ def _validate_cross_section(config: EvolveConfig) -> None:
             "evolve.audits.no_memory_fraction cannot exceed budget.audit_fraction"
         )
 
-    if config.kernel_gpu_id is not None and config.kernel_gpu_id in config.gpu_ids:
+    shared_generation_eval = (
+        config.kernel_gpu_id is not None and config.kernel_gpu_id in config.gpu_ids
+    )
+    if shared_generation_eval and not (
+        gpu_problem
+        and config.num_gpus == 1
+        and config.training_gpu_id == config.kernel_gpu_id
+        and config.kernel_eval_isolation
+    ):
         raise EvolveConfigError(
-            "kernel_gpu_id is exclusive and must not appear in authoritative gpu_ids"
+            "kernel_gpu_id is exclusive; it may share a generation GPU only "
+            "in the explicit single-GPU sequential topology (one gpu_id, matching "
+            "training_gpu_id, and kernel_eval_isolation=true)"
         )
     if config.backend not in {"hf", "unsloth"} or config.generation_backend not in {"hf", "vllm"}:
         raise UnsupportedEvolveConfigError(
@@ -892,15 +945,12 @@ def _validate_cross_section(config: EvolveConfig) -> None:
                     "quantization; training load_in_4bit remains independent"
                 )
 
-    gpu_problem = config.problem.lower() in {
-        "gpu_mode",
-        "kernel",
-        "kernel_engineering",
-        "trimul",
-        "mla_decode_nvidia",
-        "mla",
-    }
     if gpu_problem:
+        if config.gpu_type.strip().lower() == "auto":
+            raise EvolveConfigError(
+                "gpu_mode requires an explicit gpu_type because benchmark "
+                "targets, prompts, fingerprints, and evidence are hardware-specific"
+            )
         if config.kernel_gpu_id is None:
             raise EvolveConfigError(
                 "gpu_mode EVOLVE runs require an exclusive kernel_gpu_id"
@@ -918,10 +968,16 @@ def _validate_cross_section(config: EvolveConfig) -> None:
                 "gpu_mode requires kernel_timeout_s so evaluation always runs "
                 "in a spawned, bounded child process"
             )
-        if config.gpu_ids and config.kernel_gpu_id <= max(config.gpu_ids):
+        shared_with_training = config.kernel_gpu_id == config.training_gpu_id
+        if (
+            config.gpu_ids
+            and not shared_with_training
+            and not shared_generation_eval
+            and config.kernel_gpu_id <= max(config.gpu_ids)
+        ):
             raise EvolveConfigError(
                 "kernel_gpu_id must be the last/highest allocated physical GPU; "
-                "all lower gpu_ids belong exclusively to generation/training"
+                "unless it shares the explicitly assigned training GPU"
             )
         if "task_yaml" not in config.problem_config:
             raise EvolveConfigError("gpu_mode requires problem key task_yaml")
@@ -939,7 +995,10 @@ def _config_from_mapping(
     raw = copy.deepcopy(dict(raw))
 
     if require_complete:
-        required = _COMMON_KEYS - {"config_hash"}
+        # training_gpu_id is an additive schema-v1 field. Its absence retains
+        # the original shared training/generation topology and must remain
+        # valid for completed-barrier resumes created before this field.
+        required = _COMMON_KEYS - {"config_hash", "training_gpu_id"}
         missing = required - set(raw)
         if missing:
             raise EvolveConfigError(
@@ -1072,8 +1131,14 @@ def _config_from_mapping(
         else _positive_number(kernel_timeout_raw, "kernel_timeout_s")
     )
     reward_workers = _int(raw.get("reward_workers", 0), "reward_workers", minimum=0)
-    gpu_type = _string(raw.get("gpu_type", "H100"), "gpu_type")
+    gpu_type = _string(raw.get("gpu_type", "auto"), "gpu_type")
     gpu_ids = parse_gpu_ids(raw.get("gpu_ids", [0]))
+    training_gpu_raw = raw.get("training_gpu_id")
+    training_gpu_id = (
+        None
+        if training_gpu_raw is None
+        else _int(training_gpu_raw, "training_gpu_id", minimum=0)
+    )
     declared_num_gpus = _int(raw.get("num_gpus", len(gpu_ids)), "num_gpus", minimum=0)
     num_gpus = len(gpu_ids)
     derivations: List[str] = []
@@ -1172,6 +1237,7 @@ def _config_from_mapping(
         reward_workers=reward_workers,
         gpu_type=gpu_type,
         gpu_ids=gpu_ids,
+        training_gpu_id=training_gpu_id,
         num_gpus=num_gpus,
         kernel_gpu_id=kernel_gpu_id,
         kernel_eval_isolation=kernel_eval_isolation,
@@ -1345,6 +1411,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--kernel-timeout-s", type=float, default=None)
     parser.add_argument("--reward-workers", type=int, default=None)
     parser.add_argument("--gpu-ids", default=None)
+    parser.add_argument("--training-gpu-id", type=int, default=None)
     parser.add_argument("--num-gpus", type=int, default=None)
     parser.add_argument("--kernel-gpu-id", type=int, default=None)
     parser.add_argument(
@@ -1450,6 +1517,7 @@ _TOP_LEVEL_CLI = {
     "kernel_timeout_s": "kernel_timeout_s",
     "reward_workers": "reward_workers",
     "gpu_ids": "gpu_ids",
+    "training_gpu_id": "training_gpu_id",
     "num_gpus": "num_gpus",
     "kernel_gpu_id": "kernel_gpu_id",
     "kernel_eval_isolation": "kernel_eval_isolation",
@@ -1544,6 +1612,7 @@ _RESUME_MUTABLE_ARGS = {
     "engine",
     "schema_version",
     "gpu_ids",
+    "training_gpu_id",
     "num_gpus",
     "kernel_gpu_id",
     "reward_workers",

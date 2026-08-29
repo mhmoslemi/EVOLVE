@@ -7,8 +7,8 @@ bounded refinement, and barrier-only max-seeking learning.
 
 ## Start here
 
-`run.sh` contains no hidden model or GPU settings. With no arguments it prints
-a model-free plan for the CPU toy configuration:
+Set `PROBLEM`, `ACTION`, and the ordered `AVAILABLE_GPUS` list at the top of
+`run.sh`. With no arguments, the launcher applies those settings:
 
 ```sh
 sh run.sh
@@ -30,22 +30,39 @@ sh run.sh --resume /absolute/path/to/runs/RUN_NAME --num-steps 150
 ```
 
 `--num-steps` is a compatibility spelling for the total target epoch count.
-Use `EVOLVE_PYTHON=/path/to/python` to choose an interpreter. GPU visibility is
-controlled by the YAML `gpu_ids` field. Do not provide a contradictory
-`CUDA_VISIBLE_DEVICES` value.
+Use `EVOLVE_PYTHON=/path/to/python` to choose an interpreter. Explicit command
+line arguments bypass the simple settings block, so advanced/resume commands
+keep their saved or explicit topology.
 
-For vLLM, EVOLVE starts one model sharded across all `gpu_ids`, and requires
-`vllm_tensor_parallel_size == len(gpu_ids)`. HF or Unsloth is loaded only for
-barrier learning; it is released before vLLM starts, and vLLM is shut down
-before learning resumes. `load_in_4bit` applies only to the HF/Unsloth training
-loader and is never forwarded to vLLM. A pre-quantized BitsAndBytes checkpoint
-is rejected with multi-GPU tensor parallelism; use a native/MXFP4 base there.
+`AVAILABLE_GPUS="0"` shares one GPU sequentially. For ordinary scientific
+problems, the first ID is used for HF/Unsloth learning and every remaining ID
+forms the vLLM tensor-parallel set; their CPU verifiers reserve no GPU. Only
+GPU-mode problems reserve an evaluation device: the last ID when three or more
+are available, or the training device with serialized evaluation when one or
+two are available. Do not provide a contradictory `CUDA_VISIBLE_DEVICES` value.
+
+Before a real run imports the model runtime, EVOLVE prints a resolved startup
+banner covering the model, sampling, role-LoRA learning, GPU placement, search
+budget, reservations, and reproducibility settings. Validation and dry-plan
+commands remain machine-readable JSON without the banner.
+
+For vLLM, EVOLVE starts one model sharded across all generation `gpu_ids`, and
+requires `vllm_tensor_parallel_size == len(gpu_ids)`. An explicit
+`training_gpu_id` pins the HF/Unsloth backbone to that one device. HF/Unsloth is
+released before vLLM starts, and vLLM is shut down before learning resumes.
+`load_in_4bit` applies only to the HF/Unsloth training loader and is never
+forwarded to vLLM. A pre-quantized BitsAndBytes checkpoint is rejected with
+multi-GPU tensor parallelism; use a native/MXFP4 base there.
 `vllm_quantization` is the independent inference setting; the gpt-oss examples
 use `auto` so vLLM reads checkpoint-native MXFP4.
 
-Kernel configurations reserve the last/highest physical GPU as
-`kernel_gpu_id`. It is excluded from generation visibility and exposed only to
-the isolated, spawned, serial benchmark process. H100 is the default GPU type.
+Kernel configurations normally reserve the last/highest physical GPU as
+`kernel_gpu_id`. With two GPUs it may share the training GPU while vLLM uses the
+other device. With one GPU, EVOLVE shuts down the model phase and releases its
+CUDA allocations before each isolated, spawned benchmark; this is safe but
+incurs model-reload overhead. GPU-mode YAMLs must declare the real `gpu_type`
+because benchmark targets and scientific evidence depend on the hardware.
+Other problems default to `auto`; their CPU verifiers are hardware-independent.
 
 Install the GPU runtime overlay only inside a CUDA/PyTorch environment that
 matches the machine:

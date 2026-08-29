@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--config",
+    "configs/gpu_mode_trimul.yaml"
+  ],
+  "schema_version": 1
+}

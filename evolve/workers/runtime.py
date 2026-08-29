@@ -64,11 +64,12 @@ class LiveEvolveRuntime:
         if config.num_gpus < 1:
             raise RuntimeError("a live EVOLVE run requires at least one generation GPU")
 
-        requested_mask = ",".join(str(item) for item in config.gpu_ids)
+        requested_mask = ",".join(str(item) for item in config.runtime_gpu_ids)
         existing_mask = os.environ.get("CUDA_VISIBLE_DEVICES")
         if existing_mask is not None and existing_mask != requested_mask:
             raise RuntimeError(
-                "CUDA_VISIBLE_DEVICES disagrees with authoritative config gpu_ids: "
+                "CUDA_VISIBLE_DEVICES disagrees with the resolved training/generation "
+                "GPU topology: "
                 f"{existing_mask!r} != {requested_mask!r}"
             )
         os.environ["CUDA_VISIBLE_DEVICES"] = requested_mask
@@ -119,6 +120,7 @@ class LiveEvolveRuntime:
             import torch
 
             if torch.cuda.is_available():
+                torch.cuda.synchronize()
                 torch.cuda.empty_cache()
                 torch.cuda.ipc_collect()
         except (ImportError, RuntimeError):
@@ -326,6 +328,15 @@ class LiveEvolveRuntime:
 
         evaluated: dict[str, Any] = {}
         resources = self.problem.resource_requirements()
+
+        # A one-GPU kernel run is exclusive in time rather than by a dedicated
+        # physical device. Tear down the proposing model before the spawned
+        # benchmark process starts; the next branch lazily restores its phase.
+        if resources.exclusive_gpu:
+            if self.config.kernel_gpu_id in self.config.gpu_ids:
+                self._unload_vllm()
+            if self.config.kernel_gpu_id == self.config.training_gpu_id:
+                self._unload_hf()
 
         def extract_answer(response_text: str) -> Any:
             if "payload" not in evaluated:

@@ -1,0 +1,62 @@
+{
+  "config_hash": "30ba4aff7e719301783f7578bc5e198316dc0b8b87fb2720614d6a99e8651e17",
+  "config_schema_version": 1,
+  "created_at": "2026-08-29T19:36:00.098176Z",
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "d727854f7840bd1d4924f1b0d385b448cc5843d3",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "H100",
+      "physical_id": 0,
+      "purpose": "tensor_parallel_generation_and_barrier_learning"
+    },
+    {
+      "gpu_type": "H100",
+      "physical_id": 1,
+      "purpose": "exclusive_evaluation"
+    }
+  ],
+  "host": {
+    "hostname": "kn169",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6442Y-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "training_backend": "hf",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "run_id": "run:9e06bf3f4fa7632a5a6289e653f22123e2e3ec33a2857e5a9d8164b92bd2acb6",
+  "run_name": "gpu_mode_Qwen3-Coder-30B-A3B-Instruct_0829-153559_7e805f",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "30ba4aff7e719301783f7578bc5e198316dc0b8b87fb2720614d6a99e8651e17",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "exclusive_evaluation_gpu_id": 1,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 12,
+    "tensor_parallel_size": 1,
+    "vllm_quantization": "auto"
+  }
+}

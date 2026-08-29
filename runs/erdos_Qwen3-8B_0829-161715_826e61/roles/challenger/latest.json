@@ -1,0 +1,6 @@
+{
+  "adapter": "adapter_epoch000",
+  "epoch": 0,
+  "logical_adapter_hash": "8a36191f0856b8215a582f162db3d09c46a01ec5953792365e42bd3ea5e7c8ed",
+  "optimizer": "optimizer_epoch000.pt"
+}

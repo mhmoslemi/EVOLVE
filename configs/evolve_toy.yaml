@@ -28,7 +28,6 @@ learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
 gen_micro_batch: 1
 # No GPUs are used. These vLLM fields are inactive while generation_backend=hf.
-gpu_type: H100
 gpu_ids: []
 num_gpus: 0
 vllm_tensor_parallel_size: 0

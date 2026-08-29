@@ -9,8 +9,12 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import math
+import os
 import sys
+import textwrap
+import warnings
 from typing import Any, Dict, Optional, Sequence
 
 from .config import EvolveConfig, EvolveConfigError, load_evolve_config
@@ -90,6 +94,8 @@ def build_dry_plan(config: EvolveConfig, config_hash: str) -> Dict[str, Any]:
         "resources": {
             "gpu_type": config.gpu_type,
             "generation_gpu_ids": list(config.gpu_ids),
+            "training_gpu_id": config.training_gpu_id,
+            "runtime_visible_gpu_ids": list(config.runtime_gpu_ids),
             "vllm_tensor_parallel_size": config.vllm_tensor_parallel_size,
             "vllm_quantization": config.vllm_quantization,
             "vllm_gpu_memory_utilization": config.vllm_gpu_memory_utilization,
@@ -110,6 +116,165 @@ def _print_json(value: Dict[str, Any]) -> None:
             sort_keys=True,
             indent=2,
         )
+    )
+
+
+def format_startup_banner(
+    config: EvolveConfig, metadata: Dict[str, Any], *, width: int = 100
+) -> str:
+    """Render the resolved real-run hyperparameters before model loading."""
+
+    width = max(72, width)
+    inner = width - 2
+    label_width = 16
+    value_width = inner - label_width - 5
+    lines = ["╭" + "─" * inner + "╮"]
+    lines.append("│" + " EVOLVE · VERIFIED SCIENTIFIC SEARCH ".center(inner) + "│")
+
+    def section(title: str) -> None:
+        marker = f" {title} "
+        left = 2
+        right = inner - left - len(marker)
+        lines.append("├" + "─" * left + marker + "─" * right + "┤")
+
+    def row(label: str, value: Any) -> None:
+        rendered = str(value)
+        wrapped = textwrap.wrap(
+            rendered,
+            width=value_width,
+            break_long_words=False,
+            break_on_hyphens=False,
+        ) or [""]
+        for index, part in enumerate(wrapped):
+            shown_label = label if index == 0 else ""
+            body = f"  {shown_label:<{label_width}} {part:<{value_width}}  "
+            lines.append("│" + body + "│")
+
+    mode = str(metadata.get("mode", "fresh"))
+    if mode == "resume":
+        mode = f"resume · {metadata.get('resume_dir', '?')}"
+    problem = config.problem
+    if config.problem_type:
+        problem += f" / {config.problem_type}"
+    config_hash = str(metadata.get("config_hash", "?"))
+    if len(config_hash) > 16:
+        config_hash = config_hash[:16] + "…"
+
+    section("RUN")
+    row("mode", mode)
+    row("problem", problem)
+    row("config", f"schema {config.schema_version} · {config_hash}")
+
+    section("MODEL & SAMPLING")
+    row("backbone", config.model_name)
+    row(
+        "backends",
+        f"training={config.backend} · generation={config.generation_backend} · "
+        f"HF 4-bit={config.load_in_4bit}",
+    )
+    row(
+        "tokens",
+        f"context={config.max_seq_length:,} · max_new={config.max_new_tokens:,} · "
+        f"micro_batch={config.gen_micro_batch}",
+    )
+    row(
+        "sampling",
+        f"temperature={config.temperature:g} · top_p={config.top_p:g} · "
+        f"thinking={config.thinking}",
+    )
+
+    section("ROLE ADAPTER LEARNING")
+    row("roles", ", ".join(config.evolve.roles.enabled))
+    row(
+        "LoRA",
+        f"rank={config.lora_rank} · alpha={config.lora_alpha} · "
+        f"dropout={config.lora_dropout:g} · target_modules={len(config.target_modules)}",
+    )
+    row(
+        "optimizer",
+        f"lr={config.learning_rate:g} · KL={config.kl_penalty_coef:g}",
+    )
+    row(
+        "objective",
+        f"{config.evolve.learning.objective} · top_m={config.evolve.learning.top_m} · "
+        f"group_k={config.evolve.learning.group_k}",
+    )
+
+    training = (
+        f"GPU {config.training_gpu_id}"
+        if config.training_gpu_id is not None
+        else f"shared generation pool {list(config.gpu_ids)}"
+    )
+    if config.kernel_gpu_id is None:
+        evaluation = "CPU verifier · no GPU reserved"
+    elif config.kernel_gpu_id in config.runtime_gpu_ids:
+        evaluation = f"GPU {config.kernel_gpu_id} · serialized model teardown"
+    else:
+        evaluation = f"GPU {config.kernel_gpu_id} · exclusive"
+    gpu_type = (
+        "auto · verifier is hardware-independent"
+        if config.gpu_type.strip().lower() == "auto"
+        else config.gpu_type
+    )
+
+    section("RESOURCES")
+    row("GPU type", gpu_type)
+    row("training", training)
+    row(
+        "vLLM",
+        f"GPUs={list(config.gpu_ids)} · TP={config.vllm_tensor_parallel_size} · "
+        f"memory={config.vllm_gpu_memory_utilization:.0%} · "
+        f"quantization={config.vllm_quantization}",
+    )
+    row("evaluation", evaluation)
+
+    section("SEARCH BUDGET")
+    row(
+        "totals",
+        f"epochs={config.evolve.budget.epochs} · "
+        f"verifier_calls={config.evolve.budget.verifier_calls:,} · "
+        f"seed_states={config.num_seed_states}",
+    )
+    row(
+        "branches",
+        f"inflight={config.evolve.workers.max_inflight_branches} · "
+        f"horizon≤{config.evolve.options.max_horizon} · "
+        f"branch_budget={config.evolve.options.branch_budget}",
+    )
+    row(
+        "reserves",
+        f"audit={config.evolve.budget.audit_fraction:.0%} · "
+        f"refinement={config.evolve.budget.refinement_fraction:.0%} · "
+        f"harness={config.evolve.harnesses.trial_fraction:.0%} · "
+        f"exploration={config.evolve.scheduler.global_exploration_fraction:.0%}",
+    )
+    row("reproducibility", f"seed={config.seed} · deterministic={config.deterministic}")
+    lines.append("╰" + "─" * inner + "╯")
+    return "\n".join(lines)
+
+
+def _configure_runtime_noise_filters() -> None:
+    """Set safe dependency defaults and hide known non-fatal chatter."""
+
+    os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+    os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+    # Recent vLLM releases enable FlashInfer sampling by default.  FlashInfer
+    # may JIT-compile that sampler during engine warmup and therefore require a
+    # full CUDA toolkit (nvcc), which GPU compute nodes do not necessarily
+    # expose.  vLLM's native sampler has no such startup requirement.  Keep an
+    # explicit environment setting authoritative for users who have nvcc and
+    # intentionally want FlashInfer.
+    os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+    logging.getLogger("torch.utils._pytree").setLevel(logging.ERROR)
+    warnings.filterwarnings(
+        "ignore",
+        message=r"Adapter default was active which is now deleted\..*",
+        category=UserWarning,
+        module=r"peft\.tuners\.tuners_utils",
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=r"You are sending unauthenticated requests to the HF Hub\..*",
     )
 
 
@@ -151,6 +316,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         return 0
 
+    print(format_startup_banner(config, metadata), flush=True)
+    _configure_runtime_noise_filters()
+
     # Imported only for a real run so validation remains CPU/model-free.  Only
     # the absent phase-9 module receives the in-progress message; an ImportError
     # raised *inside* that module is a real dependency/runtime failure and must
@@ -167,4 +335,4 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return int(engine.run())
 
 
-__all__ = ["build_dry_plan", "main"]
+__all__ = ["build_dry_plan", "format_startup_banner", "main"]

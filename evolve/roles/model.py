@@ -24,12 +24,17 @@ class HFBackbone:
         if tokenizer.pad_token_id is None:
             tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
+        training_device = self.config.training_device_index
         model_options = {
-            "torch_dtype": torch.bfloat16,
-            # One logical backbone may be sharded across every authoritative
-            # generation GPU. It is still a single model and a single set of
-            # three named role adapters, not one backbone per role/device.
-            "device_map": "auto" if self.config.num_gpus > 1 else {"": 0},
+            "dtype": torch.bfloat16,
+            # Explicit split placement keeps the one HF backbone entirely on
+            # the training device. Legacy configs retain their original
+            # generation-pool sharding behavior when training_gpu_id is absent.
+            "device_map": (
+                {"": training_device}
+                if training_device is not None
+                else ("auto" if self.config.num_gpus > 1 else {"": 0})
+            ),
             "trust_remote_code": True,
         }
         if self.config.load_in_4bit:
@@ -96,12 +101,16 @@ class UnslothBackbone:
                 "the installed PyTorch and CUDA versions"
             ) from exc
 
+        model_options = {}
+        if self.config.training_device_index is not None:
+            model_options["device_map"] = {"": self.config.training_device_index}
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.config.model_name,
             max_seq_length=self.config.max_seq_length,
             dtype=None,
             load_in_4bit=self.config.load_in_4bit,
             full_finetuning=False,
+            **model_options,
         )
         model = FastLanguageModel.get_peft_model(
             model,

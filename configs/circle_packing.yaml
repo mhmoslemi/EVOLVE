@@ -8,7 +8,7 @@ problem: circle_packing
 num_circles: 26
 target: 2.636
 num_seed_states: 8
-sandbox_timeout_s: 100
+sandbox_timeout_s: 300
 
 # Frozen backbone and isolated role-LoRAs.
 model_name: Qwen/Qwen3-8B
@@ -28,7 +28,6 @@ kl_penalty_coef: 0.1
 gen_micro_batch: 1
 
 # GPU 0 owns both phases sequentially: vLLM generation, then HF role learning.
-gpu_type: H100
 gpu_ids: [0]
 num_gpus: 1
 vllm_tensor_parallel_size: 1

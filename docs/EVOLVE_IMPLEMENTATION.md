@@ -42,8 +42,11 @@ Existing `runs/` evidence remains untouched.
 - HF and Unsloth training backends with optional training-only 4-bit loading,
   barrier phase-switching to a single tensor-parallel vLLM generation engine,
   and preflight rejection of unsupported multi-GPU pre-quantized BnB loading.
-- H100-default resource maps and a last/highest-GPU kernel evaluation lease
-  isolated from every generation and learning process.
+- Ordered launcher GPU topology with explicit training placement, vLLM device
+  selection, GPU-mode-only dedicated evaluation on the last device when
+  available, and serialized model teardown for a one-GPU kernel benchmark.
+- vLLM EngineArgs capability validation, including the vLLM 0.28 removal of
+  `swap_space` and its explicit `device_ids` split-placement interface.
 
 ## Earlier validation (before the backend/resource changes)
 
@@ -85,5 +88,8 @@ python -m pytest evolve/tests -q -p no:cacheprovider
 sh -n run.sh
 ```
 
-The commands above were not run after the backend/resource changes. Do not infer
-current CPU, vLLM, Unsloth, or GPU readiness from the earlier checks.
+`compileall`, shell syntax, configuration validation, dry plans for one/two/four
+GPU layouts, and installed-vLLM-0.28 argument compatibility have been checked.
+The full pytest gate remains outstanding because neither available local Python
+environment currently contains pytest. No live model, training, vLLM, or GPU
+benchmark smoke run was launched.

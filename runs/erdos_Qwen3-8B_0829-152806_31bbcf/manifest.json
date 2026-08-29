@@ -1,0 +1,57 @@
+{
+  "config_hash": "4c9b06cbb77369975db33c9893280695fac9a0cd5f08193351511992498eae52",
+  "config_schema_version": 1,
+  "created_at": "2026-08-29T19:28:07.016964Z",
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "d727854f7840bd1d4924f1b0d385b448cc5843d3",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "H100",
+      "physical_id": 0,
+      "purpose": "tensor_parallel_generation_and_barrier_learning"
+    }
+  ],
+  "host": {
+    "hostname": "kn111",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6338_CPU_@_2.00GHz-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "Qwen/Qwen3-8B",
+    "training_backend": "hf",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.4.6",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.11.0",
+    "transformers": "4.57.1"
+  },
+  "run_id": "run:ccc3488317b6e6572af7c5c00099018149d65591eb426fe3062ec5d95cf3d5ea",
+  "run_name": "erdos_Qwen3-8B_0829-152806_31bbcf",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "4c9b06cbb77369975db33c9893280695fac9a0cd5f08193351511992498eae52",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "exclusive_evaluation_gpu_id": null,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 20,
+    "tensor_parallel_size": 1,
+    "vllm_quantization": "auto"
+  }
+}

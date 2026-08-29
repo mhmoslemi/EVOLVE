@@ -7,5 +7,8 @@ transformers
 peft
 accelerate
 bitsandbytes
+# vLLM 0.28 imports Responses API NamespaceTool during offline LLM startup.
+# It is absent from older 2.x SDKs despite vLLM's currently broad >=2.0 bound.
+openai>=2.25.0,<3
 vllm
 unsloth

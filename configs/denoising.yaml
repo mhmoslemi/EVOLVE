@@ -31,7 +31,6 @@ gen_micro_batch: 1
 # GPUs 0-3 form ONE TP=4 vLLM engine and host Unsloth learning at barriers.
 # On a seven-H100 host, GPUs 4-6 are deliberately unassigned. GPT-OSS has 64
 # attention heads, so TP=7 is invalid; TP=4 is a supported exact partition.
-gpu_type: H100
 gpu_ids: [0, 1, 2, 3]
 num_gpus: 4
 vllm_tensor_parallel_size: 4

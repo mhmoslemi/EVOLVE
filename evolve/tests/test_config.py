@@ -240,6 +240,31 @@ def test_gpu_ids_are_authoritative_over_num_gpus(tmp_path):
         )
 
 
+def test_explicit_training_gpu_splits_runtime_device_placement(tmp_path):
+    cfg, resolved, metadata = _fresh(
+        tmp_path,
+        cli=("--training-gpu-id", "3", "--gpu-ids", "4,5"),
+    )
+
+    assert cfg.training_gpu_id == 3
+    assert cfg.gpu_ids == (4, 5)
+    assert cfg.runtime_gpu_ids == (3, 4, 5)
+    assert cfg.training_device_index == 0
+    assert cfg.vllm_device_indices == (1, 2)
+    assert resolved["training_gpu_id"] == 3
+    assert metadata["cli_overrides"]["training_gpu_id"] == 3
+
+
+def test_legacy_config_omits_optional_training_gpu_and_preserves_shared_layout(tmp_path):
+    cfg, resolved, _ = _fresh(tmp_path)
+
+    assert cfg.training_gpu_id is None
+    assert cfg.runtime_gpu_ids == cfg.gpu_ids
+    assert cfg.training_device_index is None
+    assert cfg.vllm_device_indices == (0, 1)
+    assert "training_gpu_id" not in resolved
+
+
 def test_num_gpus_cli_alone_expands_authoritative_ids(tmp_path):
     cfg, resolved, _ = _fresh(tmp_path, cli=("--num-gpus", "3"))
     assert cfg.gpu_ids == (0, 1, 2)
@@ -452,6 +477,21 @@ def test_gpu_problem_requires_real_paths_serial_verifier_and_exclusive_gpu(tmp_p
     )
     assert cfg.kernel_gpu_id == 1
     assert resolved["task_yaml"] == str(task.resolve())
+
+    shared, shared_resolved, _ = load_evolve_config(
+        [
+            "--config",
+            str(yaml_path),
+            "--training-gpu-id",
+            "0",
+            "--kernel-gpu-id",
+            "0",
+        ],
+        cwd=tmp_path,
+    )
+    assert shared.gpu_ids == (0,)
+    assert shared.training_gpu_id == shared.kernel_gpu_id == 0
+    assert shared_resolved["kernel_eval_isolation"] is True
 
     task.unlink()
     with pytest.raises(EvolveConfigError, match="task_yaml.*does not exist"):

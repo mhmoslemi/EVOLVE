@@ -518,26 +518,8 @@ class EvolveEngine:
             },
             package_versions=_package_versions(),
             host=_host_document(),
-            gpus=[
-                {
-                    "physical_id": gpu_id,
-                    "gpu_type": self.config.gpu_type,
-                    "purpose": "tensor_parallel_generation_and_barrier_learning",
-                }
-                for gpu_id in self.config.gpu_ids
-            ] + ([{
-                "physical_id": self.config.kernel_gpu_id,
-                "gpu_type": self.config.gpu_type,
-                "purpose": "exclusive_evaluation",
-            }] if self.config.kernel_gpu_id is not None else []),
-            worker_topology={
-                "max_inflight_branches": self.config.evolve.workers.max_inflight_branches,
-                "generation_backend": self.config.generation_backend,
-                "tensor_parallel_size": self.config.vllm_tensor_parallel_size,
-                "vllm_quantization": self.config.vllm_quantization,
-                "generation_gpu_ids": list(self.config.gpu_ids),
-                "exclusive_evaluation_gpu_id": self.config.kernel_gpu_id,
-            },
+            gpus=_gpu_manifest(self.config),
+            worker_topology=_worker_topology(self.config),
             seeds={"base_seed": self.config.seed},
             versions={"schema_version": self.config.schema_version, "config_hash": self.resolved_config.get("config_hash", "")},
             run_id=run_id,
@@ -587,28 +569,8 @@ class EvolveEngine:
             },
             package_versions=_package_versions(),
             host=_host_document(),
-            gpus=[
-                {
-                    "physical_id": gpu_id,
-                    "gpu_type": self.config.gpu_type,
-                    "purpose": "tensor_parallel_generation_and_barrier_learning",
-                }
-                for gpu_id in self.config.gpu_ids
-            ] + ([{
-                "physical_id": self.config.kernel_gpu_id,
-                "gpu_type": self.config.gpu_type,
-                "purpose": "exclusive_evaluation",
-            }] if self.config.kernel_gpu_id is not None else []),
-            worker_topology={
-                "max_inflight_branches": (
-                    self.config.evolve.workers.max_inflight_branches
-                ),
-                "generation_backend": self.config.generation_backend,
-                "tensor_parallel_size": self.config.vllm_tensor_parallel_size,
-                "vllm_quantization": self.config.vllm_quantization,
-                "generation_gpu_ids": list(self.config.gpu_ids),
-                "exclusive_evaluation_gpu_id": self.config.kernel_gpu_id,
-            },
+            gpus=_gpu_manifest(self.config),
+            worker_topology=_worker_topology(self.config),
             seeds={"base_seed": self.config.seed},
             versions={
                 "schema_version": self.config.schema_version,
@@ -2466,10 +2428,61 @@ def _host_document() -> Mapping[str, Any]:
     }
 
 
+def _gpu_manifest(config: EvolveConfig) -> List[Mapping[str, Any]]:
+    physical_ids = list(config.runtime_gpu_ids)
+    if config.kernel_gpu_id is not None and config.kernel_gpu_id not in physical_ids:
+        physical_ids.append(config.kernel_gpu_id)
+    entries: List[Mapping[str, Any]] = []
+    for gpu_id in physical_ids:
+        purposes = []
+        if config.training_gpu_id == gpu_id or (
+            config.training_gpu_id is None and gpu_id in config.gpu_ids
+        ):
+            purposes.append("barrier_learning")
+        if gpu_id in config.gpu_ids:
+            purposes.append("tensor_parallel_generation")
+        if config.kernel_gpu_id == gpu_id:
+            purposes.append(
+                "serialized_evaluation"
+                if gpu_id in config.runtime_gpu_ids
+                else "exclusive_evaluation"
+            )
+        entries.append(
+            {
+                "physical_id": gpu_id,
+                "gpu_type": config.gpu_type,
+                "purpose": "_and_".join(purposes),
+            }
+        )
+    return entries
+
+
+def _worker_topology(config: EvolveConfig) -> Mapping[str, Any]:
+    return {
+        "max_inflight_branches": config.evolve.workers.max_inflight_branches,
+        "generation_backend": config.generation_backend,
+        "tensor_parallel_size": config.vllm_tensor_parallel_size,
+        "vllm_quantization": config.vllm_quantization,
+        "training_gpu_id": config.training_gpu_id,
+        "generation_gpu_ids": list(config.gpu_ids),
+        "runtime_visible_gpu_ids": list(config.runtime_gpu_ids),
+        "exclusive_evaluation_gpu_id": config.kernel_gpu_id,
+        "evaluation_is_serialized_with_model_phase": (
+            config.kernel_gpu_id in config.runtime_gpu_ids
+            if config.kernel_gpu_id is not None
+            else False
+        ),
+    }
+
+
 def _environment_document() -> Mapping[str, Any]:
     return {
         key: os.environ[key]
-        for key in ("CUDA_VISIBLE_DEVICES", "PYTHONHASHSEED")
+        for key in (
+            "CUDA_VISIBLE_DEVICES",
+            "PYTHONHASHSEED",
+            "VLLM_USE_FLASHINFER_SAMPLER",
+        )
         if key in os.environ
     }
 
