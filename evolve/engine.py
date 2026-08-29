@@ -662,7 +662,10 @@ class EvolveEngine:
         problem = adapter.problem
         seed_branch_id = content_id("branch", {"kind": "seed", "run_id": state.run_id})
         archive = state.archive
-        for index, seed in enumerate(problem.seed_states()):
+        seeds = tuple(problem.seed_states())
+        admitted_count = 0
+        failures: List[str] = []
+        for index, seed in enumerate(seeds):
             candidate = seed.construction if seed.construction is not None else seed.code
             source_text = seed.code or json.dumps(candidate, sort_keys=True, default=str)
             source_hash = content_hash(source_text)
@@ -694,15 +697,29 @@ class EvolveEngine:
                     harness_id=content_id("harness", {"kind": "seed"}),
                     policy_snapshot_id=content_id("role_snapshot", {"kind": "seed"}),
                 )
-            except Exception:
+            except Exception as exc:
+                failures.append(f"seed {index}: {type(exc).__name__}: {exc}")
                 continue
             if not result.evidence.admitted or result.state is None:
+                failures.append(
+                    f"seed {index}: verifier rejected: "
+                    f"{result.evidence.failure_kind.value}: "
+                    f"{result.evidence.diagnostics.get('message', '')}"
+                )
                 continue
             archive = archive.ensure_cell(result.descriptor, force_empty_sampling=False)
             try:
                 archive, _decision = archive.offer(result.descriptor, proposal, result.state, result.evidence)
-            except ArchiveAdmissionError:
+            except ArchiveAdmissionError as exc:
+                failures.append(f"seed {index}: archive rejected: {exc}")
                 continue
+            admitted_count += 1
+        if admitted_count == 0:
+            detail = "; ".join(failures[:3]) or "problem returned no seed states"
+            raise EngineError(
+                f"{self.config.problem} bootstrap admitted no seeds "
+                f"({len(seeds)} declared): {detail}"
+            )
         return replace(state, archive=archive)
 
     def _confirm(

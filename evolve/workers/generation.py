@@ -26,6 +26,7 @@ GENERATION_JOB_SCHEMA_VERSION = 1
 GENERATION_PARAMETERS_VERSION = "generation_parameters_v1"
 MIN_PRODUCTION_ROLE_CAPACITY = 3
 _MAX_SEED = (1 << 63) - 1
+_MAX_VLLM_LORA_ID = (1 << 31) - 1
 
 
 def _distribute_jobs(prompts, counts, workers):
@@ -782,7 +783,8 @@ def _adapter_identity_payload(batch: GenerationBatch) -> dict:
 
 def _stable_positive_lora_id(adapter_key: str) -> int:
     digest = hashlib.sha256(adapter_key.encode("utf-8")).digest()
-    value = int.from_bytes(digest[:8], "big") & _MAX_SEED
+    # vLLM V1 materializes these IDs in an int32 request-state array.
+    value = int.from_bytes(digest[:4], "big") & _MAX_VLLM_LORA_ID
     return value or 1
 
 

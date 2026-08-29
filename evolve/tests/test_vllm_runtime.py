@@ -8,6 +8,7 @@ from evolve.workers.vllm_runtime import (
     VLLMRuntimeError,
     _build_engine_options,
     _engine_arg_names,
+    _positive_lora_id,
 )
 
 
@@ -33,6 +34,13 @@ def _config(*, split: bool = False):
         gpu_ids=generation_ids,
         vllm_device_indices=(1,) if split else (0,),
     )
+
+
+def test_vllm_lora_id_is_stable_positive_int32():
+    first = _positive_lora_id("role_snapshot:scout-epoch-1")
+
+    assert first == _positive_lora_id("role_snapshot:scout-epoch-1")
+    assert 1 <= first <= (1 << 31) - 1
 
 
 def test_vllm_028_omits_removed_swap_space_with_explicit_warning():

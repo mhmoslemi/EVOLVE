@@ -335,6 +335,10 @@ def test_adapter_ids_are_stable_and_separate_roles_and_epochs(tmp_path):
     assert len({value.hf_adapter_name for value in forward.values()}) == 4
     assert len({value.vllm_lora_name for value in forward.values()}) == 4
     assert len({value.vllm_lora_id for value in forward.values()}) == 4
+    assert all(
+        1 <= value.vllm_lora_id <= (1 << 31) - 1
+        for value in forward.values()
+    )
 
 
 def test_adapter_registry_rejects_path_and_numeric_aliases(tmp_path):

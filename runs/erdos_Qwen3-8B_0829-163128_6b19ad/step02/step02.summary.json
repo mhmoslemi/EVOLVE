@@ -1,0 +1,24 @@
+{
+  "archive_coverage": 0.0,
+  "arms_by_role": {},
+  "audit_pairs": 0,
+  "checkpoint": "checkpoint_epoch003.json",
+  "checkpoint_hash": "926d471f597a2198b219f5c0092c9ffcdbfe155794c5d867a92d831f01e901b1",
+  "committed_epoch": 3,
+  "confirmed_raw_score": null,
+  "confirmed_reward": null,
+  "costs": {},
+  "epoch": 2,
+  "planned_arms": 0,
+  "record_improved": false,
+  "reservation_slots": {
+    "audit_branch_slots": 4,
+    "empty_cell_slots": 2,
+    "global_exploration_slots": 2,
+    "harness_trial_slots": 2,
+    "refinement_slots": 2,
+    "remaining_production_slots": 5,
+    "role_guaranteed_slots": 3
+  },
+  "schema_version": 1
+}

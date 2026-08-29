@@ -1,0 +1,49 @@
+{
+  "archive_cells": 0,
+  "archive_coverage": 0.0,
+  "budget": {
+    "verifier_calls": {
+      "consumed": 0.0,
+      "limit": 4000.0,
+      "remaining": 4000.0
+    }
+  },
+  "causal_memory": {
+    "promoted": 0,
+    "records": 0
+  },
+  "confirmed_record": {
+    "cell_id": null,
+    "holder": null,
+    "internal_reward": null,
+    "raw_score": null,
+    "state_id": null
+  },
+  "epoch": 6,
+  "latest_epoch": {
+    "admitted": 0,
+    "audit_pairs": 0,
+    "branches": 0,
+    "infrastructure_aborted": 0
+  },
+  "note": "interrupted; last committed epoch preserved",
+  "roles": {
+    "challenger": {
+      "adapter_hash": "24b1a3cd4fc3b1b6b3937a0e9b4087fa8b2671209c14824e5f151175528e2372",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "mechanist": {
+      "adapter_hash": "54d22093c764a25ec06d3a914c719f4d5a4d17082998bb0a9b63d44e19a16a4c",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "scout": {
+      "adapter_hash": "32fdaf15935732615bca0a7c4a35a57e50d88d0a29b09a9bb9fa42ef877ba0cc",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    }
+  },
+  "run_id": "run:2936e35f272f4e5d40b4102736e3a5bcb0170b11bbe5d12d32482a92c12fe2c7",
+  "schema_version": 1
+}

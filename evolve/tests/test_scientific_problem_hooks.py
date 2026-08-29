@@ -147,6 +147,18 @@ def test_erdos_payload_is_full_and_ignores_claimed_bound():
     assert "claimed_c5" not in first
 
 
+def test_erdos_seed_construction_serializes_as_saved_answer():
+    problem = ErdosMinOverlap({"budget_s": 1, "num_seed_states": 1})
+    construction = problem.seed_states()[0].construction
+
+    payload = problem.serialize_answer(construction)
+    verified = problem.verify_answer_payload(payload)
+
+    assert payload["h_values"] == construction
+    assert payload["n_points"] == len(construction)
+    assert verified.admitted is True
+
+
 def test_erdos_payload_verifier_recomputes_c5_without_legacy_score(monkeypatch):
     problem = ErdosMinOverlap({"budget_s": 1})
     # Sum one is normalized to sum two for n=4. The raw payload remains intact.

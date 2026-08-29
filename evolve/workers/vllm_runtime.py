@@ -22,7 +22,9 @@ class VLLMRuntimeError(RuntimeError):
 
 def _positive_lora_id(snapshot_id: str) -> int:
     digest = hashlib.sha256(snapshot_id.encode("utf-8")).digest()
-    value = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    # vLLM 0.28 stores request LoRA IDs in a NumPy int32 array even though
+    # LoRARequest annotates the field as an unconstrained Python int.
+    value = int.from_bytes(digest[:4], "big") & ((1 << 31) - 1)
     return value or 1
 
 
@@ -169,6 +171,7 @@ class TensorParallelVLLM:
 
         self.config = config
         self.adapter_paths = paths
+        self._lora_id_owners: Dict[int, str] = {}
         engine_options = _build_engine_options(
             config, supported_engine_args=_engine_arg_names(EngineArgs)
         )
@@ -193,9 +196,16 @@ class TensorParallelVLLM:
 
         if role not in self.adapter_paths:
             raise VLLMRuntimeError(f"no vLLM adapter registered for role {role.value}")
+        lora_id = _positive_lora_id(role_snapshot_id)
+        existing_owner = self._lora_id_owners.get(lora_id)
+        if existing_owner is not None and existing_owner != role_snapshot_id:
+            raise VLLMRuntimeError(
+                "distinct role snapshots collided on the bounded vLLM LoRA ID"
+            )
+        self._lora_id_owners[lora_id] = role_snapshot_id
         lora_request = LoRARequest(
             f"evolve_{role.value}_{role_snapshot_id[-12:]}",
-            _positive_lora_id(role_snapshot_id),
+            lora_id,
             str(self.adapter_paths[role]),
         )
         sampling = SamplingParams(

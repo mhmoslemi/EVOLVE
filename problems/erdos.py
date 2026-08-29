@@ -309,13 +309,25 @@ Make sure to /think step by step, first give your strategy between <strategy> an
                 raise ValueError("Erdos answer problem identifier mismatch")
             h_value = candidate.get("h_values")
             n_value = candidate.get("n_points")
-        elif isinstance(candidate, (tuple, list)) and len(candidate) == 3:
+        elif (
+            isinstance(candidate, (tuple, list))
+            and len(candidate) == 3
+            and isinstance(candidate[0], (list, tuple, np.ndarray))
+        ):
             # candidate[1] is the proposal's claimed C5. It is deliberately
             # ignored; common verification recomputes C5 from h_values.
             h_value, _claimed_bound, n_value = candidate
+        elif isinstance(candidate, (list, tuple, np.ndarray)):
+            # SeedState.construction stores the scientific object directly,
+            # without the legacy run() return wrapper.  Its length is the
+            # authoritative discretization size; verification still recomputes
+            # the bound from the complete saved values.
+            h_value = candidate
+            n_value = len(candidate)
         else:
             raise ValueError(
-                "Erdos answer must be a payload or (h_values, claimed_c5, n_points)"
+                "Erdos answer must be a payload, an h_values sequence, or "
+                "(h_values, claimed_c5, n_points)"
             )
         if isinstance(n_value, bool) or not isinstance(n_value, Integral):
             raise ValueError("n_points must be an integer")
