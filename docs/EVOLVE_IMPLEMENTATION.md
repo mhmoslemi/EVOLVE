@@ -1,6 +1,7 @@
 # EVOLVE implementation status
 
-This is the live implementation checklist for the root `AGENTS.md` contract.
+This is the live implementation checklist for the active root `AGENTS.md`
+handoff and the original contract preserved verbatim as `AGENTS-old.md`.
 The repository is EVOLVE-only, and existing `runs/` directories are immutable
 user evidence unless a user explicitly resumes one. No run directory was
 modified during the 2026-08-29 source-audit pass.
@@ -70,9 +71,10 @@ explicit user authorization and was not launched.
 
 ## Decisions and invariants
 
-- The root `AGENTS.md` is the sole method specification. No PUCT, Elo,
-  self-likelihood feedback, observational success memory, or alternate engine
-  is used as an EVOLVE fallback.
+- The active root `AGENTS.md` requires the complete original method contract in
+  `AGENTS-old.md`; neither may be weakened. No PUCT, Elo, self-likelihood
+  feedback, observational success memory, or alternate engine is used as an
+  EVOLVE fallback.
 - Scientific state identity comes from the canonical saved answer payload.
   Proposal source hashes are diagnostics and never assign archive cells.
 - Every raw response, parsed proposal, evidence packet, full verifier capture,
@@ -205,7 +207,12 @@ Results:
 - recovery corruption matrix: malformed/future completion markers, unsafe
   checkpoint paths, checkpoint hash mismatch, incomplete/missing training-state
   companions, duplicate committed epochs, and the existing companion-content
-  corruption all fail closed.
+  corruption all fail closed;
+- exact server-smoke dry plan: Qwen/Qwen3-0.6B, real vLLM generation, HF 4-bit
+  learning, three roles, one shared ordered GPU, one epoch, horizon 1, K=4,
+  4096-call ceiling, and 12 inflight branches validated with config hash
+  `a2629cd0d88025db9e4cce2a687a33a335ce2b18ead790adf97bf0e1d78837a8`;
+  it reported `model_loading: false` and `writes_run_directory: false`.
 
 Failures found and fixed during these gates:
 
@@ -233,4 +240,5 @@ gates are complete. The remaining readiness gate is an explicitly authorized
 tiny Qwen/vLLM smoke run exercising the selected installed versions, adapter
 load/generation/training phase switch, and actual GPU topology. No real model,
 multi-GPU job, GPU benchmark, or scientific experiment is authorized by this
-checklist.
+checklist. The exact staged server procedure and pass criteria are in the active
+root `AGENTS.md`.

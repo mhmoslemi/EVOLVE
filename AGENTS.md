@@ -1,397 +1,595 @@
-# EVOLVE implementation contract
+# EVOLVE server handoff and active repository contract
 
-## Mission
+## Authority and required reading
 
-Build EVOLVE end to end while preserving problem YAMLs, streamed multi-worker generation, concurrent verification, complete artifacts, completed-barrier EVOLVE resume, reporting, and plots. This is not a PUCT facelift. Search verified scientific states, allocate by posterior record value, isolate three roles, treat harnesses as arms, learn memory from matched audits, and train homogeneous on-policy max-seeking groups. This repository is EVOLVE-only; never reinterpret existing runs.
+This is the active root instruction file for the repository. It is both the
+implementation handoff and the remaining-readiness procedure.
 
-## Scope and source of truth
+Before changing code or launching anything, read these files completely:
 
-This file governs the repository and is the method source of truth. Local instructions may add rules but not weaken these invariants.
+1. `AGENTS.md` — this active handoff;
+2. `AGENTS-old.md` — the original 397-line EVOLVE method and implementation
+   contract, preserved verbatim;
+3. `docs/EVOLVE_IMPLEMENTATION.md` — the live phase checklist, decisions,
+   schema versions, validation record, and remaining gaps;
+4. `README.md` and the selected `configs/*.yaml` before using `run.sh`.
 
-`evolve` is this specification. An arm chooses cell, role, option, harness, horizon, and cost. An epoch is a frozen cycle, a branch executes one arm, an audit pair is randomized and matched, and the record is the best confirmed admissible reward.
+Every scientific, persistence, configuration, resource, and compatibility
+invariant in `AGENTS-old.md` remains binding. This handoff records what is now
+implemented and gives the exact remaining GPU procedure; it does not relax or
+replace the method. If anything is ambiguous, preserve scientific validity,
+append-only evidence, deterministic resume, and user-owned runs.
 
-## Repository facts that must be preserved
+## Current completion statement
 
-Read the relevant implementation before editing it. The active entrypoint is `train_evolve.py`.
+EVOLVE phases 0 through 10 are implemented and pass the complete CPU/fake
+end-to-end suite. Phase 11 and the Definition of Done remain open only because
+the real Qwen/vLLM hardware smoke has not been run.
 
-- Preserve `run.sh`, final argument forwarding, and `train_evolve.py` as the EVOLVE entrypoint.
-- Reuse the typed problem contract in `problems/base.py` through tested EVOLVE adapters.
-- Keep problem registration in `problems/registry.py` and one YAML per problem or subtype in `configs/`.
-- Keep plotting and analysis readers schema-aware and artifact-only.
-- `runs/` contains user-owned evidence. Never edit, normalize, rename, or delete an existing run.
+Do not claim the project fully complete until the GPU smoke in this file passes
+and its evidence is recorded in `docs/EVOLVE_IMPLEMENTATION.md`. Do not claim
+that EVOLVE improves scientific discovery from architecture, unit tests, fake
+workers, or a runtime smoke test.
 
-The configuration precedence is a compatibility contract.
+The implementation baseline immediately before this handoff document was:
 
-1. Dataclass defaults
-2. The problem YAML
-3. The resumed run's resolved `config.json`
-4. Explicit CLI flags
+- branch: `master`;
+- commit: `aac8a5b`;
+- subject: `feat(evolve): harden runtime and complete CPU readiness gates`;
+- date of recorded validation: 2026-08-29;
+- validation host: macOS, Python 3.11, CPU-only fixtures and fake workers.
 
-The last layer wins. `gpu_ids` remains authoritative. A resume must use the saved method and schema unless the user explicitly requests a supported migration.
+The commit containing this handoff will naturally be newer. On the server,
+confirm that both `AGENTS.md` and `AGENTS-old.md` arrived in the same pulled
+commit before using the instructions below.
 
-The current run invariant also remains in force. Save every rendered prompt, raw response, parsed candidate, verifier result, invalid attempt, duplicate, repair, and pruned proposal before any gradient update that consumes it.
+## Repository contract that must remain intact
 
-## Non-negotiable EVOLVE method
+- This repository is EVOLVE-only. Never introduce a hidden legacy, PUCT, Elo,
+  LLM-judge, or self-likelihood fallback.
+- `train_evolve.py` is the active entrypoint. `run.sh` must keep forwarding its
+  final `"$@"` unchanged.
+- Configuration precedence is defaults, problem YAML, resumed resolved config,
+  then explicit CLI flags. The final layer wins. `gpu_ids` is authoritative.
+- Keep the typed problem API in `problems/base.py`, registration in
+  `problems/registry.py`, and the eight existing YAMLs in `configs/`.
+- Never edit, normalize, rename, delete, or backfill an existing directory in
+  `runs/`. A new smoke must create a new run. Resume only a run explicitly
+  named with `--resume`.
+- Preserve all legacy compatibility files and readers, existing problem
+  implementations, multi-worker generation, concurrent verification,
+  completed-barrier resume, status, best-answer mirrors, and plotting tools.
+- Persist rendered prompts, raw responses, parsed proposals, verifier attempts,
+  invalids, duplicates, refinements, audit assignments, and learning inputs
+  before any consumer or gradient update uses them.
+- Never launch a long model run, multi-GPU job, GPU scientific benchmark, or
+  expensive experiment without a new explicit user authorization and agreed
+  topology. The procedure below authorizes only a deliberately tiny smoke when
+  the user explicitly asks the server agent to execute it.
 
-### Search objective
+## Non-negotiable scientific invariants
 
-Optimize the expected final verified record under a finite compute budget. Average reward, token likelihood, archive rank, visit count, and novelty are supporting signals. None is the terminal objective.
+- The objective is the best independently verified admissible record under a
+  finite budget, not mean reward, likelihood, archive rank, novelty, or visits.
+- A scientific state is identified from its canonical saved answer payload and
+  independent evidence. Proposal source hashes are diagnostics only.
+- The global archive is descriptor-indexed quality diversity with append-only
+  provenance. Local option trees never replace the global scheduler.
+- There is one frozen backbone and exactly three isolated role LoRAs:
+  `scout`, `mechanist`, and `challenger`. They have separate adapter state,
+  optimizer state, RNG, retrieval view, transcripts, and learning groups.
+- An allocation arm freezes cell, role, executable option, harness version,
+  horizon, and cost class. Harnesses are versioned arms, never hidden judges.
+- Only the common verifier admits candidates or changes the record. Confirm a
+  possible record from the saved answer payload; never rerun stochastic source.
+- Infrastructure failure stays unresolved and is excluded from scientific
+  admission, gain tails, causal effects, and learning.
+- Allocation uses the hierarchical zero-inflated record-gain posterior and a
+  correlation-aware joint-maximum portfolio with mandatory audit, role,
+  empty/under-tested-cell, harness, and exploration reservations.
+- Production evidence may update the archive and scheduler but never causal
+  memory. Causal option memory is promoted only from closed, preassigned,
+  randomized matched audit pairs with conservative repeated support.
+- Barrier learning uses persisted homogeneous on-policy groups and exact
+  OrderGrad top-m-at-K, or the explicitly selected centered MaxPO objective.
+  Never mix roles, snapshots, contexts, options, harnesses, horizons, budgets,
+  generation settings, audit halves, production, or refinement channels.
+- Refinement is Challenger-only, minimal, bounded, blinded, TTL-limited, and
+  separated from production learning.
+- Every epoch freezes archive, threshold, scheduler, role adapters, memory,
+  options, harnesses, verifier, descriptors, fingerprints, and schemas. New
+  state becomes visible only after the atomic completed barrier.
+- `allocation_plan.json` is authoritative for partial-epoch replay. Resume from
+  the newest valid completed marker, reuse durable sample IDs, and never double
+  count. Malformed or conflicting durable evidence fails closed.
 
-At allocation time, freeze the current record threshold. Estimate the probability and magnitude of a descendant maximum exceeding that threshold over the arm's horizon and cost. Plan a portfolio of arms that maximizes expected record improvement while satisfying exploration, audit, role, harness, and resource reservations.
+## Implemented system map
 
-### Global archive and local trees
+The implementation is additive through `train_evolve.py` and `evolve/`:
 
-There is no global source-code tree. Separate an immutable source `Proposal` from the `VerifiedScientificState` identified by its captured answer payload and evidence. Maintain a descriptor-indexed quality-diversity archive and append-only provenance. Source hashes are diagnostics only. Each cell has distinct slots for confirmed quality champion, promising verified descendant value, and stepping stones chosen by novelty or uncertainty, plus forced empty and under-tested sampling. Fingerprints use verified structure, behavior, diagnostics, complexity, construction, and algorithmic family. LLM labels never define identity.
+- `evolve/config.py`, `types.py`, `ids.py`, `budget.py`, and `cli.py` provide
+  strict schema-v1 configuration, canonical IDs, immutable typed records,
+  idempotent budgets, validation, dry planning, and startup reporting.
+- `evolve/archive/` implements descriptors, fingerprints, cells, champions,
+  promising descendants, stepping stones, record tracking, and provenance.
+- `evolve/roles/` owns the one backbone, three named LoRAs, optimizers, RNGs,
+  role snapshots, adapter manifests, restore logic, and private working memory.
+- `evolve/options/` contains executable bounded state machines and frozen
+  branches; `evolve/harness/` contains immutable content-addressed harnesses.
+- `evolve/scheduler/` implements hierarchical admission/reliability/tail/cost
+  posteriors, correlation-aware Monte Carlo portfolio selection, horizon arms,
+  resource limits, and mandatory reservations.
+- `evolve/audits/` and `evolve/causal_memory/` implement persisted matched
+  assignments, effects, promotion, quarantine, drift, and no-memory controls.
+- `evolve/learning/` implements strict group construction, independently tested
+  OrderGrad/MaxPO objectives, per-role updates, masks, KL, and optimizer logs.
+- `evolve/refinement/` implements the bounded Challenger nursery and its
+  separate randomized audit/learning channel.
+- `evolve/workers/` implements deterministic generation jobs, exact sample
+  counts, bounded concurrency, generation-verification overlap, backpressure,
+  resource leases, HF OOM microbatch fallback, live HF/vLLM phase switching,
+  and graceful shutdown.
+- `evolve/verifier/` implements saved-payload verification, confirmation,
+  evidence identity, retries, bounded captures, subprocess isolation, and
+  failure classification.
+- `evolve/runio/` implements exclusive layouts, atomic writes, monotonic events,
+  immutable metadata, checkpoints, schema detection, and recovery.
+- `evolve/engine.py` composes bootstrap, frozen epoch planning, streamed branch
+  execution, audits, harness trials, refinement, record confirmation, learning,
+  atomic barriers, recovery, and compatibility artifacts.
+- `evolve/reporting/` and `evolve/viz/` provide live status, best answers, and
+  nine headless artifact-only plots. They never rerun candidate code by default.
+- `problems/evolve_toy.py` is the deterministic method-complete CPU fixture.
+  The original scientific problem implementations remain registered and intact.
 
-An option may build a horizon- and budget-bounded local tree rooted at its assigned archive candidate. Link every verified descendant into global provenance and offer it to the archive. Archive eviction never removes artifacts or lineage, and local tree statistics never replace the global scheduler.
+## Completed A-to-Z phases
 
-### Agent ecology and model ownership
+### Phase 0 — evidence compatibility
 
-Use one frozen LLM backbone and exactly three isolated role adapters.
+Strict EVOLVE schema detection, configuration precedence, immutable run
+attachment, rollout compatibility files, score direction, best tracking,
+checkpoint pointers, and the deterministic toy fixture are operational.
 
-- `scout` searches broadly, enters empty cells, and proposes structurally different approaches.
-- `mechanist` develops explanations, invariants, and focused improvements around promising mechanisms.
-- `challenger` attacks assumptions, constructs counterexamples, and performs bounded minimal repairs.
+### Phase 1 — foundations
 
-Each owns a LoRA, optimizer, RNG, working transcript, retrieval view, and learning groups. Never merge adapters or gradients, train the base, or mix roles in a batch. The verifier is independent. An adapter registry gives every generation job a stable role, adapter ID and version, policy snapshot, and seed. vLLM request IDs cannot alias. Sequential role activation is allowed if isolation is exact. Do not add multiple backbones to the baseline.
+Schema-v1 typed records, canonical content IDs, strict nested configuration,
+idempotent budgets/events, atomic persistence, initial/resume manifests,
+`--validate-config`, `--dry-plan`, and engine dispatch are operational.
 
-### Options and branches
+### Phase 2 — scientific evidence
 
-An option is a registered executable state machine, not a prompt label. Its versioned spec defines allowed roles and capabilities, initiation, per-step policy, stop rule, horizon, expected and hard costs, harness eligibility, prerequisites, and output contract. Before dispatch, a branch freezes its start candidate, record threshold, role and option versions, harness, verifier, memory view, horizon, budget, and seed. Its outcome is its maximum independently verified admissible descendant plus every intermediate candidate and cost. Return genuinely unused budget after early stop.
+Saved-payload verification, confirmation, descriptors, fingerprints,
+descriptor cells, local competition, confirmed record tracking, complete
+captures, and global provenance are operational.
 
-### Adaptive harness
+### Phase 3 — role isolation
 
-The harness is part of the allocation arm, not a hidden constant or final judge. A content-addressed `HarnessSpec` versions instructions, tools, intermediate tests, scaffolding, and diagnostic feedback. Freeze each branch's assigned version. Option audits hold it fixed. Harness audits differ only in harness version while holding start, role, option, horizon, cost, policy, verifier, and generation settings fixed. Store harness effects and promote versions by conservative repeated audit evidence. Any behavior change creates a new version.
+Exactly three role adapters, independent logical optimizers/RNGs, stable policy
+snapshots, immutable adapter artifacts, restore, vLLM request separation,
+bounded signed-int32 LoRA IDs, and collision rejection are operational.
 
-Every candidate passes the same independent problem verifier. Harness-local scores may guide a branch but cannot admit a candidate or set the record. Do not pool incomparable harness scores without common-verifier calibration. Give harness trials a bounded budget, compare matched contexts where possible, log cost, validity, record gain, and failure mix, and promote only through an explicit barrier decision.
+### Phase 4 — options and harnesses
 
-### Independent verification
+Registered executable option state machines, initiation/stop rules,
+horizon-scaled hard costs, immutable branch specifications, intermediate
+evidence, content-addressed harnesses, and matched harness trials are
+operational.
 
-The common verifier alone controls admission and the record. Its immutable, content-hashed `EvidencePacket` records run, proposal, scientific-state, parent, branch, problem, verifier, harness, policy, and lineage IDs, flags and scores, uncertainty, descriptors and fingerprint, source hash, full bounded diagnostics, failure kind, resources, serialized answer payload, and timestamps.
+### Phase 5 — record allocation
 
-Infrastructure failure is not a low scientific score. Retry under a small budget, persist it unresolved, and exclude it from scientific admission and tail estimates, causal credit, and learning while still updating reliability and resource-risk models. Problems declare whether timeouts are scientific. Confirm possible records by verifying the saved answer payload, never by rerunning stochastic proposal code. Noisy problems use a lower confidence bound or robust repeats.
+Hierarchical admission, reliability, positive-gain tail and resource models,
+backoff, uncertain costs, correlated joint-max selection, homogeneous replicas,
+mandatory reservations, and reproducible allocation logs are operational.
 
-### Posterior allocation
+### Phase 6 — causal memory
 
-An allocation arm is
+Persisted randomization, matched option audits, common randomness, closed and
+aborted pairs, normalized effects, support/uncertainty, promotion, quarantine,
+drift, contextual retrieval, and permanent no-memory audits are operational.
 
-```text
-(cell_id, role, option_id, harness_version, horizon, cost_class)
+### Phase 7 — role learning
+
+Persisted exact-K homogeneous groups, complete same-role policy traces, token
+IDs/masks/log probabilities, exact OrderGrad and optional MaxPO, per-role
+gradient steps, KL, gradient norms, adapter hashes, and optimizer state are
+operational.
+
+### Phase 8 — refinement
+
+Challenger-only minimal repairs, fresh equal-cost controls, blinded verification,
+no re-entry, attempts/depth/TTL/cost bounds, failed-repair persistence, and
+separate refinement groups are operational.
+
+### Phase 9 — composition and recovery
+
+Frozen manifests, bounded asynchronous branch execution, durable arrival and
+verification records, authoritative partial plans, exact retry settlement,
+deterministic record confirmation, atomic barriers, role optimizer/RNG
+companions, graceful draining, and completed-marker recovery are operational.
+
+### Phase 10 — reporting
+
+Atomic live status, immutable best snapshots and pointer, compatibility best
+files, answer rendering, append-only archive/memory streams, and artifact-only
+record/archive/provenance/allocation/audit/role/posterior/failure/resource plots
+are operational for active and completed runs.
+
+### Phase 11 — readiness
+
+All CPU, fake end-to-end, concurrency, resume, corruption, artifact, plotting,
+and static gates pass. Only the real model/runtime boundary below remains.
+
+## Important compatibility and correctness fixes already present
+
+- `run.sh` accepts an ordered GPU list. The first GPU trains; remaining GPUs
+  run vLLM. GPU-mode evaluation uses the last GPU with three or more devices.
+  With one or two devices, sharing is serialized safely.
+- `run.sh` selects the explicitly requested/activated Python environment before
+  falling back to a project or discoverable Python, preventing the earlier
+  interpreter/NumPy mismatch.
+- vLLM 0.28 compatibility is implemented: unsupported `swap_space` is not sent;
+  the OpenAI schema requirement is pinned; FlashInfer sampling is disabled by
+  default when `nvcc` is unavailable; LoRA IDs fit signed int32; and collisions
+  fail instead of aliasing adapters.
+- The startup banner prints model, sampling, LoRA, topology, budgets, reserves,
+  and reproducibility settings before a real model import.
+- Ordinary CPU-verified problems default `gpu_type` to `auto`; GPU benchmark
+  problems require explicit real hardware identity.
+- Erdos bare seed constructions serialize correctly, eight seeds can populate
+  the archive, and total bootstrap rejection fails clearly instead of allowing
+  empty epochs.
+- Complete verifier-owned captures retain identity unless a retry index changes.
+- GPU-mode verification uses three bounded repeats, standard error, conservative
+  runtime, clean empty-log handling, and persisted exclusive-GPU identity.
+- The generic sandbox accepts legacy `none` as a fresh no-input temporary
+  workspace. Linux keeps `RLIMIT_AS`; macOS uses a process-group RSS watchdog.
+- Harness trial records have a JSON-safe projection.
+- Scheduler reservation satisfaction considers every label on an arm, so role,
+  learning, empty-cell, and exploration reservations can overlap correctly.
+- Allocation capacity validation now reports explicit reservation overflow.
+- Artifact-only allocation plotting suppresses only the known harmless
+  tight-layout warning.
+- The composed resume fixture uses enough verifier budget to avoid mistaking a
+  legitimate run-derived budget stop for a recovery failure.
+
+## Completed CPU and model-free validation
+
+These results were obtained after the implementation and fixes above:
+
+- complete suite: **349 passed in 12.10 seconds**;
+- skipped tests: **0**;
+- warnings: **0**;
+- compilation: passed;
+- POSIX `run.sh` syntax: passed;
+- `git diff --check`: passed;
+- all eight shipped YAMLs: **16/16** validate/dry-plan invocations passed;
+- problem registry audit: all YAMLs instantiate the expected problem/subtype,
+  expose every required scientific hook, and declare the expected resources;
+- expanded CLI/engine/sandbox boundary slice: **22 passed**;
+- completed-barrier resume was repeated three additional consecutive times in
+  5.34, 5.39, and 5.92 seconds.
+
+The complete suite command was:
+
+```sh
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /opt/homebrew/bin/python3.11 \
+  -m pytest evolve/tests -q -p no:cacheprovider
 ```
 
-Use a hierarchical sparse-data posterior. The first implementable baseline is a zero-inflated record-gain model.
+The bare `python` on the validation Mac was Python 2.7. Python 3.11 was selected
+explicitly. Pytest plugin auto-loading was disabled because an unrelated
+globally installed Hydra plugin crashed pytest startup; the EVOLVE suite does
+not require that plugin.
 
-- Use Beta-Binomial admission probability with backoff from exact arm through option-role, role, cell region, and global levels.
-- Given admission, model positive descendant-max gain over the frozen record by bounded empirical, Bayesian-bootstrap, threshold, or QoMax-style tails.
-- Predict tokens, wall time, verifier time, and scarce-device cost separately and with uncertainty.
-- Monte Carlo the joint portfolio objective `E[max(0, max_r Z_r - M)]`. Marginal value is the change in this joint maximum after adding an arm, not a sum of independent expected improvements. Model dependence using shared cell, fingerprint family, start, option family, and observed correlation.
+Coverage includes:
 
-Reserve randomized audits, every role, empty or under-tested cells, harness calibration, and global exploration first. Allocate the remainder by greedy or small-knapsack marginal expected record improvement subject to each resource. Recompute only at barriers.
+- config precedence, hashing, strict unknown-key/range rejection, resume
+  overrides, and model-free CLI behavior;
+- schema round-trips, canonical IDs, immutable typed state, unknown-field
+  preservation, and future-schema rejection;
+- idempotent budget/event persistence, torn tails, ownership, atomic writes,
+  exclusive run creation, and immutable metadata;
+- common-verifier identity, saved payloads, confirmation, timeouts,
+  infrastructure classification, descriptors, fingerprints, archive cells,
+  records, and provenance;
+- three-role isolation, adapter relocation/restore, optimizer/RNG state,
+  request non-aliasing, exact sample counts, worker-topology-independent seeds,
+  reversed completion routing, and HF/vLLM mocked non-leakage;
+- executable bounded options, immutable harnesses, record-gain posteriors,
+  reservations, correlation-aware portfolios, and reproducible plans;
+- randomized option/harness/refinement audits, causal effects, promotion,
+  quarantine, drift, no-memory controls, and separate refinement groups;
+- exact OrderGrad identities and homogeneous on-policy learning constraints;
+- fresh fake bootstrap/epoch, confirmed best publication, three concurrent
+  branch workers, homogeneous learning, audits/harness trials, graceful
+  shutdown, completed resume, and immutable old summaries;
+- partial-epoch crash and exact durable replay from the unchanged allocation
+  plan without changing the already durable sample;
+- malformed/future completion markers, unsafe checkpoint paths, checkpoint
+  hash mismatch, incomplete/missing/corrupt training companions, and duplicate
+  committed epochs all failing closed;
+- every JSON and nonblank JSONL artifact parsing, no leftover temporary files,
+  and all nine plots from both active-interrupted and completed-resumed runs;
+- disposable sandbox working directories, legacy filesystem policy, Python
+  socket denial, timeout, spawned-process-group cleanup, memory enforcement,
+  and bounded diagnostic capture;
+- live `run.sh` validation forwarding and every documented README command
+  parsing against the current CLI without creating or changing a run.
 
-Log sufficient statistics, hierarchy fallback, RNG seed, expected gain and cost, uncertainty, correlation penalty, reservations, and final choice so the plan reproduces exactly.
+No model was loaded, no vLLM server started, no CUDA kernel ran, no real
+training occurred, and no user-owned run was modified during these gates.
 
-Do not use raw historical maximum PUCT, archive-wide rank alone, or an LLM judge score as the EVOLVE scheduler.
+## Remaining GPU readiness gate
 
-### Causal option memory
+### Purpose
 
-Memory stores evidence about interventions, not attractive summaries of successful trajectories.
+The remaining gate must exercise the boundary that fakes cannot prove:
 
-Production updates the scheduler and archive but never establishes causal memory. Credit comes only from randomized matched audits sharing start candidate and cell, frozen threshold, role checkpoint, harness and verifier, horizon, resources, generation settings, and common randomness where valid. Persist assignment probability and the pair spec before execution. Compare the intervention with a registered matched continuation and close both sides before computing their normalized descendant-max difference.
+1. installed CUDA/PyTorch/Transformers/PEFT/bitsandbytes/vLLM/OpenAI-schema
+   compatibility;
+2. actual ordered GPU topology and `CUDA_VISIBLE_DEVICES` handling;
+3. creation and persistence of all three real role LoRAs;
+4. vLLM loading the one backbone and the correct role adapter per request;
+5. bounded signed-int32 vLLM LoRA IDs with no collision or role leakage;
+6. real generation followed by full vLLM shutdown and HF reload;
+7. at least one homogeneous OrderGrad role update with a durable optimizer;
+8. barrier checkpoint, status, best artifacts, and artifact-only plots;
+9. real adapter/optimizer/RNG restore on one short completed-barrier resume.
 
-Store pair effects. A memory record includes context, intervention, pair IDs, propensity, effect and uncertainty, support, recency, scope, contraindications, and lineage. Promote only after repeated support and positive conservative effect. Quarantine conflicting or sparse records, stratify drift, retrieve contextually without extra rollout budget, and permanently reserve no-memory audits.
+This is a runtime compatibility test, not a scientific experiment or benchmark.
+Use `evolve_toy`, `Qwen/Qwen3-0.6B`, one physical GPU, one fresh epoch, and one
+resumed epoch. Do not use `erdos`, `gpu_mode_*`, multiple GPUs, or a large model
+for this gate.
 
-Private role working memory may summarize the current branch, but it is ephemeral and cannot be promoted into causal option memory without audits.
+### Authorization boundary
 
-### Test-time learning
+Do not execute the GPU commands merely because this file exists. The server
+agent may run model-free preflight and dry-plan commands, but must wait until
+the user explicitly says to run the tiny GPU smoke. That permission does not
+authorize a multi-GPU run, a benchmark problem, a longer run, or dependency
+changes in a shared environment.
 
-Train at barriers only from persisted homogeneous on-policy groups matching role and policy snapshot, start cell or context, option, harness, horizon, cost, generation settings, frozen threshold, and production, audit, or refinement channel. Reject rather than mix roles, versions, budgets, audit halves, or refinement attempts. A `PolicyTrace` stores every role-policy prompt, response segment, token mask, log probability, and adapter hash. Branch log probability sums all same-role policy decisions, and descendant gain credits that complete trace while excluding tools, verifier text, and other-role tokens.
+### Server preflight
 
-Learn from branch descendant maxima using exact, independently tested OrderGrad for top-m-at-K. Pure-max mode may use exactly centered MaxPO. KL or entropy is explicit and secondary. Never improvise equations. Check the primary papers, enumerated distributions, centering identities, and finite-difference or Monte Carlo tests.
+Use the exact Python environment intended for the real run. If the environment
+is shared and packages need installation or upgrades, report that and obtain
+permission before mutating it. The overlay is
+`requirements/requirements-evolve-gpu.txt` and currently expects vLLM 0.28.x
+and `openai>=2.25.0,<3`.
 
-Update only the generating role. Record objective version, group members, advantages, masks, KL, gradient norm, optimizer step, and before and after adapter hashes. Save inputs before backward.
+```sh
+cd /absolute/path/to/TTT-small
+git status --short
+nvidia-smi
+/absolute/path/to/python -m pip check
+/absolute/path/to/python - <<'PY'
+import importlib.metadata as metadata
+import torch
 
-Self-likelihood feedback is not part of EVOLVE. Verifier diagnostics can guide allocation or enter bounded refinement, but learning from a repair requires an executed and independently verified improvement under the refinement protocol.
-
-### Bounded refinement nursery
-
-Invalid or nearly admissible candidates may enter a separate nursery. Challenger makes one minimal diagnostic-targeted change per attempt. Allow one to three attempts, depth at most two, fixed cost, strict TTL, one entry, and a separate cap. Every revision is a new candidate with blinded verification. Randomize eligible cases between refinement and equal-cost fresh continuation in a dedicated refinement-audit channel. Its paired effect may update causal evidence. Confirmed refinement traces use separate homogeneous role-learning groups and never enter production groups.
-
-Persist failed repairs. They are useful diagnostics but not negative causal option evidence unless placed in a valid audit.
-
-### Synchronization
-
-Use epoch barriers to prevent moving-target evidence.
-
-At epoch start, freeze archive, record threshold, scheduler, role adapters, causal memory, options, harnesses, verifier, descriptor function, cell map, fingerprint function, and reporting schema versions. Persist them in the manifest, branch specs, evidence, and checkpoint before dispatch. New mappings take effect only after a barrier.
-
-During the epoch, stream branch generation and verification with bounded backpressure. Append artifacts as they arrive, but do not expose new archive entries or learned weights to in-flight branches.
-
-Wait for or explicitly close every allocation, then atomically perform
-
-1. evidence finalization and record confirmation
-2. archive and provenance updates
-3. scheduler posterior updates
-4. completed audit effect updates and memory promotion decisions
-5. role-specific learning updates
-6. approved harness-state updates
-7. checkpoint and report publication
-
-Resume from the last barrier. Reuse already durable responses and evidence by sample ID, replay only missing IDs with identical versions and seeds, or mark them infrastructure-aborted. Never double count.
-
-## Target code organization
-
-Add a cohesive `evolve/` package. Keep root entrypoints and compatibility helpers small.
-
-```text
-train_evolve.py
-evolve/
-  config.py, types.py, ids.py, budget.py, engine.py, cli.py
-  archive/        cells, descriptors, fingerprints, provenance
-  roles/          registry, adapters, working_memory
-  options/        base, registry, builtins, branch
-  harness/        spec, registry
-  scheduler/      arms, posterior, portfolio, reservations
-  verifier/       evidence, service, confirmation
-  audits/         pairing, effects
-  causal_memory/  records, promotion, retrieval
-  learning/       groups, objectives, trainer
-  refinement/     nursery
-  workers/        generation, verification, resources
-  runio/          events, checkpoint, recovery, status
-  reporting/      console, best
-  viz/            record, archive, provenance, allocation, audits, roles
+for package in (
+    "torch", "transformers", "peft", "accelerate", "bitsandbytes",
+    "vllm", "openai", "pyyaml",
+):
+    print(f"{package}: {metadata.version(package)}")
+print(f"cuda_available: {torch.cuda.is_available()}")
+print(f"cuda_device_count: {torch.cuda.device_count()}")
+for index in range(torch.cuda.device_count()):
+    print(f"gpu[{index}]: {torch.cuda.get_device_name(index)}")
+PY
 ```
 
-Use small typed services and pure decisions, not another monolithic step. Adapt the problem verifier, worker stream, sandbox, and run I/O through typed boundaries.
+Stop before the smoke if `pip check` fails, CUDA is unavailable, no device is
+visible, the selected Python differs from the environment where packages were
+installed, vLLM is not 0.28.x, or OpenAI is older than 2.25. The OpenAI package
+is a schema dependency used internally by vLLM; the backbone remains Qwen.
 
-## Required typed records and invariants
+Optionally repeat the already-passing CPU gate on the Linux server before using
+the GPU:
 
-Define schema-versioned typed records for `Proposal`, `VerifiedScientificState`, `EvidencePacket`, `Descriptor`, `ArchiveCell`, `ProvenanceEdge`, `RoleSnapshot`, `OptionSpec`, `HarnessSpec`, `AllocationArm`, `BranchSpec`, `BranchOutcome`, `PolicyTrace`, `AuditPair`, `CausalMemoryRecord`, `LearningGroup`, `BudgetLedger`, and `EpochManifest`.
-
-IDs are stable and namespaced, using canonical content when identity survives resume. Never persist Python `hash()`.
-
-Runtime validation must enforce immutability after ID assignment, exact candidate and verifier references, confirmed-only record updates, higher-is-better internal reward with native `raw_score`, valid provenance endpoints, one frozen branch spec, idempotent resource-specific budget debits, scheduler updates only from closed eligible branches, paired preassigned audits, audit-backed promoted memory, persisted on-policy learning inputs, and append-only artifacts except documented pointers, status, plots, and compatibility best mirrors.
-
-Use JSON-safe enums and versions, validate reads, preserve unknown migrated fields, and reject unsupported future schemas.
-
-## Problem API evolution
-
-Do not break existing problem files in the first migration. Normalize `build_prompt(parent, memory="")` through an adapter, then add hooks such as
-
-```python
-describe_scientific_state(candidate, evidence) -> Descriptor
-scientific_fingerprint(candidate, evidence) -> str
-serialize_answer(candidate, evidence) -> JSONValue
-verify_answer_payload(payload, policy) -> EvidencePacket
-record_key(evidence) -> float
-confirm_record(candidate, evidence, policy) -> EvidencePacket
-normalize_gain(new_reward, threshold) -> float
-render_best(candidate, evidence, output_dir) -> list[str]
-harness_specs() -> list[HarnessSpec]
-resource_requirements() -> ResourceRequirements
-```
-
-Test-only adapters may derive a coarse verified-output descriptor, but must be marked method-incomplete. Production EVOLVE requires problem-defined scientific descriptors, fingerprints, answer serialization, and deterministic payload verification. Source text never assigns a cell.
-
-Adding a problem requires `problems/<name>.py`, registry aliases, a matching problem or subtype YAML, deterministic seed and verifier-direction tests, descriptor and fingerprint tests, a best-answer renderer or text fallback, and an explicit resource declaration.
-
-Never change process-wide working directories in a verifier. Pass declared CPU, memory, timeout, and GPU limits into actual execution and record observed resources. Prompt text is not sandbox enforcement. Keep isolation, unique temporary paths, process-group cleanup, and explicit network or filesystem policy versioned. Runtime benchmarks retain exclusive evaluation resources and generally `reward_workers: 1`.
-
-## Configuration and launch contract
-
-Keep one human-readable YAML per problem or problem subtype. Do not introduce Hydra or a second unrelated configuration stack. Add a strictly validated nested `evolve` section while keeping current problem keys and common CLI flags.
-
-An indicative configuration is
-
-```yaml
-engine: evolve
-
-evolve:
-  budget:
-    epochs: 100
-    verifier_calls: 50000
-    audit_fraction: 0.15
-    refinement_fraction: 0.05
-  archive:
-    elites_per_cell: 3
-    empty_cell_fraction: 0.10
-  roles:
-    enabled: [scout, mechanist, challenger]
-  options:
-    max_horizon: 4
-    branch_budget: 64
-  harnesses:
-    trial_fraction: 0.05
-    active_versions: [baseline_v1]
-  scheduler:
-    posterior: zero_inflated_tail
-    global_exploration_fraction: 0.10
-  audits:
-    no_memory_fraction: 0.05
-    min_pairs_for_promotion: 5
-  learning:
-    objective: ordergrad
-    top_m: 1
-    group_k: 8
-  refinement:
-    max_attempts: 3
-    max_depth: 2
-  reporting:
-    status_every_verifications: 25
-    plots_every_epochs: 1
-  workers:
-    max_inflight_branches: 16
-```
-
-This is a shape contract, not permission to hard-code values. Production baseline validates exactly `scout`, `mechanist`, and `challenger`; role subsets are test-only and method-incomplete. Reject unknown keys and invalid ranges before model loading, including sampling, budgets, group dimensions, GPU conflicts, paths, context, disk, and checkpoints.
-
-Write the requested config and an immutable resolved manifest after every default and runtime derivation. Include command, Git state, model and package versions, host, GPUs, worker topology, seeds, harness and verifier versions, and config hash. Runtime must match it. Preserve real JSON types rather than stringifying lists.
-
-Keep `run.sh` working for both fresh and resumed runs. Required interfaces are
-
-```bash
-sh run.sh
-sh run.sh --engine evolve --problem erdos --config configs/erdos.yaml
-sh run.sh --resume /absolute/path/to/runs/RUN_NAME
-sh run.sh --resume /absolute/path/to/runs/RUN_NAME --num-steps 150
-```
-
-Preserve final `"$@"` forwarding. `run.sh` calls `train_evolve.py`, and run metadata without an explicit `engine: evolve` declaration is rejected. Fresh defaults never become implicit resume overrides, especially backend, GPU IDs, or CUDA masks. A resume derives topology from its versioned effective config unless the user explicitly overrides a supported resource field, then writes a new config version and checkpoint hash without replacing the initial manifest. `--num-steps N` is a compatibility alias for total target epochs, not N additional epochs.
-
-Do not launch a real multi-GPU or long model run as part of ordinary implementation or testing. Such a run requires explicit user authorization and an agreed config.
-
-## Multi-worker and resource behavior
-
-Preserve persistent spawned generation workers and generation-verification overlap. Add per-job adapter selection, partition batches by role snapshot when required, raise vLLM LoRA capacity, and prove HF and vLLM adapter non-leakage. Do not create one base-model pool per role.
-
-- Every job includes allocation ID, branch step, role, adapter path and version, option, harness, policy snapshot, exact sample count, generation parameters, and deterministic seed.
-- `distribute_jobs` must still return exactly the requested number of samples across workers.
-- Stream results into verification immediately with bounded queues.
-- Backpressure generation when verifier or persistence queues are full.
-- A worker error is explicit infrastructure evidence and never silently mapped to a low scientific reward.
-- HF OOM recovery may reduce a worker's sticky microbatch, but may not change the logical rollout count.
-- vLLM adapter IDs and paths must not alias across roles or epochs.
-- Do not hold archive or scheduler locks while generating, verifying, plotting, judging, or writing large files.
-- Resource leases prevent concurrent use of an exclusive benchmark GPU.
-- Graceful shutdown drains durable writes, closes assignments, stops workers, and preserves the last valid checkpoint.
-
-Derive and persist seeds from run, epoch, allocation, branch step, sample, and role identity, independent of worker rank, completion order, and rescheduling. Log worker and microbatch topology as execution metadata.
-
-## Run directory and persistence contract
-
-Keep the recognizable top-level naming convention, but use seconds plus a short random run ID and an exclusive creation lock. Refuse to attach to a nonempty run unless `--resume` was explicit.
-
-```text
-runs/<problem>_<model>_<MMDD-HHMMSS>_<run-id>/
-```
-
-Evolve the contents without creating a disconnected second logging system.
-
-```text
-config.requested.yaml
-config.resolved.json
-config.json                 compatibility copy of resolved config
-manifest.json, command.json, environment.json
-status.json, events.jsonl, training_state.pt
-checkpoints/{latest.json, checkpoint_epochNNN.pt}
-roles/{scout,mechanist,challenger}/adapter_epochNNN/
-archive/{cells.json,candidates.jsonl,evidence.jsonl,provenance.jsonl,snapshots/}
-causal_memory/{records.jsonl,snapshots/}
-stepNN/
-  stepNN.parents.json, epoch.manifest.json, allocation_plan.json
-  stepNN_groupGG_rolloutRRR.prompt.txt
-  stepNN_groupGG_rolloutRRR.txt
-  stepNN_groupGG_rolloutRRR.meta.json
-  branches/, audits/, learning/, refinement/
-  stepNN.summary.json        completion marker
-best/{candidate.json,evidence.json,answer.py,answer.txt}
-plots/, logs/controller.log, logs/workers/, logs/verifiers/
-final.summary.json
-best_code.py, best_construction.json
-```
-
-Treat `stepNN` as EVOLVE epoch NN and `allocation_plan.json` as authoritative. `stepNN.parents.json` is a compact compatibility view. Give every allocation hop, audit side, refinement attempt, retry, group, and rollout a deterministic globally unique epoch index so flat files never overwrite. Preserve stable compatibility fields and add EVOLVE IDs. `config.json` is an explicit top-level compatibility projection, while `config.resolved.json` is authoritative.
-
-One controller-owned serialized writer assigns monotonic event sequences and idempotency keys. Workers never append JSONL directly. Persist each response on arrival and evidence after verification, flush assignments and evidence before use, keep complete bounded verifier traces separately, and content-address repeated prompts while retaining readable compatibility files.
-
-Atomic commit order at a completed barrier is
-
-1. all raw branch, audit, and refinement artifacts
-2. finalized evidence and closed allocation events
-3. archive, scheduler, memory, and learning snapshots
-4. all three versioned role adapters and optimizer states
-5. the versioned checkpoint
-6. atomic replacement of `checkpoints/latest.json` and compatibility `training_state.pt`
-7. `stepNN.summary.json` as completion marker
-8. committed best, status, and non-critical plots
-
-Never let a summary advertise an uncommitted checkpoint. Use temporary files in the destination directory followed by atomic replace. Checkpoint role-to-adapter mapping, three optimizer states, RNG states, archive, provenance, scheduler posterior, budget ledger, causal memory, harness registry, next epoch, and schema versions.
-
-An in-epoch record is provisional and cannot affect the frozen threshold or public `best/`. Publish only confirmed records in the barrier commit. Old runs remain read-only and auto-detected. Never backfill them.
-
-## Periodic status, best answer, and plots
-
-The user must be able to understand a live run without opening raw logs.
-
-Refresh `status.json` atomically at the verification cadence and every barrier. Report confirmed internal and native records, holder and its cell, role, option, and harness, resource ledger and record age, archive coverage, allocations by channel and role, outcome and infrastructure rates, audit and memory state, and latest learning group and adapter versions.
-
-At every barrier that commits a confirmed new record, atomically update `best/`, compatibility best files, and the problem renderer. Print the full answer then when configured and periodically otherwise. Live status may label a provisional observation but never present it as the committed answer.
-
-Generate headless plots from stored artifacts only. Plot record against tokens, verifier calls, and time, archive coverage and quality, provenance with record lineage, allocation by cell, role, option, and harness, posterior calibration, audit effects and memory state, role learning, failures, and resources. Plot failures never abort discovery.
-
-Provide one schema-aware plotting command such as
-
-```bash
-python -m evolve.viz.run RUN_DIR --all
-```
-
-It must work after a run and while a run is active by reading committed snapshots. It must never rerun candidate code by default. Problem-specific rendering may replay only when no saved construction exists and the user explicitly requests it.
-
-## A-to-Z implementation sequence
-
-Work in vertical slices. Keep the repository runnable after every phase. Maintain `docs/EVOLVE_IMPLEMENTATION.md` with this checklist, decisions, schema versions, tests, and remaining gaps. Do not mark a phase complete from interfaces alone.
-
-0. **Protect EVOLVE evidence behavior.** Characterize config precedence, rollout counts, artifact order, score direction, best tracking, and checkpoint pointers. Add strict schema detection and a tiny fixture.
-1. **Build foundations.** Add typed records, strict config, IDs, budget, events, atomic writes, manifest, `train_evolve.py --validate-config --dry-plan`, and engine dispatch.
-2. **Make evidence scientific.** Adapt verifier output, confirmation, descriptors, fingerprints, cells, local competition, record, and provenance. Add a deterministic multi-cell toy problem.
-3. **Isolate roles.** Add three adapters, optimizers, RNGs, role-aware HF and vLLM jobs, non-aliasing IDs, and full restore tests.
-4. **Execute options.** Add immutable harnesses, option state machines, frozen branches, hard bounds, and intermediate evidence.
-5. **Allocate for records.** Add hierarchical admission and tail models, horizon-aware expected improvement, costs, reservations, correlation-aware portfolio choice, and reproducible logs.
-6. **Learn causal memory.** Add persisted randomization, matched pair closure, effects, promotion, quarantine, drift, contextual retrieval, and no-memory audits.
-7. **Learn role policies.** Add strict groups, tested OrderGrad and optional MaxPO, one-role barrier updates, objective logs, and isolation checks.
-8. **Bound refinement.** Add minimal Challenger repairs, TTL, depth, attempts, cost, blinded verification, no re-entry, and separate groups.
-9. **Compose and recover.** Build `EvolveEngine`, frozen manifests, bounded asynchronous execution, barriers, shutdown, idempotent crash recovery, and compatibility artifacts.
-10. **Report.** Add live status, periodic best artifacts, generic plots, renderers, and active-run fixture tests.
-11. **Establish readiness.** Run EVOLVE, fake end-to-end, and resume suites. After CPU gates, run only an explicitly authorized tiny model smoke test. Non-EVOLVE resumes remain unsupported and read-only.
-
-## Test requirements
-
-Most tests must be CPU-only, deterministic, and fast. Use fakes and skip marked GPU or vLLM tests. Keep root pytest configuration restricted to active EVOLVE test paths, and fix `.gitignore` before trusting new tests.
-
-Cover config precedence and hashing, IDs and schema round-trips, event and budget idempotency, verifier classification, archive cells and provenance, role isolation, exact worker counts and seeds, frozen harnesses and bounded options, posterior allocation and reservations, randomized audit effects and no-memory persistence, group and objective correctness, nursery limits, barrier crash recovery, and active and complete run plots.
-
-Common lightweight checks should remain available.
-
-```bash
-python -m compileall evolve problems train_evolve.py
-python -m pytest evolve/tests -q -p no:cacheprovider
+```sh
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /absolute/path/to/python \
+  -m pytest evolve/tests -q -p no:cacheprovider
+/absolute/path/to/python -m compileall -q evolve problems train_evolve.py
 sh -n run.sh
 ```
 
-If the full suite is too slow, document and run the smallest relevant set during iteration, then run the complete CPU suite before declaring a phase complete. Report skipped tests and why.
+### Model-free validation of the exact smoke configuration
 
-## Coding and change discipline
+The command below was dry-planned successfully on the development machine. It
+does not load a model and must report `model_loading: false`,
+`writes_run_directory: false`, one generation GPU, training GPU 0, three roles,
+one epoch, horizon 1, group K=4, and Qwen3-0.6B.
 
-- Inspect and characterize before changing interfaces. Prefer additive typed adapters and pure policy services over a rewrite or controller monolith.
-- Use atomic, content-hashed persistence. Preserve user work, unrelated files, and generated runs. Never use destructive Git operations or edit evidence to pass a test.
-- Prefer existing or standard-library code. Pin and explain necessary dependencies.
-- Never hide a non-EVOLVE fallback, infrastructure error, schema mismatch, partial checkpoint, adapter alias, or budget overrun.
-- Prefer deterministic verification over LLM judgment. Never launch jobs or reserve GPUs without user authorization. Keep public commands documented.
+```sh
+EVOLVE_PYTHON=/absolute/path/to/python sh run.sh \
+  --config configs/evolve_toy.yaml \
+  --model-name Qwen/Qwen3-0.6B \
+  --backend hf \
+  --generation-backend vllm \
+  --load-in-4bit \
+  --training-gpu-id 0 \
+  --gpu-ids 0 \
+  --num-gpus 1 \
+  --vllm-tensor-parallel-size 1 \
+  --vllm-max-num-seqs 4 \
+  --vllm-max-num-batched-tokens 2048 \
+  --max-seq-length 2048 \
+  --max-new-tokens 128 \
+  --num-seed-states 4 \
+  --epochs 1 \
+  --verifier-calls 4096 \
+  --max-horizon 1 \
+  --branch-budget 8 \
+  --group-k 4 \
+  --max-inflight-branches 12 \
+  --dry-plan
+```
 
-When a design question is ambiguous, protect scientific validity first. Persist enough information to reconstruct the decision, separate observational production evidence from randomized causal evidence, and keep final verification independent from the mechanism that proposed the candidate.
+If physical GPU 0 is not the intended device, replace every topology occurrence
+of `0` consistently. Do not leave a contradictory `CUDA_VISIBLE_DEVICES`; unset
+it or make it exactly match EVOLVE's resolved ordered physical list.
 
-## Definition of done
+### Fresh one-epoch GPU smoke
 
-Done means EVOLVE starts and resumes to its documented guarantees, problem compatibility holds, role isolation, archive, provenance, bounded branches, harnesses, posterior allocation, common verification, audit-only memory, homogeneous top-rank learning, refinement, deterministic recovery, complete artifacts, live answers, plots, and all CPU and crash tests work together.
+After explicit user authorization, run the same command with only
+`--dry-plan` removed:
 
-Until these conditions hold, describe the work as an implementation in progress. Do not claim that EVOLVE improves scientific discovery from architecture or mock tests alone.
+```sh
+EVOLVE_PYTHON=/absolute/path/to/python sh run.sh \
+  --config configs/evolve_toy.yaml \
+  --model-name Qwen/Qwen3-0.6B \
+  --backend hf \
+  --generation-backend vllm \
+  --load-in-4bit \
+  --training-gpu-id 0 \
+  --gpu-ids 0 \
+  --num-gpus 1 \
+  --vllm-tensor-parallel-size 1 \
+  --vllm-max-num-seqs 4 \
+  --vllm-max-num-batched-tokens 2048 \
+  --max-seq-length 2048 \
+  --max-new-tokens 128 \
+  --num-seed-states 4 \
+  --epochs 1 \
+  --verifier-calls 4096 \
+  --max-horizon 1 \
+  --branch-budget 8 \
+  --group-k 4 \
+  --max-inflight-branches 12
+```
+
+The high verifier limit is a ceiling, not a requirement to spend 4096 calls.
+Epoch count, horizon, and inflight capacity keep this smoke small while ensuring
+that mandatory reservations and a K=4 learning group cannot be blocked merely
+by an artificially tight fixture budget.
+
+Do not reuse or delete a failed smoke run. Preserve it, diagnose from its
+artifacts, and use a new run for a corrected retry.
+
+### Fresh-run pass criteria
+
+Record the new absolute run directory printed by EVOLVE as `SMOKE_RUN_DIR`.
+The first half passes only if all of the following are true:
+
+- startup shows Qwen3-0.6B, HF training, vLLM generation, three isolated roles,
+  one ordered generation GPU, training GPU 0, and the expected budgets;
+- the run exits normally and `final.summary.json` says one epoch completed and
+  target epochs reached;
+- `bootstrap.summary.json` and `step00/step00.summary.json` exist;
+- `checkpoints/latest.json`, `checkpoint_epoch001.json`,
+  `checkpoint_epoch001.pt`, and compatibility `training_state.pt` exist;
+- every role has immutable `adapter_epoch000` and `adapter_epoch001` artifacts,
+  an adapter manifest, and matching optimizer state;
+- branch arrivals, raw responses, parsed proposals, verifier attempts,
+  evidence, policy traces, allocation plan, and events are durable;
+- at least one `step00/learning/*.inputs.json`, `*.trace.json`, and
+  `*.update.json` exists, with finite loss/KL/gradient norm, one role only,
+  group K=4, and different before/after adapter hashes for an updated role;
+- `events.jsonl` contains bootstrap and epoch `barrier_committed` events with
+  unique monotonic sequences and idempotency keys;
+- `status.json`, `best/`, compatibility best files, and plots are readable;
+- no unsupported `swap_space`, missing `NamespaceTool`, signed-int32 LoRA
+  overflow, LoRA collision, cross-role adapter, CUDA mask, or unreleased-model
+  error occurred.
+
+Useful artifact-only inspection commands are:
+
+```sh
+SMOKE_RUN_DIR=/absolute/path/to/the/new/run
+test -f "$SMOKE_RUN_DIR/final.summary.json"
+test -f "$SMOKE_RUN_DIR/step00/step00.summary.json"
+test -f "$SMOKE_RUN_DIR/checkpoints/checkpoint_epoch001.pt"
+find "$SMOKE_RUN_DIR/roles" -maxdepth 3 -type f | sort
+find "$SMOKE_RUN_DIR/step00/learning" -maxdepth 1 -type f | sort
+/absolute/path/to/python -m evolve.viz.run "$SMOKE_RUN_DIR" --all
+```
+
+Plotting is artifact-only and may be run after completion or against committed
+state while active. A plot failure must not invalidate scientific artifacts,
+but it must be reported and fixed before closing Phase 11.
+
+### One-epoch completed-barrier resume
+
+After the fresh half passes, resume the same new smoke run to a total target of
+two epochs. `--num-steps 2` means total epochs, not two additional epochs. The
+saved resolved topology is authoritative, so do not restate fresh defaults.
+
+```sh
+EVOLVE_PYTHON=/absolute/path/to/python sh run.sh \
+  --resume /absolute/path/to/the/new/run \
+  --num-steps 2
+```
+
+The resume half passes only if:
+
+- the original manifest, bootstrap summary, and step00 summary are unchanged;
+- `config.resume001.json`, `config.resolved.resume001.json`,
+  `manifest.resume001.json`, `command.resume001.json`, and
+  `environment.resume001.json` are added rather than replacing initial files;
+- the real role adapters, optimizers, Python/Torch/CUDA RNG state, archive,
+  posterior, ledger, memory, harness registry, and next epoch restore without
+  alias or topology errors;
+- already durable sample IDs are not regenerated or counted twice;
+- `step01/step01.summary.json`, `checkpoint_epoch002.json`, and its exact
+  training companion are committed;
+- `final.summary.json` reports two completed target epochs;
+- all three roles again have versioned epoch-2 adapter/optimizer artifacts;
+- the event log contains exactly one additional epoch barrier commit and stays
+  monotonic/idempotent;
+- artifact-only plots work after resume.
+
+### Known failure triage
+
+- A package appears installed but import fails: confirm `EVOLVE_PYTHON` is the
+  exact interpreter whose `-m pip` installed it. Do not mix system, venv, and
+  Conda interpreters.
+- `NamespaceTool` or an OpenAI schema import is missing: require
+  `openai>=2.25.0,<3`; this is vLLM plumbing, not an OpenAI model selection.
+- vLLM rejects `swap_space`: the server is not running the current code or the
+  expected vLLM 0.28 path. Current EVOLVE intentionally omits that argument.
+- FlashInfer compilation fails with no `nvcc`: current startup should select
+  the safe non-FlashInfer sampling path. Capture the exact environment if it
+  does not.
+- LoRA ID overflow or collision: treat it as a correctness bug and stop. Never
+  coerce, reuse, or silently remap an adapter ID.
+- CUDA mask disagreement: unset the preexisting mask or make it exactly equal
+  to the resolved ordered list. Do not guess logical versus physical IDs.
+- OOM with Qwen3-0.6B: preserve the failed run, first lower
+  `--vllm-gpu-memory-utilization` to 0.60 or reduce context/batching, and never
+  reduce the logical rollout count silently.
+- No learning update file: the runtime boundary is not fully tested. Inspect
+  validity, group construction, and policy traces; do not declare success just
+  because generation completed.
+- Worker/runtime failure is infrastructure evidence, never a scientific score.
+  Preserve it unresolved and do not edit artifacts to make the run pass.
+
+## Closing Phase 11 after the server smoke
+
+Only after both fresh and resume halves pass:
+
+1. update `docs/EVOLVE_IMPLEMENTATION.md` Phase 11 to checked;
+2. record server OS, GPU model/count, driver, CUDA, Python, PyTorch,
+   Transformers, PEFT, bitsandbytes, vLLM, and OpenAI package versions;
+3. record the exact fresh and resume commands, run directory, elapsed time,
+   peak GPU memory if available, adapter versions/hashes, learning update IDs,
+   checkpoint hashes, event/barrier counts, plots generated, and any warnings;
+4. state explicitly that the smoke used Qwen3-0.6B and `evolve_toy`, not a
+   scientific benchmark;
+5. preserve the smoke run permanently as evidence and do not normalize it;
+6. run `git diff --check` and the relevant CPU/static checks after any fix;
+7. commit only source/docs changes, never the generated `runs/` directory.
+
+If the smoke fails, leave Phase 11 open, preserve the run, document the exact
+failure and environment, make the smallest evidence-preserving fix, run the
+relevant CPU regression tests, and retry in a new run only with user approval.
+
+## Definition of Done
+
+Done means the original contract in `AGENTS-old.md` remains satisfied; phases
+0–10 and all CPU/crash gates still pass; the fresh and resumed real Qwen/vLLM
+smoke above passes on the documented server topology; complete artifacts,
+adapters, optimizer/RNG companions, live status, best answers, and plots are
+present; and `docs/EVOLVE_IMPLEMENTATION.md` contains the evidence.
+
+Until then, describe EVOLVE as an implementation in progress with CPU readiness
+established and the external model/runtime boundary pending.
