@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--config",
+    "configs/erdos.yaml",
+    "--training-gpu-id",
+    "0",
+    "--gpu-ids",
+    "0",
+    "--vllm-tensor-parallel-size",
+    "1",
+    "--eval-cpus",
+    "40"
+  ],
+  "schema_version": 1
+}

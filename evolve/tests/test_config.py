@@ -310,6 +310,18 @@ def test_scientific_resource_limits_are_typed_before_runtime(tmp_path):
     assert resolved["scientific_max_points"] == 128
 
 
+def test_eval_cpus_cli_override_is_typed_and_recorded(tmp_path):
+    cfg, resolved, metadata = _fresh(
+        tmp_path,
+        "eval_cpus: 3\n",
+        cli=("--eval-cpus", "7"),
+    )
+
+    assert cfg.problem_config["eval_cpus"] == 7
+    assert resolved["eval_cpus"] == 7
+    assert metadata["cli_overrides"]["eval_cpus"] == 7
+
+
 @pytest.mark.parametrize(
     ("key", "value"),
     [

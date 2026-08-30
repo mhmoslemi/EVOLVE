@@ -1,0 +1,36 @@
+{
+  "abort_reason": "ineligible_or_infrastructure_side",
+  "assignment_probability": 0.5,
+  "assignment_seed": 2061229718722967251,
+  "audit_id": "audit_pair:ef70ca79ad95303c22c77302cbc919faed0696a1a8deec9dafeb9fb21ff4e7c9",
+  "cell_id": "cell:191d8305d434cf25ef77bcd0b9874518959bc231e676dca76abaa852c29956fe",
+  "control_branch_id": "branch:a1d5d1c52d09e4c131dbd2401850df2e53d35e8a552f43c2e9a1bfd7b26782aa",
+  "control_option_id": "option:d88b2bae98d3df092b515be801efd2cd8aa836ce05467fe36fec2747ff62cccb",
+  "control_outcome_id": null,
+  "epoch": 0,
+  "extensions": {},
+  "frozen_record_threshold": 2.0423631823626796,
+  "generation_settings": {
+    "max_new_tokens": 30000,
+    "memory_records": [],
+    "role": "scout",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "horizon": 3,
+  "intervention_branch_id": "branch:62e50b1f8cc0e97ff65371381310b07d0c600a04f7a5ef9737ce70406549e9af",
+  "intervention_option_id": "option:e08d9ca6d319ee3f063540f59f3bab40f3a019770f2673f1ed5d4c2ea16de254",
+  "intervention_outcome_id": null,
+  "preassigned": true,
+  "record_type": "audit_pair",
+  "resources": {
+    "verifier_calls": 6.0
+  },
+  "role_snapshot_id": "role_snapshot:d367611f6e89c204708975cb161fa10b0bd5ff25abb37bbfb7d521762b7b7564",
+  "run_id": "run:0b5615584e074170acfb1316b289ce0d0f6e0ae2d9853a752da8a6bb06c17c4c",
+  "schema_version": 1,
+  "start_state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22",
+  "status": "aborted",
+  "verifier_id": "verifier:96f7d8cd73c0036f63fd8344ba2ebbd8a775f624905beec2fbafda8484ec33ab"
+}

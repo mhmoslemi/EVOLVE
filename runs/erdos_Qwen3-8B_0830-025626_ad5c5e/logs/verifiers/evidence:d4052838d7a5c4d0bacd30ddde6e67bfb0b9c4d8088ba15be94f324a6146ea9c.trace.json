@@ -1,0 +1,18 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:0b9df17746ccfdf4164fb0b8aa9a09535be8001fcd6b8a81c1a5f23b91a3f922",
+  "capture_hash": "ec7310a00622818afea3023c5e8811fe9b5be6109fc21594338227282f208f71",
+  "completed_at": "2026-08-30T06:56:29.559841Z",
+  "diagnostics": {
+    "message": "verified saved h_values and recomputed C5"
+  },
+  "evidence_id": "evidence:d4052838d7a5c4d0bacd30ddde6e67bfb0b9c4d8088ba15be94f324a6146ea9c",
+  "phase": "bootstrap_seed_verification_attempt_0",
+  "proposal_id": "proposal:66b493aae29343306549b074d1381fe4db1ba346d674dfbd6a3209ddf5aee5cf",
+  "resources": {
+    "verifier_calls": 1,
+    "verifier_wall_time_s": 0.0006847367621958256
+  },
+  "schema_version": 1,
+  "started_at": "2026-08-30T06:56:29.559145Z"
+}

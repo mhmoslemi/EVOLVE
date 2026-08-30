@@ -151,7 +151,15 @@ class LiveEvolveRuntime:
             max_workers=int(config.evolve.workers.max_inflight_branches),
             thread_name_prefix="evolve-branch",
         )
-        self._load_hf()
+        try:
+            self._load_hf()
+        except BaseException:
+            # Deadline/user interrupts may arrive while the initial backbone is
+            # loading, before the controller receives an EngineWorkers handle.
+            # Release any partially constructed model and executor resources at
+            # the ownership boundary, then preserve the original exception.
+            self.shutdown()
+            raise
 
     def submit_branch(self, callback: Any):
         """Submit one frozen branch to the persistent bounded controller pool."""
@@ -196,10 +204,19 @@ class LiveEvolveRuntime:
 
     def _unload_hf(self) -> None:
         if self.model is None:
+            # A signal or loader exception can occur after the backend object
+            # is created but before ``load()`` returns the model. Drop those
+            # partial references and still flush allocator state.
+            self.optimizers = None
+            self.port = None
+            self.tokenizer = None
+            self.backend = None
+            self._release_cuda()
             return
         self.optimizers = None
         self.port = None
         self.model = None
+        self.tokenizer = None
         self.backend = None
         self._release_cuda()
 

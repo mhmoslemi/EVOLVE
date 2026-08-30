@@ -1,0 +1,9 @@
+{
+  "approved": false,
+  "candidate_harness_id": "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913",
+  "context_id": "harness_audit:e6810e05b53e273c7622c83e468bf6df140964c8e0292b496bf3b28cf170f074",
+  "detail": "harness 'harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913' has 0 trial(s); needs >= 5",
+  "min_trials": 5,
+  "reason": "conservative_evidence_threshold_not_met",
+  "schema_version": 1
+}

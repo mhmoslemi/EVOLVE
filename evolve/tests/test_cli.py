@@ -180,6 +180,7 @@ def test_run_sh_forwards_explicit_validation_without_creating_a_run():
         path.name for path in (repository / "runs").iterdir()
     ) if (repository / "runs").is_dir() else []
     environment = dict(os.environ)
+    environment.pop("CUDA_VISIBLE_DEVICES", None)
     environment["EVOLVE_PYTHON"] = sys.executable
 
     completed = subprocess.run(

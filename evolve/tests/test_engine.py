@@ -17,6 +17,7 @@ from evolve.engine import (
     EngineError,
     EngineWorkers,
     EvolveEngine,
+    _apply_role_artifact_retention,
     _json_native_answer_payload,
     _latest_completed_checkpoint,
 )
@@ -499,6 +500,92 @@ def test_fake_epoch_and_completed_barrier_resume(tmp_path: Path, capsys) -> None
     }
 
 
+def test_keyboard_interrupt_drains_workers_and_preserves_live_status(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path / "toy.yaml", epochs=1)
+    runs_root = tmp_path / "runs"
+    config, resolved, metadata = _load_fresh(config_path)
+    workers = _FakeWorkers(runs_root=runs_root, adapter=_adapter(config))
+
+    def interrupt_epoch(self, layout, state, **_kwargs):
+        live = {
+            "schema_version": 1,
+            "run_id": state.run_id,
+            "run_directory": str(layout.run_dir),
+            "epoch": state.epoch,
+            "live_epoch": {
+                "epoch": state.epoch,
+                "provisional_best": {
+                    "internal_reward": 3.5,
+                    "raw_score": 0.285,
+                    "committed": False,
+                },
+                "provisional_is_committed": False,
+            },
+        }
+        layout.path("status.json").write_text(
+            json.dumps(live, allow_nan=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(EvolveEngine, "run_epoch", interrupt_epoch)
+    assert _run_engine(
+        config=config,
+        resolved=resolved,
+        metadata=metadata,
+        runs_root=runs_root,
+        workers=workers,
+    ) == 130
+
+    run_dir = workers._run_dir()
+    status = json.loads((run_dir / "status.json").read_text(encoding="utf-8"))
+    assert workers.shutdown_calls == 1
+    assert status["live_epoch"]["provisional_best"]["raw_score"] == 0.285
+    assert status["interruption"]["graceful_worker_shutdown_completed"] is True
+    assert status["interruption"]["public_best_remains_barrier_confirmed"] is True
+    interrupted = [
+        event for event in _events(run_dir)
+        if event["event_type"] == "run_interrupted"
+    ]
+    assert len(interrupted) == 1
+    assert interrupted[0]["payload"]["provisional_best"]["internal_reward"] == 3.5
+
+
+def test_keyboard_interrupt_during_bootstrap_is_recorded_without_traceback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path / "toy.yaml", epochs=1)
+    runs_root = tmp_path / "runs"
+    config, resolved, metadata = _load_fresh(config_path)
+    workers = _FakeWorkers(runs_root=runs_root, adapter=_adapter(config))
+
+    def interrupt_bootstrap(self, state, **_kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(EvolveEngine, "_seed_archive", interrupt_bootstrap)
+    assert _run_engine(
+        config=config,
+        resolved=resolved,
+        metadata=metadata,
+        runs_root=runs_root,
+        workers=workers,
+    ) == 130
+
+    run_dir = workers._run_dir()
+    status = json.loads((run_dir / "status.json").read_text(encoding="utf-8"))
+    assert workers.shutdown_calls == 0
+    assert status["interruption"]["last_committed_epoch"] is None
+    assert status["interruption"]["latest_completed_barrier_found"] is False
+    assert [
+        event for event in _events(run_dir)
+        if event["event_type"] == "run_interrupted"
+    ]
+
+
 def test_partial_epoch_replays_plan_and_fails_closed_on_companion_corruption(
     tmp_path: Path,
 ) -> None:
@@ -624,6 +711,72 @@ def _minimal_completed_layout(root: Path):
         encoding="utf-8",
     )
     return layout, summary
+
+
+def test_latest_retention_prunes_only_old_role_training_artifacts(
+    tmp_path: Path,
+) -> None:
+    layout = create_fresh_run_layout(
+        tmp_path,
+        problem="evolve_toy",
+        model_name="fixture/model",
+        short_random_id="retention",
+    )
+    for role in ("scout", "mechanist", "challenger"):
+        role_dir = layout.path(f"roles/{role}")
+        old_adapter = role_dir / "adapter_epoch000"
+        latest_adapter = role_dir / "adapter_epoch001"
+        old_adapter.mkdir()
+        latest_adapter.mkdir()
+        (old_adapter / "adapter_model.safetensors").write_bytes(b"old" * 20)
+        (old_adapter / "optimizer_state.pt").write_bytes(b"optimizer")
+        (latest_adapter / "adapter_model.safetensors").write_bytes(b"latest")
+        (latest_adapter / "optimizer_state.pt").write_bytes(b"optimizer")
+        (role_dir / "optimizer_epoch000.pt").write_bytes(b"legacy")
+
+    checkpoint = layout.path("checkpoints/checkpoint_epoch000.pt")
+    checkpoint.write_bytes(b"required resume companion")
+    evidence = layout.path("logs/verifiers/evidence.json")
+    evidence.write_bytes(b"scientific evidence")
+
+    _apply_role_artifact_retention(
+        layout,
+        keep_epoch=1,
+        mode="all",
+    )
+    assert layout.path("roles/scout/adapter_epoch000").is_dir()
+
+    _apply_role_artifact_retention(
+        layout,
+        keep_epoch=1,
+        mode="latest",
+    )
+    # Reapplication after an interrupted/controller retry is idempotent.
+    _apply_role_artifact_retention(
+        layout,
+        keep_epoch=1,
+        mode="latest",
+    )
+
+    for role in ("scout", "mechanist", "challenger"):
+        assert not layout.path(f"roles/{role}/adapter_epoch000").exists()
+        assert not layout.path(f"roles/{role}/optimizer_epoch000.pt").exists()
+        assert layout.path(f"roles/{role}/adapter_epoch001").is_dir()
+    assert checkpoint.read_bytes() == b"required resume companion"
+    assert evidence.read_bytes() == b"scientific evidence"
+    plan = json.loads(
+        layout.path("logs/retention_epoch001.plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    result = json.loads(
+        layout.path("logs/retention_epoch001.result.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert plan["policy"] == result["policy"] == "latest"
+    assert len(plan["targets"]) == len(result["removed"]) == 6
+    assert result["resume_checkpoint_companions_preserved"] is True
 
 
 @pytest.mark.parametrize(

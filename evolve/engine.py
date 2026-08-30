@@ -24,6 +24,7 @@ import json
 import math
 import os
 import platform
+import re
 import shutil
 import socket
 import subprocess
@@ -142,6 +143,10 @@ class EngineError(RuntimeError):
 
 class RecordConfirmationInfrastructureError(EngineError):
     """Both bounded record-confirmation calls failed in infrastructure."""
+
+
+class _RunAttachInterrupted(Exception):
+    """Bootstrap was drained and recorded before model-worker construction."""
 
 
 def _file_sha256(path: Path) -> str:
@@ -949,6 +954,196 @@ class EpochReport:
     record_improved: bool
 
 
+_ROLE_ADAPTER_DIRECTORY = re.compile(r"adapter_epoch([0-9]{3,})$")
+_ROLE_OPTIMIZER_FILE = re.compile(r"optimizer_epoch([0-9]{3,})[.]pt$")
+
+
+def _artifact_retention_mode(value: Optional[str] = None) -> str:
+    """Resolve the operational retention policy without changing run schema."""
+
+    mode = (
+        os.environ.get("EVOLVE_ARTIFACT_RETENTION", "all")
+        if value is None
+        else value
+    )
+    if mode not in {"all", "latest"}:
+        raise EngineError(
+            "EVOLVE_ARTIFACT_RETENTION must be 'all' or 'latest'"
+        )
+    return mode
+
+
+def _tree_size(path: Path) -> int:
+    if path.is_file() and not path.is_symlink():
+        return path.stat().st_size
+    total = 0
+    for item in path.rglob("*"):
+        if item.is_file() and not item.is_symlink():
+            total += item.stat().st_size
+    return total
+
+
+def _retention_target(layout: RunLayout, relative: str, *, keep_epoch: int) -> Path:
+    """Validate one narrowly scoped role-artifact pruning target."""
+
+    parts = Path(relative).parts
+    if len(parts) != 3 or parts[0] != "roles":
+        raise EngineError(f"unsafe artifact-retention target: {relative}")
+    if parts[1] not in {role.value for role in Role}:
+        raise EngineError(f"unknown role in artifact-retention target: {relative}")
+    match = _ROLE_ADAPTER_DIRECTORY.fullmatch(parts[2])
+    if match is None:
+        match = _ROLE_OPTIMIZER_FILE.fullmatch(parts[2])
+    if match is None or int(match.group(1)) >= keep_epoch:
+        raise EngineError(f"unsafe artifact-retention epoch target: {relative}")
+    return layout.path(relative)
+
+
+def _apply_role_artifact_retention(
+    layout: RunLayout,
+    *,
+    keep_epoch: int,
+    mode: str,
+) -> None:
+    """Optionally retain only the newest completed role-training snapshot.
+
+    Scientific evidence, logs, summaries, JSON checkpoints, and their small
+    RNG/training companions remain untouched.  Only older immutable LoRA
+    directories (including their embedded optimizer ``.pt`` files) and legacy
+    standalone role-optimizer files are eligible.  A durable plan is written
+    before deletion so an interrupted cleanup can be completed idempotently.
+    """
+
+    if _artifact_retention_mode(mode) == "all" or keep_epoch <= 0:
+        return
+    plan_path = layout.path(f"logs/retention_epoch{keep_epoch:03d}.plan.json")
+    result_path = layout.path(f"logs/retention_epoch{keep_epoch:03d}.result.json")
+    if result_path.is_file():
+        try:
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise EngineError(
+                f"invalid artifact-retention result: {result_path}"
+            ) from exc
+        if (
+            result.get("schema_version") != 1
+            or result.get("policy") != "latest"
+            or result.get("keep_epoch") != keep_epoch
+            or not isinstance(result.get("removed"), list)
+            or any(not isinstance(item, str) for item in result["removed"])
+            or len(set(result["removed"])) != len(result["removed"])
+        ):
+            raise EngineError(f"invalid artifact-retention result: {result_path}")
+        return
+
+    if plan_path.is_file():
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        if (
+            plan.get("schema_version") != 1
+            or plan.get("policy") != "latest"
+            or plan.get("keep_epoch") != keep_epoch
+            or not isinstance(plan.get("targets"), list)
+            or any(not isinstance(item, str) for item in plan["targets"])
+            or len(set(plan["targets"])) != len(plan["targets"])
+        ):
+            raise EngineError(f"invalid artifact-retention plan: {plan_path}")
+        relative_targets = list(plan["targets"])
+    else:
+        targets: List[Path] = []
+        for role in Role:
+            role_dir = layout.path(f"roles/{role.value}")
+            if not role_dir.is_dir():
+                continue
+            for child in role_dir.iterdir():
+                match = _ROLE_ADAPTER_DIRECTORY.fullmatch(child.name)
+                if match is None:
+                    match = _ROLE_OPTIMIZER_FILE.fullmatch(child.name)
+                if match is not None and int(match.group(1)) < keep_epoch:
+                    if child.is_symlink():
+                        raise EngineError(
+                            f"refusing symlink artifact-retention target: {child}"
+                        )
+                    targets.append(child)
+        relative_targets = sorted(
+            path.relative_to(layout.run_dir).as_posix() for path in targets
+        )
+        planned_bytes = sum(_tree_size(path) for path in targets)
+        _write_json_once(
+            plan_path,
+            {
+                "schema_version": 1,
+                "policy": "latest",
+                "keep_epoch": keep_epoch,
+                "targets": relative_targets,
+                "planned_bytes": planned_bytes,
+                "preserved": [
+                    "scientific evidence and logs",
+                    "completed-barrier summaries and JSON checkpoints",
+                    "checkpoint training/RNG companions",
+                    f"role adapter and optimizer snapshot epoch {keep_epoch}",
+                ],
+            },
+        )
+
+    removed = []
+    for relative in relative_targets:
+        target = _retention_target(layout, relative, keep_epoch=keep_epoch)
+        if not target.exists() and not target.is_symlink():
+            removed.append(relative)
+            continue
+        if target.is_symlink():
+            raise EngineError(f"refusing symlink artifact-retention target: {target}")
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.is_file():
+            target.unlink()
+        else:
+            raise EngineError(f"unsupported artifact-retention target: {target}")
+        fsync_directory(target.parent)
+        removed.append(relative)
+    _write_json_once(
+        result_path,
+        {
+            "schema_version": 1,
+            "policy": "latest",
+            "keep_epoch": keep_epoch,
+            "removed": removed,
+            "latest_role_artifacts_preserved": True,
+            "resume_checkpoint_companions_preserved": True,
+        },
+    )
+
+
+def _run_guard_document() -> Mapping[str, Any]:
+    keys = {
+        "cuda_visible_devices": "CUDA_VISIBLE_DEVICES",
+        "cpu_cores": "EVOLVE_CPU_CORES",
+        "time_limit_hh_mm": "EVOLVE_RUN_TIME_LIMIT",
+        "graceful_stop_minutes": "EVOLVE_GRACEFUL_STOP_MINUTES",
+        "hard_deadline_epoch": "EVOLVE_HARD_DEADLINE_EPOCH",
+        "artifact_retention": "EVOLVE_ARTIFACT_RETENTION",
+    }
+    return {
+        output: os.environ[source]
+        for output, source in keys.items()
+        if source in os.environ
+    }
+
+
+def _last_committed_epoch(layout: RunLayout) -> Optional[int]:
+    """Return only an epoch backed by a fully validated completion marker."""
+
+    try:
+        checkpoint_path = _latest_completed_checkpoint(layout)
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        epoch = checkpoint.get("epoch")
+        if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch < 0:
+            raise EngineError("completed checkpoint has an invalid epoch")
+        return epoch
+    except (EngineError, OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
 class EvolveEngine:
     """The composed EVOLVE runtime: fresh/resume lifecycle and epoch barriers."""
 
@@ -968,6 +1163,7 @@ class EvolveEngine:
         self._workers = workers
         self._adapter = adapter
         self._runs_root = Path(runs_root) if runs_root is not None else Path.cwd() / "runs"
+        self._artifact_retention = _artifact_retention_mode()
 
     def _print_progress(
         self,
@@ -1012,18 +1208,26 @@ class EvolveEngine:
         verification_policy = VerificationPolicy.create(
             version="evolve_engine_v1", production=not self.config.method_incomplete
         )
-        layout, state = self._attach(adapter=adapter, verification_policy=verification_policy)
-        self._print_progress(
-            "model runtime",
-            detail="initializing backbone, role adapters, and generation workers",
-        )
-        workers = self._workers or build_production_workers(
-            self.config, adapter=adapter, layout=layout, state=state
-        )
-        self._print_progress("model runtime", detail="workers ready")
+        try:
+            layout, state = self._attach(
+                adapter=adapter,
+                verification_policy=verification_policy,
+            )
+        except _RunAttachInterrupted:
+            return 130
         target_epochs = self.config.evolve.budget.epochs
         completion_reason = "target epochs reached"
+        workers = self._workers
+        interrupted = False
         try:
+            self._print_progress(
+                "model runtime",
+                detail="initializing backbone, role adapters, and generation workers",
+            )
+            workers = workers or build_production_workers(
+                self.config, adapter=adapter, layout=layout, state=state
+            )
+            self._print_progress("model runtime", detail="workers ready")
             try:
                 _latest_completed_checkpoint(layout)
                 has_completed_barrier = True
@@ -1129,11 +1333,24 @@ class EvolveEngine:
                     detail="epoch committed",
                 )
         except KeyboardInterrupt:
-            self._write_status(layout, state, note="interrupted; last committed epoch preserved")
-            return 130
+            interrupted = True
         finally:
-            if workers.shutdown is not None:
+            if workers is not None and workers.shutdown is not None:
                 workers.shutdown()
+        if interrupted:
+            committed_epoch = _last_committed_epoch(layout)
+            if committed_epoch is not None:
+                _apply_role_artifact_retention(
+                    layout,
+                    keep_epoch=committed_epoch,
+                    mode=self._artifact_retention,
+                )
+            self._write_interrupted_status(
+                layout,
+                state,
+                committed_epoch=committed_epoch,
+            )
+            return 130
         target_reached = state.epoch >= target_epochs
         self._write_status(
             layout,
@@ -1224,9 +1441,20 @@ class EvolveEngine:
             run_id=run_id,
         )
         state = self._initial_state(run_id)
-        state = self._seed_archive(
-            state, layout=layout, adapter=adapter, verification_policy=verification_policy
-        )
+        try:
+            state = self._seed_archive(
+                state,
+                layout=layout,
+                adapter=adapter,
+                verification_policy=verification_policy,
+            )
+        except KeyboardInterrupt:
+            self._write_interrupted_status(
+                layout,
+                state,
+                committed_epoch=None,
+            )
+            raise _RunAttachInterrupted from None
         return layout, state
 
     def _commit_bootstrap(
@@ -1316,12 +1544,20 @@ class EvolveEngine:
                     "incomplete bootstrap manifest has no stable run_id"
                 )
             state = self._initial_state(run_id)
-            state = self._seed_archive(
-                state,
-                layout=layout,
-                adapter=adapter,
-                verification_policy=verification_policy,
-            )
+            try:
+                state = self._seed_archive(
+                    state,
+                    layout=layout,
+                    adapter=adapter,
+                    verification_policy=verification_policy,
+                )
+            except KeyboardInterrupt:
+                self._write_interrupted_status(
+                    layout,
+                    state,
+                    committed_epoch=None,
+                )
+                raise _RunAttachInterrupted from None
             recovery_checkpoint = {
                 "record_type": "evolve_bootstrap_recovery_anchor",
                 "schema_version": 1,
@@ -4462,6 +4698,11 @@ class EvolveEngine:
                     # Logging the non-critical plotting error is itself
                     # best-effort; the completed barrier remains authoritative.
                     pass
+        _apply_role_artifact_retention(
+            layout,
+            keep_epoch=state.epoch,
+            mode=self._artifact_retention,
+        )
 
     def _publish_role_pointers(
         self,
@@ -4753,11 +4994,33 @@ class EvolveEngine:
     ) -> None:
         """Refresh live progress without publishing an in-epoch record."""
 
-        provisional = [
-            execution.outcome.maximum_reward
-            for execution in executions
-            if execution.outcome.maximum_reward is not None
-        ]
+        provisional_best = None
+        for execution in executions:
+            evidence_id = execution.outcome.maximum_evidence_id
+            if evidence_id is None or execution.outcome.maximum_reward is None:
+                continue
+            matching = next(
+                (
+                    observation.verification.evidence
+                    for observation in execution.observations
+                    if observation.verification.evidence.evidence_id == evidence_id
+                ),
+                None,
+            )
+            candidate = {
+                "state_id": execution.outcome.maximum_state_id,
+                "evidence_id": evidence_id,
+                "branch_id": execution.outcome.branch_id,
+                "internal_reward": execution.outcome.maximum_reward,
+                "raw_score": matching.raw_score if matching is not None else None,
+                "committed": False,
+            }
+            if (
+                provisional_best is None
+                or float(candidate["internal_reward"])
+                > float(provisional_best["internal_reward"])
+            ):
+                provisional_best = candidate
         document = {}
         status_path = layout.path("status.json")
         if status_path.is_file():
@@ -4765,6 +5028,23 @@ class EvolveEngine:
                 document = json.loads(status_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 document = {}
+        previous_live = document.get("live_epoch", {})
+        previous_best = (
+            previous_live.get("provisional_best")
+            if isinstance(previous_live, Mapping)
+            and previous_live.get("epoch") == epoch
+            else None
+        )
+        if (
+            isinstance(previous_best, Mapping)
+            and isinstance(previous_best.get("internal_reward"), (int, float))
+            and (
+                provisional_best is None
+                or float(previous_best["internal_reward"])
+                > float(provisional_best["internal_reward"])
+            )
+        ):
+            provisional_best = dict(previous_best)
         document.update(
             {
                 "schema_version": 1,
@@ -4796,14 +5076,71 @@ class EvolveEngine:
                         1 for item in executions if item.outcome.infrastructure_aborted
                     ),
                     "provisional_observation": (
-                        max(provisional) if provisional else None
+                        provisional_best["internal_reward"]
+                        if provisional_best is not None
+                        else None
                     ),
+                    "provisional_best": provisional_best,
                     "provisional_is_committed": False,
                 },
+                "run_guard": dict(_run_guard_document()),
                 "note": f"epoch {epoch} active",
             }
         )
         atomic_write_json(status_path, document)
+
+    def _write_interrupted_status(
+        self,
+        layout: RunLayout,
+        state: EpochState,
+        *,
+        committed_epoch: Optional[int],
+    ) -> None:
+        """Preserve live evidence while recording a completed graceful drain."""
+
+        status_path = layout.path("status.json")
+        try:
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            status = {
+                "schema_version": 1,
+                "run_id": state.run_id,
+                "run_directory": str(layout.run_dir),
+                "epoch": committed_epoch,
+            }
+        guard = dict(_run_guard_document())
+        interruption = {
+            "graceful_worker_shutdown_completed": True,
+            "last_committed_epoch": committed_epoch,
+            "latest_completed_barrier_found": committed_epoch is not None,
+            "partial_epoch_is_committed": False,
+            "durable_samples_are_resume_reusable": True,
+            "public_best_remains_barrier_confirmed": True,
+            "run_guard": guard,
+        }
+        status.update(
+            {
+                "note": (
+                    "interrupted after graceful worker shutdown; last completed "
+                    "barrier preserved"
+                ),
+                "run_guard": guard,
+                "interruption": interruption,
+            }
+        )
+        atomic_write_json(status_path, status)
+        with ControllerEventWriter(layout.path("events.jsonl")) as event_writer:
+            sequence = event_writer.next_sequence
+            event_writer.append(
+                "run_interrupted",
+                {
+                    **interruption,
+                    "provisional_best": status.get("live_epoch", {}).get(
+                        "provisional_best"
+                    ),
+                },
+                idempotency_key=f"run-interrupted:{sequence}",
+            )
 
     def _write_status(
         self,
@@ -4989,6 +5326,7 @@ class EvolveEngine:
                     if outcomes else 0.0
                 ),
             },
+            "run_guard": dict(_run_guard_document()),
             "note": note,
         }
         atomic_write_json(layout.path("status.json"), status)
@@ -5310,6 +5648,11 @@ def _environment_document() -> Mapping[str, Any]:
         key: os.environ[key]
         for key in (
             "CUDA_VISIBLE_DEVICES",
+            "EVOLVE_ARTIFACT_RETENTION",
+            "EVOLVE_CPU_CORES",
+            "EVOLVE_GRACEFUL_STOP_MINUTES",
+            "EVOLVE_HARD_DEADLINE_EPOCH",
+            "EVOLVE_RUN_TIME_LIMIT",
             "PYTHONHASHSEED",
             "VLLM_USE_FLASHINFER_SAMPLER",
         )

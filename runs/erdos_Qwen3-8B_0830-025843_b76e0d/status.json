@@ -1,0 +1,113 @@
+{
+  "allocations": {
+    "by_channel": {
+      "audit": 6,
+      "production": 10
+    },
+    "by_harness": {
+      "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913": 1,
+      "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428": 15
+    },
+    "by_option": {
+      "option:260be06610305b4d66a4236398564b742c670e0af5e0e883f6a07e215bfcc30f": 2,
+      "option:3dd0fb8f1e1bd05e2d594307d1e4a62124324d2131e49790e67e84afcc2072fa": 1,
+      "option:d88b2bae98d3df092b515be801efd2cd8aa836ce05467fe36fec2747ff62cccb": 2,
+      "option:e08d9ca6d319ee3f063540f59f3bab40f3a019770f2673f1ed5d4c2ea16de254": 11
+    },
+    "by_role": {
+      "challenger": 1,
+      "mechanist": 3,
+      "scout": 12
+    }
+  },
+  "archive_cells": 2,
+  "archive_coverage": 1.0,
+  "budget": {
+    "verifier_calls": {
+      "consumed": 9.0,
+      "limit": 4000.0,
+      "remaining": 3991.0
+    }
+  },
+  "causal_memory": {
+    "promoted": 0,
+    "quarantined": 0,
+    "records": 0,
+    "rejected": 0
+  },
+  "confirmed_record": {
+    "age_epochs": null,
+    "cell_id": "cell:191d8305d434cf25ef77bcd0b9874518959bc231e676dca76abaa852c29956fe",
+    "holder": {
+      "branch_id": "branch:e75a81d51ddd98d5c91c20e55c071e51f7d3e87dc13c8225495a8af8df164b8e",
+      "confirmed_at": "2026-08-30T06:58:44.585163Z",
+      "evidence_id": "evidence:83c1bad434d2b4060d512953470ac937c4dfb5d9a9a30506c0e8e0df11825022",
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "proposal_id": "proposal:414bf021d97c49f2e1be4af6c457fd5fcbc599c0dad4892911c98a1d809730fa"
+    },
+    "internal_reward": 2.0423631823626796,
+    "raw_score": 0.48962887120768206,
+    "state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22"
+  },
+  "epoch": 1,
+  "latest_epoch": {
+    "aborted_audit_pairs": 2,
+    "admission_rate": 0.0,
+    "admitted": 0,
+    "audit_pairs": 2,
+    "branches": 16,
+    "closed_audit_pairs": 0,
+    "infrastructure_aborted": 16,
+    "infrastructure_rate": 1.0
+  },
+  "latest_learning": {
+    "challenger": {
+      "adapter_hash": "04913aa54c5197badfb4e9e0b629c1b1bea75bd7a55ed129001d236e56bcc123",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "mechanist": {
+      "adapter_hash": "ca518979f61f7d9fccdc701b51a03d3ceba1aad082ef535670005e7713217ff9",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "scout": {
+      "adapter_hash": "7ef0573557afc1a5d7bdb6133da9f0bb793757ca02e7ed6364baa1fb5c7b3094",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    }
+  },
+  "note": "epoch 0 committed",
+  "roles": {
+    "challenger": {
+      "adapter_hash": "04913aa54c5197badfb4e9e0b629c1b1bea75bd7a55ed129001d236e56bcc123",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "mechanist": {
+      "adapter_hash": "ca518979f61f7d9fccdc701b51a03d3ceba1aad082ef535670005e7713217ff9",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "scout": {
+      "adapter_hash": "7ef0573557afc1a5d7bdb6133da9f0bb793757ca02e7ed6364baa1fb5c7b3094",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    }
+  },
+  "run_directory": "/scratch/mmoslem3/EVOLVE/runs/erdos_Qwen3-8B_0830-025843_b76e0d",
+  "run_guard": {
+    "artifact_retention": "latest",
+    "cpu_cores": "40",
+    "cuda_visible_devices": "0",
+    "graceful_stop_minutes": "5",
+    "hard_deadline_epoch": "1788073722",
+    "time_limit_hh_mm": "00:10"
+  },
+  "run_id": "run:0b5615584e074170acfb1316b289ce0d0f6e0ae2d9853a752da8a6bb06c17c4c",
+  "schema_version": 1
+}

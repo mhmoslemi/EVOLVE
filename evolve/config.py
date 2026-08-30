@@ -1411,6 +1411,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--sandbox-timeout-s", type=float, default=None)
     parser.add_argument("--kernel-timeout-s", type=float, default=None)
     parser.add_argument("--reward-workers", type=int, default=None)
+    parser.add_argument("--eval-cpus", type=int, default=None)
     parser.add_argument("--gpu-ids", default=None)
     parser.add_argument("--training-gpu-id", type=int, default=None)
     parser.add_argument("--num-gpus", type=int, default=None)
@@ -1517,6 +1518,7 @@ _TOP_LEVEL_CLI = {
     "sandbox_timeout_s": "sandbox_timeout_s",
     "kernel_timeout_s": "kernel_timeout_s",
     "reward_workers": "reward_workers",
+    "eval_cpus": "eval_cpus",
     "gpu_ids": "gpu_ids",
     "training_gpu_id": "training_gpu_id",
     "num_gpus": "num_gpus",
