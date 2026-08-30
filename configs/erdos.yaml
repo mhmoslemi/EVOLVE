@@ -30,8 +30,10 @@ learning_rate: 4.0e-5
 kl_penalty_coef: 0.1
 gen_micro_batch: 10
 
-# GPU 0 owns both phases sequentially: vLLM generation, then HF role learning.
-gpu_ids: [0]
+# Split placement for the current two-GPU allocation: GPU 4 performs HF role
+# learning at barriers, while GPU 5 owns the single-device vLLM engine.
+training_gpu_id: 4
+gpu_ids: [5]
 num_gpus: 1
 vllm_tensor_parallel_size: 1
 vllm_quantization: auto  # vLLM checkpoint choice; not HF load_in_4bit.

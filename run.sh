@@ -6,17 +6,17 @@ PROBLEM="erdos"       # ac1, ac2, circle_packing, denoising, erdos,
                       # evolve_toy, gpu_mode_mla, or gpu_mode_trimul
 ACTION="run"          # dry-plan = inspect safely, run = start the real run,
                       # validate = check configuration without loading a model
-CUDA_DEVICES="${EVOLVE_CUDA_DEVICES:-0}"
+CUDA_DEVICES="${EVOLVE_CUDA_DEVICES:-4,5}"
                       # Ordered physical IDs, separated by spaces or commas.
                       # Also becomes CUDA_VISIBLE_DEVICES; keep it consistent
                       # with the GPUs actually assigned by Slurm.
                       # Non-GPU problems: first trains; all others run vLLM.
                       # GPU mode: first trains, last evaluates, middle run vLLM.
                       # With <=2 GPUs, GPU-mode evaluation shares training.
-CPU_CORES="${EVOLVE_CPU_CORES:-1}"
+CPU_CORES="${EVOLVE_CPU_CORES:-10}"
                       # Fresh runs override problem eval_cpus with this value.
                       # Resumes retain their immutable saved verifier setting.
-TIME_LIMIT="${EVOLVE_RUN_TIME_LIMIT:-00:20}"
+TIME_LIMIT="${EVOLVE_RUN_TIME_LIMIT:-04:20}"
                       # Hard wall-clock limit from launch, exactly HH:MM.
 GRACEFUL_STOP_MINUTES="${EVOLVE_GRACEFUL_STOP_MINUTES:-5}"
                       # Send SIGINT this many minutes before the hard limit.
