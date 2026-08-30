@@ -19,7 +19,10 @@ from .allocation import plot_allocation
 from .archive import plot_archive
 from .audits import plot_audits
 from .provenance import plot_provenance
+from .posterior import plot_posterior
 from .record import plot_record
+from .failures import plot_failures
+from .resources import plot_resources
 from .roles import plot_roles
 
 _PLOTS = {
@@ -29,6 +32,9 @@ _PLOTS = {
     "allocation": plot_allocation,
     "audits": plot_audits,
     "roles": plot_roles,
+    "posterior": plot_posterior,
+    "failures": plot_failures,
+    "resources": plot_resources,
 }
 
 

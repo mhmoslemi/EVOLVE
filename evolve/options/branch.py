@@ -12,6 +12,7 @@ an injected callback is what makes the branch executor itself CPU-testable.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -51,11 +52,16 @@ class PolicySegment:
     response_segment: str
     token_mask: Tuple[bool, ...]
     log_probabilities: Tuple[float, ...]
+    token_ids: Tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         if len(self.token_mask) != len(self.log_probabilities):
             raise BranchExecutionError(
                 "policy segment token_mask and log_probabilities must align"
+            )
+        if self.token_ids and len(self.token_ids) != len(self.token_mask):
+            raise BranchExecutionError(
+                "policy segment token_ids and token_mask must align"
             )
 
 
@@ -94,7 +100,12 @@ class BranchStepResult:
         for resource, amount in self.costs.items():
             if not isinstance(resource, str) or not resource.strip():
                 raise BranchExecutionError("step cost resource names must be non-empty strings")
-            if isinstance(amount, bool) or not isinstance(amount, (int, float)) or amount < 0.0:
+            if (
+                isinstance(amount, bool)
+                or not isinstance(amount, (int, float))
+                or not math.isfinite(float(amount))
+                or amount < 0.0
+            ):
                 raise BranchExecutionError(f"step cost for {resource!r} must be non-negative")
         object.__setattr__(self, "costs", dict(self.costs))
 
@@ -220,13 +231,18 @@ def execute_branch(
     state = option.start(context)
     step_input = OptionStepInput(step_index=0, cumulative_cost={})
 
+    # Actual resource cost includes infrastructure retries and is used for the
+    # global ledger/refund. Option hard bounds count logical scientific steps,
+    # so a verifier retry cannot silently shorten a branch's frozen horizon.
     cumulative_cost: Dict[str, float] = {}
+    option_cost: Dict[str, float] = {}
     observations: List[BranchStepResult] = []
     provenance_edges: List[ProvenanceEdge] = []
     prompts: List[str] = []
     responses: List[str] = []
     masks: List[Tuple[bool, ...]] = []
     log_probabilities: List[Tuple[float, ...]] = []
+    token_ids: List[Tuple[int, ...]] = []
     parent_state_id = branch.start_state_id
     stop_reason: Optional[str] = None
     step_count = 0
@@ -251,7 +267,7 @@ def execute_branch(
             prompt_metadata=dict(decision.prompt_metadata),
             step_index=state.step_index,
             parent_state_id=parent_state_id,
-            cumulative_cost=dict(cumulative_cost),
+            cumulative_cost=dict(option_cost),
         )
         result = executor(request)
         if not isinstance(result, BranchStepResult):
@@ -268,12 +284,17 @@ def execute_branch(
             raise BranchExecutionError("step proposal does not extend the branch lineage")
 
         _accumulate(cumulative_cost, result.costs)
+        logical_cost = dict(result.costs)
+        if "verifier_calls" in logical_cost:
+            logical_cost["verifier_calls"] = 1.0
+        _accumulate(option_cost, logical_cost)
         observations.append(result)
         if result.policy_segment is not None:
             prompts.append(result.policy_segment.prompt)
             responses.append(result.policy_segment.response_segment)
             masks.append(result.policy_segment.token_mask)
             log_probabilities.append(result.policy_segment.log_probabilities)
+            token_ids.append(result.policy_segment.token_ids)
 
         admitted = evidence.admitted
         confirmed = evidence.confirmed
@@ -297,10 +318,23 @@ def execute_branch(
             )
             parent_state_id = state_obj.state_id
 
+        if bool(evidence.flags.get("excluded_from_scientific_updates", False)):
+            stop_reason = "infrastructure_failure"
+            break
+
+        exceeded = [
+            resource
+            for resource, limit in branch.budget.items()
+            if cumulative_cost.get(resource, 0.0) > float(limit) + 1e-9
+        ]
+        if exceeded:
+            stop_reason = "hard_budget_exceeded"
+            break
+
         state = decision.next_state
         step_input = OptionStepInput(
             step_index=state.step_index,
-            cumulative_cost=dict(cumulative_cost),
+            cumulative_cost=dict(option_cost),
             latest_state_id=result.verification.state.state_id if admitted else None,
             latest_evidence_id=evidence.evidence_id if admitted else None,
             admitted=admitted,
@@ -313,7 +347,10 @@ def execute_branch(
             uncertainty=max(0.0, float(result.uncertainty)),
         )
 
-    infrastructure_aborted = stop_reason == "infrastructure_failure"
+    infrastructure_aborted = stop_reason in (
+        "infrastructure_failure",
+        "hard_budget_exceeded",
+    )
     descendant_proposal_ids = tuple(
         result.verification.evidence.proposal_id for result in observations
     )
@@ -390,6 +427,12 @@ def execute_branch(
             "token_masks": [list(mask) for mask in masks],
             "log_probabilities": [list(values) for values in log_probabilities],
         }
+        captured_token_ids = bool(token_ids) and all(
+            len(ids) == len(mask) and len(ids) > 0
+            for ids, mask in zip(token_ids, masks)
+        )
+        if captured_token_ids:
+            trace_payload["token_ids"] = [list(values) for values in token_ids]
         policy_trace = PolicyTrace(
             trace_id=content_id("policy_trace", trace_payload),
             branch_id=branch.branch_id,
@@ -400,6 +443,7 @@ def execute_branch(
             response_segments=tuple(responses),
             token_masks=tuple(masks),
             log_probabilities=tuple(log_probabilities),
+            token_ids=(tuple(token_ids) if captured_token_ids else ()),
         )
 
     return BranchExecution(

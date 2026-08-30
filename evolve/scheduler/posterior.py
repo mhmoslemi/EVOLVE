@@ -50,6 +50,21 @@ class BetaBinomial:
     successes: int = 0
     failures: int = 0
 
+    def __post_init__(self) -> None:
+        for name in ("prior_alpha", "prior_beta"):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                or float(value) <= 0.0
+            ):
+                raise PosteriorError(f"{name} must be finite and positive")
+        for name in ("successes", "failures"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise PosteriorError(f"{name} must be a non-negative integer")
+
     @property
     def alpha(self) -> float:
         return self.prior_alpha + self.successes
@@ -88,6 +103,22 @@ class ResourceStats:
     mean: float = 0.0
     m2: float = 0.0
 
+    def __post_init__(self) -> None:
+        if isinstance(self.count, bool) or not isinstance(self.count, int) or self.count < 0:
+            raise PosteriorError("resource count must be a non-negative integer")
+        for name in ("mean", "m2"):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+            ):
+                raise PosteriorError(f"resource {name} must be finite")
+        if float(self.m2) < 0.0:
+            raise PosteriorError("resource m2 must be non-negative")
+        if self.count == 0 and (float(self.mean) != 0.0 or float(self.m2) != 0.0):
+            raise PosteriorError("an empty resource estimate must have zero moments")
+
     @property
     def variance(self) -> float:
         return self.m2 / (self.count - 1) if self.count > 1 else 0.0
@@ -97,10 +128,18 @@ class ResourceStats:
         return math.sqrt(self.variance)
 
     def update(self, value: float) -> "ResourceStats":
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or float(value) < 0.0
+        ):
+            raise PosteriorError("resource observations must be finite and non-negative")
         count = self.count + 1
+        value = float(value)
         delta = value - self.mean
         mean = self.mean + delta / count
-        m2 = self.m2 + delta * (value - mean)
+        m2 = max(0.0, self.m2 + delta * (value - mean))
         return ResourceStats(count=count, mean=mean, m2=m2)
 
 
@@ -111,10 +150,40 @@ _MAX_RESERVOIR = 256
 class LevelStats:
     """Everything observed so far at one hierarchy level for one key."""
 
+    reliability: BetaBinomial = field(default_factory=BetaBinomial)
     admission: BetaBinomial = field(default_factory=BetaBinomial)
     improvement_given_admission: BetaBinomial = field(default_factory=BetaBinomial)
     positive_gains: Tuple[float, ...] = ()
     resources: Mapping[str, ResourceStats] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.reliability, BetaBinomial):
+            raise PosteriorError("reliability must be BetaBinomial statistics")
+        if not isinstance(self.admission, BetaBinomial):
+            raise PosteriorError("admission must be BetaBinomial statistics")
+        if not isinstance(self.improvement_given_admission, BetaBinomial):
+            raise PosteriorError(
+                "improvement_given_admission must be BetaBinomial statistics"
+            )
+        gains = tuple(self.positive_gains)
+        if len(gains) > _MAX_RESERVOIR:
+            raise PosteriorError("positive-gain reservoir exceeds its hard bound")
+        for gain in gains:
+            if (
+                isinstance(gain, bool)
+                or not isinstance(gain, (int, float))
+                or not math.isfinite(float(gain))
+                or float(gain) <= 0.0
+            ):
+                raise PosteriorError("positive-gain observations must be finite and positive")
+        resources = dict(self.resources)
+        for name, stats in resources.items():
+            if not isinstance(name, str) or not name.strip():
+                raise PosteriorError("resource names must be non-empty strings")
+            if not isinstance(stats, ResourceStats):
+                raise PosteriorError("resource entries must be ResourceStats")
+        object.__setattr__(self, "positive_gains", tuple(float(gain) for gain in gains))
+        object.__setattr__(self, "resources", resources)
 
 
 @dataclass(frozen=True)
@@ -123,6 +192,7 @@ class PosteriorSnapshot:
 
     hierarchy_level: str
     support: int
+    reliability_probability: float
     admission_probability: float
     improvement_probability_given_admission: float
     positive_probability: float
@@ -156,6 +226,7 @@ class PosteriorStore:
                 level: [
                     {
                         "key": list(key),
+                        "reliability": vars(stats.reliability),
                         "admission": vars(stats.admission),
                         "improvement_given_admission": vars(
                             stats.improvement_given_admission
@@ -191,20 +262,37 @@ class PosteriorStore:
             for entry in entries:
                 if not isinstance(entry, Mapping):
                     raise PosteriorError("posterior entry must be a mapping")
-                key = tuple(entry.get("key", ()))
-                resources = {
-                    str(name): ResourceStats(**dict(value))
-                    for name, value in dict(entry.get("resources", {})).items()
-                }
+                raw_key = entry.get("key", ())
+                if not isinstance(raw_key, (list, tuple)):
+                    raise PosteriorError("posterior hierarchy key must be a list")
+                key = tuple(raw_key)
+                if key in levels[level]:
+                    raise PosteriorError("persisted posterior contains a duplicate key")
+                raw_resources = entry.get("resources", {})
+                if not isinstance(raw_resources, Mapping):
+                    raise PosteriorError("posterior resources must be a mapping")
+                resources = {}
+                for name, value in raw_resources.items():
+                    if not isinstance(value, Mapping):
+                        raise PosteriorError(
+                            "posterior resource statistics must be a mapping"
+                        )
+                    resources[name] = ResourceStats(**dict(value))
+                raw_gains = entry.get("positive_gains", ())
+                if not isinstance(raw_gains, (list, tuple)):
+                    raise PosteriorError("positive_gains must be a list")
                 levels[level][key] = LevelStats(
+                    reliability=BetaBinomial(
+                        **dict(entry.get("reliability", {}))
+                    ),
                     admission=BetaBinomial(**dict(entry["admission"])),
                     improvement_given_admission=BetaBinomial(
                         **dict(entry["improvement_given_admission"])
                     ),
-                    positive_gains=tuple(float(x) for x in entry.get("positive_gains", ())),
+                    positive_gains=tuple(raw_gains),
                     resources=resources,
                 )
-        return cls(min_support=int(payload.get("min_support", 3)), levels=levels)
+        return cls(min_support=payload.get("min_support", 3), levels=levels)
 
     def observe(
         self,
@@ -224,17 +312,46 @@ class PosteriorStore:
         models.
         """
 
-        if isinstance(admitted, bool) is False:
-            raise PosteriorError("admitted must be boolean")
+        for name, value in (
+            ("admitted", admitted),
+            ("infrastructure", infrastructure),
+            ("record_improved", record_improved),
+        ):
+            if not isinstance(value, bool):
+                raise PosteriorError(f"{name} must be boolean")
+        if (
+            isinstance(gain, bool)
+            or not isinstance(gain, (int, float))
+            or not math.isfinite(float(gain))
+            or float(gain) < 0.0
+        ):
+            raise PosteriorError("gain must be finite and non-negative")
+        normalized_costs: Dict[str, float] = {}
+        for resource, amount in costs.items():
+            if not isinstance(resource, str) or not resource.strip():
+                raise PosteriorError("resource names must be non-empty strings")
+            if (
+                isinstance(amount, bool)
+                or not isinstance(amount, (int, float))
+                or not math.isfinite(float(amount))
+                or float(amount) < 0.0
+            ):
+                raise PosteriorError(
+                    f"resource observation {resource!r} must be finite and non-negative"
+                )
+            normalized_costs[resource] = float(amount)
         levels = {level: dict(bucket) for level, bucket in self.levels.items()}
         for level in HIERARCHY_LEVELS:
             key = hierarchy_key(level, identity)
             stats = levels[level].get(key, LevelStats())
             resources = dict(stats.resources)
-            for resource, amount in costs.items():
-                resources[resource] = resources.get(resource, ResourceStats()).update(float(amount))
+            for resource, amount in normalized_costs.items():
+                resources[resource] = resources.get(resource, ResourceStats()).update(amount)
+            reliability = stats.reliability.update(not infrastructure)
             if infrastructure:
-                levels[level][key] = replace(stats, resources=resources)
+                levels[level][key] = replace(
+                    stats, reliability=reliability, resources=resources
+                )
                 continue
             admission = stats.admission.update(admitted)
             improvement = stats.improvement_given_admission
@@ -245,6 +362,7 @@ class PosteriorStore:
                 if improved:
                     positive_gains = (stats.positive_gains + (float(gain),))[-_MAX_RESERVOIR:]
             levels[level][key] = LevelStats(
+                reliability=reliability,
                 admission=admission,
                 improvement_given_admission=improvement,
                 positive_gains=positive_gains,
@@ -270,12 +388,46 @@ class PosteriorStore:
                 return level, stats
         return self._backoff(identity)
 
+    def _backoff_for_reliability(
+        self, identity: ArmIdentity
+    ) -> Tuple[str, LevelStats]:
+        for level in HIERARCHY_LEVELS:
+            key = hierarchy_key(level, identity)
+            stats = self.levels.get(level, {}).get(key)
+            if stats is not None and stats.reliability.support >= self.min_support:
+                return level, stats
+        key = hierarchy_key("global", identity)
+        return "global", self.levels.get("global", {}).get(key, LevelStats())
+
+    def _backoff_for_resource(
+        self, identity: ArmIdentity, resource: str
+    ) -> Tuple[str, ResourceStats]:
+        """Back off on resource support independently of scientific support."""
+
+        if not isinstance(resource, str) or not resource.strip():
+            raise PosteriorError("resource must be a non-empty string")
+        for level in HIERARCHY_LEVELS:
+            key = hierarchy_key(level, identity)
+            stats = self.levels.get(level, {}).get(key)
+            estimate = stats.resources.get(resource) if stats is not None else None
+            if estimate is not None and estimate.count >= self.min_support:
+                return level, estimate
+        global_key = hierarchy_key("global", identity)
+        global_stats = self.levels.get("global", {}).get(global_key)
+        if global_stats is not None and resource in global_stats.resources:
+            return "global", global_stats.resources[resource]
+        return "global", ResourceStats()
+
     def snapshot(self, identity: ArmIdentity) -> PosteriorSnapshot:
         level, stats = self._backoff(identity)
-        gain_level, gain_stats = self._backoff_for_gain(identity)
+        _gain_level, gain_stats = self._backoff_for_gain(identity)
+        _reliability_level, reliability_stats = self._backoff_for_reliability(
+            identity
+        )
+        reliability = reliability_stats.reliability.mean
         p_admit = stats.admission.mean
         p_improve = stats.improvement_given_admission.mean if stats.admission.support else 0.5
-        p_positive = p_admit * p_improve
+        p_positive = reliability * p_admit * p_improve
         if gain_stats.positive_gains:
             mean_gain = sum(gain_stats.positive_gains) / len(gain_stats.positive_gains)
             n = len(gain_stats.positive_gains)
@@ -291,6 +443,7 @@ class PosteriorStore:
         return PosteriorSnapshot(
             hierarchy_level=level,
             support=stats.admission.support,
+            reliability_probability=reliability,
             admission_probability=p_admit,
             improvement_probability_given_admission=p_improve,
             positive_probability=p_positive,
@@ -300,8 +453,8 @@ class PosteriorStore:
         )
 
     def resource_estimate(self, identity: ArmIdentity, resource: str) -> ResourceStats:
-        level, stats = self._backoff(identity)
-        return stats.resources.get(resource, ResourceStats())
+        _level, estimate = self._backoff_for_resource(identity, resource)
+        return estimate
 
     def sample_positive_gain(self, identity: ArmIdentity, rng: random.Random) -> float:
         """One Bayesian-bootstrap draw of the positive-gain magnitude.
@@ -325,6 +478,10 @@ class PosteriorStore:
     def sample_admission_rate(self, identity: ArmIdentity, rng: random.Random) -> float:
         _, stats = self._backoff(identity)
         return stats.admission.sample(rng)
+
+    def sample_reliability_rate(self, identity: ArmIdentity, rng: random.Random) -> float:
+        _, stats = self._backoff_for_reliability(identity)
+        return stats.reliability.sample(rng)
 
     def sample_improvement_rate(self, identity: ArmIdentity, rng: random.Random) -> float:
         _, stats = self._backoff(identity)

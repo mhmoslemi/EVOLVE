@@ -12,6 +12,7 @@ import json
 import logging
 import math
 import os
+import shutil
 import sys
 import textwrap
 import warnings
@@ -38,16 +39,17 @@ def build_dry_plan(config: EvolveConfig, config_hash: str) -> Dict[str, Any]:
         requested = slots(fraction)
         return requested if requested % 2 == 0 else requested + 1
 
-    audit_slots = paired_slots(settings.budget.audit_fraction)
+    audit_slots = max(
+        paired_slots(settings.budget.audit_fraction),
+        paired_slots(settings.audits.no_memory_fraction),
+    )
     refinement_slots = paired_slots(settings.budget.refinement_fraction)
     harness_slots = paired_slots(settings.harnesses.trial_fraction)
     empty_cell_slots = slots(settings.archive.empty_cell_fraction)
     exploration_slots = int(
         math.ceil(inflight * settings.scheduler.global_exploration_fraction)
     )
-    no_memory_slots = min(
-        audit_slots, slots(settings.audits.no_memory_fraction)
-    )
+    no_memory_slots = paired_slots(settings.audits.no_memory_fraction)
     production_slots = inflight - audit_slots - refinement_slots - harness_slots
     return {
         "schema_version": 1,
@@ -207,7 +209,10 @@ def format_startup_banner(
     )
     if config.kernel_gpu_id is None:
         evaluation = "CPU verifier · no GPU reserved"
-    elif config.kernel_gpu_id in config.runtime_gpu_ids:
+    elif (
+        config.kernel_gpu_id == config.training_gpu_id
+        or config.kernel_gpu_id in config.gpu_ids
+    ):
         evaluation = f"GPU {config.kernel_gpu_id} · serialized model teardown"
     else:
         evaluation = f"GPU {config.kernel_gpu_id} · exclusive"
@@ -264,7 +269,8 @@ def _configure_runtime_noise_filters() -> None:
     # expose.  vLLM's native sampler has no such startup requirement.  Keep an
     # explicit environment setting authoritative for users who have nvcc and
     # intentionally want FlashInfer.
-    os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+    if shutil.which("nvcc") is None:
+        os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
     logging.getLogger("torch.utils._pytree").setLevel(logging.ERROR)
     warnings.filterwarnings(
         "ignore",

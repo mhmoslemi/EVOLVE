@@ -19,31 +19,35 @@ durable. Dry planning and configuration validation remain model-free.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
 import platform
 import shutil
 import socket
 import subprocess
 import sys
+from concurrent.futures import as_completed
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from evolve.archive import (
     ArchiveAdmissionError,
     ConfirmedRecordTracker,
     ProvenanceStore,
     ScientificArchive,
+    validate_stored_evidence,
 )
 from evolve.audits import (
     AuditEffectError,
     AuditPairingError,
+    abort_audit_pair,
     assign_audit_sides,
     close_audit_pair,
     compute_audit_effect,
     create_audit_pair,
-    default_gain,
 )
 from evolve.budget import BudgetOverrun, BudgetService
 from evolve.causal_memory import (
@@ -84,28 +88,49 @@ from evolve.refinement import (
 from evolve.roles import RoleRegistry
 from evolve.runio import (
     ControllerEventWriter,
+    ImmutableWriteError,
     RunLayout,
+    atomic_write_bytes,
     atomic_write_json,
     atomic_write_text,
+    append_jsonl_records,
     create_fresh_run_layout,
+    fsync_directory,
     open_existing_run_layout,
     write_immutable_json,
     write_immutable_text,
     write_initial_run_metadata,
     write_resume_run_metadata,
 )
-from evolve.scheduler import AllocationPlan, PosteriorStore, plan_epoch
+from evolve.scheduler import (
+    AllocationPlan,
+    ArmIdentity,
+    PORTFOLIO_VERSION,
+    POSTERIOR_VERSION,
+    PlannedArm,
+    PosteriorStore,
+    RESERVATIONS_VERSION,
+    ReservationSlots,
+    SchedulerError,
+    enumerate_candidate_arms,
+    make_allocation_arm,
+    plan_epoch,
+)
 from evolve.types import (
     AllocationArm,
     AuditPair,
     AuditSide,
+    AuditStatus,
     BranchSpec,
     BudgetLedger,
     Channel,
+    Descriptor,
     EpochManifest,
+    EvidencePacket,
     FailureKind,
     Proposal,
     Role,
+    VerifiedScientificState,
 )
 from evolve.verifier.adapters import ProblemScientificAdapter
 from evolve.verifier.models import VerificationPolicy
@@ -113,6 +138,270 @@ from evolve.verifier.models import VerificationPolicy
 
 class EngineError(RuntimeError):
     """The composed engine cannot proceed as configured."""
+
+
+class RecordConfirmationInfrastructureError(EngineError):
+    """Both bounded record-confirmation calls failed in infrastructure."""
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _write_json_once(path: Path, value: Any) -> None:
+    try:
+        write_immutable_json(path, value)
+    except ImmutableWriteError:
+        if json.loads(path.read_text(encoding="utf-8")) != value:
+            raise EngineError(f"immutable JSON artifact conflict: {path}")
+
+
+def _write_text_once(path: Path, value: str) -> None:
+    try:
+        write_immutable_text(path, value)
+    except ImmutableWriteError:
+        if path.read_text(encoding="utf-8") != value:
+            raise EngineError(f"immutable text artifact conflict: {path}")
+
+
+def _confirmation_attempt_count(value: Any) -> int:
+    """Strictly validate the bounded record-confirmation attempt count."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value not in (1, 2):
+        raise EngineError("record confirmation attempts must be integer 1 or 2")
+    return value
+
+
+def _verification_attempt_index(value: Any, *, maximum: Optional[int] = None) -> int:
+    """Reject coerced or out-of-range verifier attempt metadata."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise EngineError("verification attempt index must be a nonnegative integer")
+    if maximum is not None and value > maximum:
+        raise EngineError("verification attempt index exceeds the retry policy")
+    return value
+
+
+def _validate_attempt_count_covers_evidence(
+    attempt_flag: Any, attempts: int, *, context: str
+) -> None:
+    """Ensure total calls include the final durable evidence-producing call.
+
+    A later retry can fail before producing evidence, so the final packet's
+    attempt index need not equal the total number of charged calls.  It may
+    never be greater, however.
+    """
+
+    attempts = _confirmation_attempt_count(attempts)
+    if attempt_flag is None:
+        return
+    evidence_attempt = _verification_attempt_index(attempt_flag, maximum=1) + 1
+    if evidence_attempt > attempts:
+        raise EngineError(f"{context} attempt count contradicts its evidence")
+
+
+def _validate_proposal_evidence_binding(
+    proposal: Proposal, evidence: EvidencePacket
+) -> None:
+    """Reject a durable packet that is not the exact proposal observation."""
+
+    try:
+        validate_stored_evidence(evidence)
+    except Exception as exc:
+        raise EngineError(
+            f"invalid durable evidence {evidence.evidence_id}: {exc}"
+        ) from exc
+    expected = {
+        "run_id": proposal.run_id,
+        "proposal_id": proposal.proposal_id,
+        "problem_id": proposal.problem_id,
+        "parent_state_id": proposal.parent_state_id,
+        "branch_id": proposal.branch_id,
+        "source_hash": proposal.source_hash,
+    }
+    for field_name, value in expected.items():
+        if getattr(evidence, field_name) != value:
+            raise EngineError(
+                f"durable evidence {evidence.evidence_id} has a mismatched "
+                f"{field_name} reference"
+            )
+
+
+def _validate_confirmation_binding(
+    proposal: Proposal,
+    prior_evidence: EvidencePacket,
+    confirmation_evidence: EvidencePacket,
+) -> None:
+    """Validate that a replayed packet confirms precisely the saved payload."""
+
+    _validate_proposal_evidence_binding(proposal, confirmation_evidence)
+    expected = {
+        "verifier_id": prior_evidence.verifier_id,
+        "verifier_version": prior_evidence.verifier_version,
+        "harness_id": prior_evidence.harness_id,
+        "policy_snapshot_id": prior_evidence.policy_snapshot_id,
+        "timeout_is_scientific": prior_evidence.timeout_is_scientific,
+    }
+    for field_name, value in expected.items():
+        if getattr(confirmation_evidence, field_name) != value:
+            raise EngineError(
+                f"confirmation {confirmation_evidence.evidence_id} has a "
+                f"mismatched {field_name} reference"
+            )
+    if (
+        confirmation_evidence.flags.get("confirmation_of_evidence_id")
+        != prior_evidence.evidence_id
+    ):
+        raise EngineError("confirmation references a different source evidence packet")
+    if (
+        confirmation_evidence.flags.get("confirmation_target_state_id")
+        != prior_evidence.scientific_state_id
+    ):
+        raise EngineError("confirmation references a different scientific state")
+    if content_hash(confirmation_evidence.answer_payload) != content_hash(
+        prior_evidence.answer_payload
+    ):
+        raise EngineError("confirmation payload differs from the saved answer payload")
+    if confirmation_evidence.admitted:
+        if confirmation_evidence.scientific_state_id != prior_evidence.scientific_state_id:
+            raise EngineError("confirmation admitted a different scientific state")
+        if confirmation_evidence.descriptor_id != prior_evidence.descriptor_id:
+            raise EngineError("confirmation changed the scientific descriptor")
+        if confirmation_evidence.fingerprint != prior_evidence.fingerprint:
+            raise EngineError("confirmation changed the scientific fingerprint")
+
+
+def _restore_admitted_artifacts(
+    evidence: EvidencePacket,
+    *,
+    adapter: ProblemScientificAdapter,
+) -> Tuple[VerifiedScientificState, Descriptor]:
+    """Rebuild derived state/descriptor files without rerunning verification."""
+
+    if not evidence.admitted or evidence.scientific_state_id is None:
+        raise EngineError("cannot restore scientific artifacts from rejected evidence")
+
+    from evolve.verifier.evidence import build_descriptor
+    from evolve.verifier.models import ExecutionCapture, VerificationDecision
+
+    restored_decision = VerificationDecision(
+        failure_kind=evidence.failure_kind,
+        resolved=evidence.resolved,
+        admitted=evidence.admitted,
+        internal_reward=evidence.internal_reward,
+        raw_score=evidence.raw_score,
+        uncertainty=evidence.uncertainty,
+        flags=evidence.flags,
+        scores=evidence.scores,
+        capture=ExecutionCapture(
+            diagnostics=evidence.diagnostics,
+            resources=evidence.resources,
+            started_at=evidence.started_at,
+            completed_at=evidence.completed_at,
+            attempt_index=_verification_attempt_index(
+                evidence.flags.get("verification_attempt_index", 0)
+            ),
+        ),
+    )
+    descriptor = build_descriptor(
+        problem_id=evidence.problem_id,
+        function_version=adapter.descriptor_version,
+        dimensions=adapter.describe_scientific_state(
+            evidence.answer_payload, restored_decision
+        ),
+        method_complete=adapter.method_complete,
+    )
+    if descriptor.descriptor_id != evidence.descriptor_id:
+        raise EngineError("scientific descriptor changed while restoring durable evidence")
+    fingerprint = adapter.scientific_fingerprint(
+        evidence.answer_payload, restored_decision
+    )
+    if fingerprint != evidence.fingerprint:
+        raise EngineError("scientific fingerprint changed while restoring durable evidence")
+    state = VerifiedScientificState(
+        state_id=evidence.scientific_state_id,
+        proposal_id=evidence.proposal_id,
+        evidence_id=evidence.evidence_id,
+        problem_id=evidence.problem_id,
+        answer_payload=evidence.answer_payload,
+        resolved=evidence.resolved,
+        admitted=evidence.admitted,
+        confirmed=evidence.confirmed,
+        internal_reward=evidence.internal_reward,
+        raw_score=evidence.raw_score,
+        descriptor_id=evidence.descriptor_id,
+        fingerprint=evidence.fingerprint,
+    )
+    return state, descriptor
+
+
+def _normalized_outcome_gain(
+    adapter: ProblemScientificAdapter,
+    outcome: Any,
+    *,
+    frozen_record_threshold: float,
+) -> float:
+    """Apply the problem's frozen-threshold gain normalization exactly once."""
+
+    if outcome.maximum_reward is None or outcome.infrastructure_aborted:
+        return 0.0
+    value = adapter.problem.normalize_gain(
+        float(outcome.maximum_reward), float(frozen_record_threshold)
+    )
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise EngineError("problem normalize_gain must return a numeric value")
+    return max(0.0, float(value))
+
+
+def _settle_branch_verifier_budget(
+    ledger: BudgetLedger,
+    *,
+    execution: BranchExecution,
+    debit_key: str,
+    reserved: float,
+) -> BudgetLedger:
+    """Reconcile one frozen reservation with durable verifier attempts.
+
+    New plans reserve the bounded retry ceiling up front.  A partially
+    executed plan written by an older controller can reserve less, however,
+    while its already-durable evidence records more than one infrastructure
+    attempt.  Account for that evidence exactly instead of trusting a derived
+    ``unused_budget`` value or silently losing the retry from the global
+    ledger.
+    """
+
+    actual = float(execution.outcome.costs.get("verifier_calls", 0.0))
+    reserved = float(reserved)
+    if not math.isfinite(actual) or actual < 0.0:
+        raise EngineError("branch verifier cost must be finite and nonnegative")
+    if not math.isfinite(reserved) or reserved <= 0.0:
+        raise EngineError("branch verifier reservation must be finite and positive")
+    if actual > reserved + 1e-12:
+        try:
+            return BudgetService.debit(
+                ledger,
+                resource="verifier_calls",
+                amount=actual - reserved,
+                transaction_key=f"{debit_key}:actual-overflow",
+            )
+        except BudgetOverrun as exc:
+            raise EngineError(
+                "durable verifier attempts exceed the frozen reservation and "
+                "remaining global verifier budget"
+            ) from exc
+    if reserved > actual + 1e-12:
+        return BudgetService.refund(
+            ledger,
+            resource="verifier_calls",
+            amount=reserved - actual,
+            transaction_key=f"{debit_key}:refund",
+            debit_transaction_key=debit_key,
+        )
+    return ledger
 
 
 COMPONENT_SCHEMA_VERSIONS: Mapping[str, int] = {
@@ -135,7 +424,11 @@ class EngineWorkers:
     branch_step_executor: BranchStepExecutor
     gradient_step: GradientStepFn
     begin_epoch: Optional[Callable[[Any], None]] = None
-    persist_roles: Optional[Callable[[Any], None]] = None
+    persist_roles: Optional[Callable[[Any], Mapping[str, Any]]] = None
+    persist_training_state: Optional[
+        Callable[[Any, Mapping[str, Any], Sequence[Path]], None]
+    ] = None
+    submit_branch: Optional[Callable[[Callable[[], BranchExecution]], Any]] = None
     shutdown: Optional[Callable[[], None]] = None
 
 
@@ -163,8 +456,30 @@ def build_production_workers(
         gradient_step=runtime.gradient_step,
         begin_epoch=runtime.begin_epoch,
         persist_roles=runtime.persist_roles,
+        persist_training_state=runtime.persist_training_state,
+        submit_branch=runtime.submit_branch,
         shutdown=runtime.shutdown,
     )
+
+
+@dataclass(frozen=True)
+class _PendingBranch:
+    branch: BranchSpec
+    arm: AllocationArm
+    role_snapshot: Any
+    ordinal: int
+    debit_key: str
+    cell_empty: bool = False
+    memory_enabled: bool = True
+
+
+@dataclass(frozen=True)
+class _RefinementSource:
+    arm: AllocationArm
+    proposal: Proposal
+    evidence: EvidencePacket
+    branch_id: str
+    entry: Optional[NurseryEntry] = None
 
 
 # --------------------------------------------------------------------------
@@ -200,6 +515,8 @@ def _allocation_plan_id(plan: AllocationPlan) -> str:
             {
                 "arm_id": planned.arm.arm_id,
                 "reservation": planned.reservation,
+                "reservations": list(planned.reservations),
+                "replicas": planned.replicas,
                 "rng_seed": planned.rng_seed,
             }
             for planned in plan.planned_arms
@@ -210,6 +527,7 @@ def _allocation_plan_id(plan: AllocationPlan) -> str:
 
 def _plan_document(plan: AllocationPlan) -> Mapping[str, Any]:
     return {
+        "schema_version": 1,
         "epoch": plan.epoch,
         "seed": plan.seed,
         "posterior_version": plan.posterior_version,
@@ -233,12 +551,226 @@ def _plan_document(plan: AllocationPlan) -> Mapping[str, Any]:
                 "posterior_level": planned.posterior_level,
                 "expected_gain": planned.expected_gain,
                 "uncertainty": planned.uncertainty,
+                "posterior_support": planned.posterior_support,
+                "reliability_probability": planned.reliability_probability,
+                "admission_probability": planned.admission_probability,
+                "improvement_probability_given_admission": (
+                    planned.improvement_probability_given_admission
+                ),
+                "mean_positive_gain": planned.mean_positive_gain,
                 "marginal_gain": planned.marginal_gain,
+                "correlation_penalty": planned.correlation_penalty,
+                "predicted_cost_uncertainty": dict(
+                    planned.predicted_cost_uncertainty
+                ),
+                "replicas": planned.replicas,
+                "reservations": list(planned.reservations),
                 "rng_seed": planned.rng_seed,
             }
             for planned in plan.planned_arms
         ],
     }
+
+
+def _plan_from_document(document: Mapping[str, Any]) -> AllocationPlan:
+    """Strictly restore the authoritative in-epoch allocation decision."""
+
+    if not isinstance(document, Mapping):
+        raise EngineError("allocation plan must be a JSON object")
+    schema_version = document.get("schema_version", 1)
+    if (
+        isinstance(schema_version, bool)
+        or not isinstance(schema_version, int)
+        or schema_version != 1
+    ):
+        raise EngineError(
+            f"unsupported allocation plan schema {schema_version!r}"
+        )
+    slots_document = document.get("reservation_slots")
+    planned_documents = document.get("planned_arms")
+    if not isinstance(slots_document, Mapping) or not isinstance(
+        planned_documents, list
+    ):
+        raise EngineError("allocation plan omits reservations or planned arms")
+
+    def plan_number(value: Any, name: str, *, minimum: float = 0.0) -> float:
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or float(value) < minimum
+        ):
+            raise EngineError(f"allocation plan {name} is invalid")
+        return float(value)
+
+    def plan_integer(value: Any, name: str, *, minimum: int = 0) -> int:
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < minimum
+        ):
+            raise EngineError(f"allocation plan {name} is invalid")
+        return value
+
+    def plan_string(value: Any, name: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise EngineError(f"allocation plan {name} is invalid")
+        return value
+    try:
+        slots = ReservationSlots(
+            **{
+                name: slots_document[name]
+                for name in (
+                    "total_inflight",
+                    "audit_branch_slots",
+                    "no_memory_audit_slots",
+                    "refinement_slots",
+                    "harness_trial_slots",
+                    "empty_cell_slots",
+                    "global_exploration_slots",
+                    "role_guaranteed_slots",
+                    "remaining_production_slots",
+                )
+            }
+        )
+        planned = []
+        for item in planned_documents:
+            if not isinstance(item, Mapping):
+                raise EngineError("planned arm entry must be a JSON object")
+            arm = AllocationArm.from_dict(item["arm"])
+            rebuilt = make_allocation_arm(
+                ArmIdentity.from_arm(arm),
+                channel=arm.channel,
+                expected_cost=arm.expected_cost,
+                hard_cost=arm.hard_cost,
+            )
+            if rebuilt.arm_id != arm.arm_id:
+                raise EngineError("persisted allocation arm ID is not canonical")
+            reservation = item.get("reservation")
+            if reservation is not None:
+                reservation = plan_string(reservation, "reservation")
+            reservation_values = item.get("reservations", ())
+            if not isinstance(reservation_values, (list, tuple)) or any(
+                not isinstance(value, str) or not value.strip()
+                for value in reservation_values
+            ):
+                raise EngineError("allocation plan reservations are invalid")
+            reservation_values = tuple(reservation_values)
+            if len(set(reservation_values)) != len(reservation_values):
+                raise EngineError("allocation plan reservation labels must be unique")
+            if reservation_values and reservation != reservation_values[0]:
+                raise EngineError(
+                    "allocation plan primary reservation does not match its labels"
+                )
+            uncertainty_document = item.get("predicted_cost_uncertainty", {})
+            if not isinstance(uncertainty_document, Mapping):
+                raise EngineError(
+                    "allocation plan predicted cost uncertainty must be a mapping"
+                )
+            cost_uncertainty = {
+                plan_string(resource, "resource uncertainty key"): plan_number(
+                    amount, f"predicted_cost_uncertainty.{resource}"
+                )
+                for resource, amount in uncertainty_document.items()
+            }
+            reliability = plan_number(
+                item.get("reliability_probability", 0.5),
+                "reliability_probability",
+            )
+            admission = plan_number(
+                item.get("admission_probability", 0.5),
+                "admission_probability",
+            )
+            improvement = plan_number(
+                item.get("improvement_probability_given_admission", 0.5),
+                "improvement_probability_given_admission",
+            )
+            if any(value > 1.0 for value in (reliability, admission, improvement)):
+                raise EngineError("allocation plan probabilities must lie in [0, 1]")
+            planned.append(
+                PlannedArm(
+                    arm=arm,
+                    reservation=reservation,
+                    posterior_level=plan_string(
+                        item["posterior_level"], "posterior_level"
+                    ),
+                    expected_gain=plan_number(item["expected_gain"], "expected_gain"),
+                    uncertainty=plan_number(item["uncertainty"], "uncertainty"),
+                    marginal_gain=plan_number(item["marginal_gain"], "marginal_gain"),
+                    rng_seed=plan_integer(item["rng_seed"], "rng_seed"),
+                    posterior_support=plan_integer(
+                        item.get("posterior_support", 0), "posterior_support"
+                    ),
+                    reliability_probability=reliability,
+                    admission_probability=admission,
+                    improvement_probability_given_admission=improvement,
+                    mean_positive_gain=plan_number(
+                        item.get("mean_positive_gain", 0.0), "mean_positive_gain"
+                    ),
+                    replicas=plan_integer(item.get("replicas", 1), "replicas", minimum=1),
+                    reservations=reservation_values,
+                    correlation_penalty=plan_number(
+                        item.get("correlation_penalty", 0.0), "correlation_penalty"
+                    ),
+                    predicted_cost_uncertainty=cost_uncertainty,
+                )
+            )
+        epoch = document["epoch"]
+        seed = document["seed"]
+        if (
+            isinstance(epoch, bool)
+            or not isinstance(epoch, int)
+            or epoch < 0
+            or isinstance(seed, bool)
+            or not isinstance(seed, int)
+            or seed < 0
+        ):
+            raise EngineError("allocation plan epoch and seed must be integers")
+        posterior_version = plan_string(
+            document["posterior_version"], "posterior_version"
+        )
+        portfolio_version = plan_string(
+            document["portfolio_version"], "portfolio_version"
+        )
+        reservations_version = plan_string(
+            document["reservations_version"], "reservations_version"
+        )
+        supported_versions = {
+            "posterior_version": (posterior_version, POSTERIOR_VERSION),
+            "portfolio_version": (portfolio_version, PORTFOLIO_VERSION),
+            "reservations_version": (reservations_version, RESERVATIONS_VERSION),
+        }
+        for name, (persisted, supported) in supported_versions.items():
+            if persisted != supported:
+                raise EngineError(
+                    f"allocation plan {name} {persisted!r} is unsupported; "
+                    f"expected {supported!r}"
+                )
+        arm_ids = [item.arm.arm_id for item in planned]
+        if len(set(arm_ids)) != len(arm_ids):
+            raise EngineError("allocation plan contains duplicate arm identities")
+        production_capacity = max(
+            0,
+            slots.total_inflight
+            - slots.audit_branch_slots
+            - slots.refinement_slots
+            - slots.harness_trial_slots,
+        )
+        if sum(item.replicas for item in planned) > production_capacity:
+            raise EngineError("allocation plan exceeds its frozen production capacity")
+        return AllocationPlan(
+            epoch=epoch,
+            posterior_version=posterior_version,
+            portfolio_version=portfolio_version,
+            reservations_version=reservations_version,
+            reservation_slots=slots,
+            planned_arms=tuple(planned),
+            seed=seed,
+        )
+    except EngineError:
+        raise
+    except (KeyError, TypeError, ValueError) as exc:
+        raise EngineError(f"malformed allocation plan: {exc}") from exc
 
 
 def _retargeted_arm(
@@ -254,13 +786,16 @@ def _retargeted_arm(
 
     if arm.option_id == option_id and arm.channel == channel:
         return arm
-    spec = option_registry.spec(option_id)
+    option_registry.spec(option_id)
     identity = ArmIdentity(
         cell_id=arm.cell_id, role=arm.role, option_id=option_id,
         harness_id=arm.harness_id, horizon=arm.horizon, cost_class=arm.cost_class,
     )
     return make_allocation_arm(
-        identity, channel=channel, expected_cost=spec.expected_cost, hard_cost=spec.hard_cost
+        identity,
+        channel=channel,
+        expected_cost=arm.expected_cost,
+        hard_cost=arm.hard_cost,
     )
 
 
@@ -311,11 +846,17 @@ def _special_option_arm(
         horizon=spec.max_horizon,
         cost_class="refinement_fixed",
     )
+    hard_cost = {
+        resource: (
+            float(amount) * (2.0 if resource == "verifier_calls" else 1.0)
+        )
+        for resource, amount in spec.hard_cost.items()
+    }
     return make_allocation_arm(
         identity,
         channel=channel,
         expected_cost=spec.expected_cost,
-        hard_cost=spec.hard_cost,
+        hard_cost=hard_cost,
     )
 
 
@@ -388,6 +929,7 @@ class EpochState:
     budget_ledger: BudgetLedger
     record: ConfirmedRecordTracker
     nursery: Mapping[str, NurseryEntry] = field(default_factory=dict)
+    role_artifacts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -432,22 +974,75 @@ class EvolveEngine:
         workers = self._workers or build_production_workers(
             self.config, adapter=adapter, layout=layout, state=state
         )
-        if workers.persist_roles is not None:
-            workers.persist_roles(state)
-        if self.metadata.get("mode") != "resume":
-            self._commit_bootstrap(layout, state)
         target_epochs = self.config.evolve.budget.epochs
+        completion_reason = "target epochs reached"
         try:
-            while state.epoch < target_epochs:
-                if workers.begin_epoch is not None:
-                    workers.begin_epoch(state)
-                state, report = self.run_epoch(
+            try:
+                _latest_completed_checkpoint(layout)
+                has_completed_barrier = True
+            except EngineError:
+                has_completed_barrier = False
+            needs_bootstrap_commit = not has_completed_barrier
+            if needs_bootstrap_commit:
+                role_artifacts = (
+                    workers.persist_roles(state)
+                    if workers.persist_roles is not None
+                    else state.role_artifacts
+                )
+                self._commit_bootstrap(
                     layout,
                     state,
+                    role_artifacts=role_artifacts or {},
                     workers=workers,
                     adapter=adapter,
-                    verification_policy=verification_policy,
                 )
+                self._write_status(layout, state, note="bootstrap committed")
+            else:
+                # A checkpoint summary is the completed-barrier authority. Repair
+                # non-critical mirrors that may have been interrupted after that
+                # marker without replaying any scientific work.
+                if state.role_artifacts:
+                    self._publish_role_pointers(
+                        layout,
+                        role_artifacts=state.role_artifacts,
+                        epoch=state.epoch,
+                    )
+                if state.record.evidence_id is not None:
+                    best_pointer = layout.path("best/latest.json")
+                    best_evidence_id = None
+                    if best_pointer.is_file():
+                        try:
+                            best_evidence_id = json.loads(
+                                best_pointer.read_text(encoding="utf-8")
+                            ).get("evidence_id")
+                        except (OSError, json.JSONDecodeError):
+                            best_evidence_id = None
+                    if best_evidence_id != state.record.evidence_id:
+                        self._publish_best(layout, state, adapter=adapter)
+                self._write_status(
+                    layout, state, note="resumed from completed barrier"
+                )
+            while state.epoch < target_epochs:
+                if state.budget_ledger.remaining("verifier_calls") <= 2.0:
+                    completion_reason = "verifier budget reserve exhausted"
+                    break
+                if workers.begin_epoch is not None:
+                    workers.begin_epoch(state)
+                try:
+                    state, report = self.run_epoch(
+                        layout,
+                        state,
+                        workers=workers,
+                        adapter=adapter,
+                        verification_policy=verification_policy,
+                    )
+                except SchedulerError as exc:
+                    if not str(exc).startswith(
+                        "resource limits cannot satisfy mandatory"
+                    ):
+                        raise
+                    completion_reason = f"verifier budget exhausted: {exc}"
+                    break
                 self._commit_barrier(
                     layout, state, report, adapter=adapter, workers=workers
                 )
@@ -457,15 +1052,33 @@ class EvolveEngine:
         finally:
             if workers.shutdown is not None:
                 workers.shutdown()
-        self._write_status(layout, state, note="run complete")
+        target_reached = state.epoch >= target_epochs
+        self._write_status(
+            layout,
+            state,
+            note=(
+                "run complete: target epochs reached"
+                if target_reached
+                else f"run stopped safely: {completion_reason}"
+            ),
+        )
         atomic_write_json(
             layout.path("final.summary.json"),
             {
+                "schema_version": 1,
                 "run_id": state.run_id,
                 "epochs_completed": state.epoch,
+                "target_epochs": target_epochs,
+                "target_epochs_reached": target_reached,
+                "completion_reason": completion_reason,
                 "confirmed_record": state.record.internal_reward,
                 "archive_coverage": state.archive.coverage,
                 "budget": state.budget_ledger.to_dict(),
+                "checkpoint": json.loads(
+                    layout.path("checkpoints/latest.json").read_text(
+                        encoding="utf-8"
+                    )
+                ),
             },
         )
         return 0
@@ -486,7 +1099,10 @@ class EvolveEngine:
         self, *, adapter: ProblemScientificAdapter, verification_policy: VerificationPolicy
     ) -> Tuple[RunLayout, EpochState]:
         if self.metadata.get("mode") == "resume":
-            return self._attach_resume()
+            return self._attach_resume(
+                adapter=adapter,
+                verification_policy=verification_policy,
+            )
         return self._attach_fresh(adapter=adapter, verification_policy=verification_policy)
 
     def _attach_fresh(
@@ -528,32 +1144,113 @@ class EvolveEngine:
         state = self._seed_archive(
             state, layout=layout, adapter=adapter, verification_policy=verification_policy
         )
-        checkpoint = _checkpoint_payload(state)
-        checkpoint_path = layout.path("checkpoints/checkpoint_epoch000.json")
-        atomic_write_json(checkpoint_path, checkpoint)
         return layout, state
 
-    def _commit_bootstrap(self, layout: RunLayout, state: EpochState) -> None:
+    def _commit_bootstrap(
+        self,
+        layout: RunLayout,
+        state: EpochState,
+        *,
+        role_artifacts: Mapping[str, Mapping[str, Any]],
+        workers: EngineWorkers,
+        adapter: ProblemScientificAdapter,
+    ) -> None:
         """Publish epoch zero only after all three role artifacts are durable."""
 
+        self._publish_snapshots(layout, state)
         checkpoint_path = layout.path("checkpoints/checkpoint_epoch000.json")
-        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        checkpoint = _checkpoint_payload(state, role_artifacts=role_artifacts)
+        _write_json_once(checkpoint_path, checkpoint)
+        self._persist_training_state(
+            layout,
+            state=state,
+            checkpoint=checkpoint,
+            workers=workers,
+            epoch=state.epoch,
+        )
         checkpoint_hash = content_hash(checkpoint)
+        training_state_path = layout.path("checkpoints/checkpoint_epoch000.pt")
         pointer = {
             "schema_version": 1,
             "epoch": 0,
             "committed_epoch": 0,
             "checkpoint": checkpoint_path.name,
             "checkpoint_hash": checkpoint_hash,
+            "training_state": training_state_path.name,
+            "training_state_hash": _file_sha256(training_state_path),
         }
         atomic_write_json(layout.path("checkpoints/latest.json"), pointer)
-        atomic_write_json(layout.path("bootstrap.summary.json"), pointer)
+        _write_json_once(layout.path("bootstrap.summary.json"), pointer)
+        self._publish_role_pointers(
+            layout, role_artifacts=role_artifacts, epoch=state.epoch
+        )
+        with ControllerEventWriter(layout.path("events.jsonl")) as event_writer:
+            event_writer.append(
+                "barrier_committed",
+                {
+                    "kind": "bootstrap",
+                    "epoch": state.epoch,
+                    "checkpoint": checkpoint_path.name,
+                    "checkpoint_hash": checkpoint_hash,
+                },
+                idempotency_key="barrier-committed:bootstrap",
+            )
+        self._publish_best(layout, state, adapter=adapter)
 
-    def _attach_resume(self) -> Tuple[RunLayout, EpochState]:
+    def _attach_resume(
+        self,
+        *,
+        adapter: ProblemScientificAdapter,
+        verification_policy: VerificationPolicy,
+    ) -> Tuple[RunLayout, EpochState]:
         resume_dir = Path(self.metadata["resume_dir"])
         layout = open_existing_run_layout(resume_dir, resume=True)
-        checkpoint_path = _latest_completed_checkpoint(layout)
-        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        checkpoint = None
+        try:
+            checkpoint_path = _latest_completed_checkpoint(layout)
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        except EngineError:
+            # An explicitly resumed fresh run may have crashed before its
+            # bootstrap completion marker. Reconstruct the deterministic
+            # initial state under the existing run identity and replay only
+            # missing seed artifacts; never attach implicitly.
+            if layout.path("bootstrap.summary.json").exists() or any(
+                layout.run_dir.glob("step*/step*.summary.json")
+            ):
+                raise EngineError(
+                    "completion markers exist but no checkpoint passes hash "
+                    "validation; refusing to reinterpret the run as an "
+                    "incomplete bootstrap"
+                )
+            manifest_path = layout.path("manifest.json")
+            if not manifest_path.is_file():
+                raise
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            run_id = manifest.get("run_id")
+            if not isinstance(run_id, str):
+                raise EngineError(
+                    "incomplete bootstrap manifest has no stable run_id"
+                )
+            state = self._initial_state(run_id)
+            state = self._seed_archive(
+                state,
+                layout=layout,
+                adapter=adapter,
+                verification_policy=verification_policy,
+            )
+            recovery_checkpoint = {
+                "record_type": "evolve_bootstrap_recovery_anchor",
+                "schema_version": 1,
+                "run_id": state.run_id,
+                "state": _checkpoint_payload(state),
+            }
+            _write_json_once(
+                layout.path("checkpoints/bootstrap_recovery.json"),
+                recovery_checkpoint,
+            )
+            checkpoint_hash_for_resume = content_hash(recovery_checkpoint)
+        else:
+            checkpoint_hash_for_resume = content_hash(checkpoint)
         write_resume_run_metadata(
             layout.run_dir,
             resume_index=int(self.metadata.get("effective_resume_index", 0)) + 1,
@@ -576,9 +1273,10 @@ class EvolveEngine:
                 "schema_version": self.config.schema_version,
                 "config_hash": self.resolved_config.get("config_hash", ""),
             },
-            checkpoint_hash=content_hash(checkpoint),
+            checkpoint_hash=checkpoint_hash_for_resume,
         )
-        state = _state_from_checkpoint(checkpoint, config=self.config)
+        if checkpoint is not None:
+            state = _state_from_checkpoint(checkpoint, config=self.config)
         return layout, state
 
     def _initial_state(self, run_id: str) -> EpochState:
@@ -657,14 +1355,32 @@ class EvolveEngine:
 
         from evolve.verifier.models import PersistedAnswerPayload
         from evolve.verifier.service import verify_persisted_answer
-        from evolve.workers.verification import persist_answer_artifact
+        from evolve.workers.verification import (
+            VerificationWorkerError,
+            persist_answer_artifact,
+            persist_verifier_trace,
+            restore_durable_verification_result,
+        )
 
         problem = adapter.problem
         seed_branch_id = content_id("branch", {"kind": "seed", "run_id": state.run_id})
+        seed_harness_id = content_id("harness", {"kind": "seed"})
+        seed_policy_snapshot_id = content_id(
+            "role_snapshot", {"kind": "seed"}
+        )
         archive = state.archive
         seeds = tuple(problem.seed_states())
         admitted_count = 0
+        admitted_results = []
         failures: List[str] = []
+        budget_ledger = state.budget_ledger
+        bootstrap_dir = layout.path("bootstrap")
+        bootstrap_dir.mkdir(parents=True, exist_ok=True)
+
+        def seed_verifier_key(seed_index: int, attempt_index: int) -> str:
+            base = f"bootstrap:seed:{seed_index}:verify"
+            return base if attempt_index == 0 else f"{base}:retry:{attempt_index}"
+
         for index, seed in enumerate(seeds):
             candidate = seed.construction if seed.construction is not None else seed.code
             source_text = seed.code or json.dumps(candidate, sort_keys=True, default=str)
@@ -681,6 +1397,150 @@ class EvolveEngine:
                 parent_state_id=None,
                 branch_id=seed_branch_id,
             )
+            proposal_path = bootstrap_dir / f"seed{index:03d}.proposal.json"
+            evidence_path = bootstrap_dir / f"seed{index:03d}.evidence.json"
+            state_path = bootstrap_dir / f"seed{index:03d}.state.json"
+            descriptor_path = bootstrap_dir / f"seed{index:03d}.descriptor.json"
+            archive_path = bootstrap_dir / f"seed{index:03d}.archive.json"
+            error_path = bootstrap_dir / f"seed{index:03d}.error.json"
+
+            _write_json_once(proposal_path, proposal.to_dict())
+            if error_path.is_file() and not evidence_path.is_file():
+                error_document = json.loads(
+                    error_path.read_text(encoding="utf-8")
+                )
+                error_attempts = error_document.get(
+                    "verifier_attempts",
+                    1 if error_document.get("verifier_debited") else 0,
+                )
+                if (
+                    isinstance(error_attempts, bool)
+                    or not isinstance(error_attempts, int)
+                    or not 0 <= error_attempts
+                    <= verification_policy.infrastructure_retry_limit + 1
+                ):
+                    raise EngineError(
+                        f"bootstrap seed {index} error has invalid attempt count"
+                    )
+                for attempt_index in range(error_attempts):
+                    budget_ledger = BudgetService.debit(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=1.0,
+                        transaction_key=seed_verifier_key(index, attempt_index),
+                    )
+                failures.append(
+                    f"seed {index}: {error_document.get('exception_type')}: "
+                    f"{error_document.get('message')}"
+                )
+                continue
+
+            if evidence_path.is_file():
+                if not proposal_path.is_file():
+                    raise EngineError(
+                        f"bootstrap seed {index} has evidence without its proposal"
+                    )
+                durable_proposal = Proposal.from_dict(
+                    json.loads(proposal_path.read_text(encoding="utf-8"))
+                )
+                if durable_proposal != proposal:
+                    raise EngineError(
+                        f"bootstrap seed {index} proposal identity changed"
+                    )
+                evidence = EvidencePacket.from_dict(
+                    json.loads(evidence_path.read_text(encoding="utf-8"))
+                )
+                _validate_proposal_evidence_binding(durable_proposal, evidence)
+                if (
+                    evidence.verifier_id != adapter.verifier_id
+                    or evidence.verifier_version != adapter.verifier_version
+                    or evidence.harness_id != seed_harness_id
+                    or evidence.policy_snapshot_id != seed_policy_snapshot_id
+                ):
+                    raise EngineError(
+                        f"bootstrap seed {index} verifier context changed on recovery"
+                    )
+                attempt_index = _verification_attempt_index(
+                    evidence.flags.get("verification_attempt_index"),
+                    maximum=verification_policy.infrastructure_retry_limit,
+                )
+                for replay_index in range(attempt_index + 1):
+                    budget_ledger = BudgetService.debit(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=1.0,
+                        transaction_key=seed_verifier_key(index, replay_index),
+                    )
+                if not evidence.admitted:
+                    if state_path.exists() or descriptor_path.exists():
+                        raise EngineError(
+                            f"bootstrap seed {index} failed evidence has scientific state artifacts"
+                        )
+                    failures.append(
+                        f"seed {index}: verifier rejected: "
+                        f"{evidence.failure_kind.value}: "
+                        f"{evidence.diagnostics.get('message', '')}"
+                    )
+                    continue
+                if evidence.scientific_state_id is None:
+                    raise EngineError(
+                        f"bootstrap seed {index} admitted evidence has no state"
+                    )
+                if state_path.is_file() and descriptor_path.is_file():
+                    seed_state = VerifiedScientificState.from_dict(
+                        json.loads(state_path.read_text(encoding="utf-8"))
+                    )
+                    seed_descriptor = Descriptor.from_dict(
+                        json.loads(descriptor_path.read_text(encoding="utf-8"))
+                    )
+                else:
+                    restored_state, restored_descriptor = (
+                        _restore_admitted_artifacts(evidence, adapter=adapter)
+                    )
+                    if state_path.is_file():
+                        seed_state = VerifiedScientificState.from_dict(
+                            json.loads(state_path.read_text(encoding="utf-8"))
+                        )
+                        if seed_state != restored_state:
+                            raise EngineError(
+                                f"bootstrap seed {index} state changed on recovery"
+                            )
+                    else:
+                        seed_state = restored_state
+                        _write_json_once(state_path, seed_state.to_dict())
+                    if descriptor_path.is_file():
+                        seed_descriptor = Descriptor.from_dict(
+                            json.loads(
+                                descriptor_path.read_text(encoding="utf-8")
+                            )
+                        )
+                        if seed_descriptor != restored_descriptor:
+                            raise EngineError(
+                                f"bootstrap seed {index} descriptor changed on recovery"
+                            )
+                    else:
+                        seed_descriptor = restored_descriptor
+                        _write_json_once(
+                            descriptor_path, seed_descriptor.to_dict()
+                        )
+                archive = archive.ensure_cell(
+                    seed_descriptor, force_empty_sampling=False
+                )
+                archive, seed_decision = archive.offer(
+                    seed_descriptor, durable_proposal, seed_state, evidence
+                )
+                _write_json_once(
+                    archive_path,
+                    {"schema_version": 1, **vars(seed_decision)},
+                )
+                admitted_count += 1
+                admitted_results.append((durable_proposal, evidence))
+                continue
+            if state_path.exists() or descriptor_path.exists() or archive_path.exists():
+                raise EngineError(
+                    f"bootstrap seed {index} has artifacts without evidence"
+                )
+            verifier_attempts = 0
             try:
                 payload = problem.serialize_answer(candidate)
                 artifact_path = persist_answer_artifact(
@@ -689,17 +1549,129 @@ class EvolveEngine:
                 persisted = PersistedAnswerPayload.create(
                     problem_id=self.config.problem, artifact_uri=str(artifact_path), payload=payload
                 )
-                result = verify_persisted_answer(
-                    adapter=adapter,
-                    proposal=proposal,
-                    persisted_answer=persisted,
-                    verification_policy=verification_policy,
-                    harness_id=content_id("harness", {"kind": "seed"}),
-                    policy_snapshot_id=content_id("role_snapshot", {"kind": "seed"}),
-                )
+                result = None
+                for attempt_index in range(
+                    verification_policy.infrastructure_retry_limit + 1
+                ):
+                    attempt_stem = f"seed{index:03d}.attempt{attempt_index:02d}"
+                    attempt_evidence_path = (
+                        bootstrap_dir / f"{attempt_stem}.evidence.json"
+                    )
+                    attempt_state_path = bootstrap_dir / f"{attempt_stem}.state.json"
+                    attempt_descriptor_path = (
+                        bootstrap_dir / f"{attempt_stem}.descriptor.json"
+                    )
+                    attempt_completed_path = (
+                        bootstrap_dir / f"{attempt_stem}.completed.json"
+                    )
+                    budget_ledger = BudgetService.debit(
+                        budget_ledger,
+                        resource="verifier_calls",
+                        amount=1.0,
+                        transaction_key=seed_verifier_key(index, attempt_index),
+                    )
+                    verifier_attempts = attempt_index + 1
+                    if attempt_evidence_path.is_file():
+                        attempt_evidence = EvidencePacket.from_dict(
+                            json.loads(
+                                attempt_evidence_path.read_text(encoding="utf-8")
+                            )
+                        )
+                        _validate_proposal_evidence_binding(
+                            proposal, attempt_evidence
+                        )
+                        if (
+                            attempt_evidence.verifier_id != adapter.verifier_id
+                            or attempt_evidence.verifier_version
+                            != adapter.verifier_version
+                            or attempt_evidence.harness_id != seed_harness_id
+                            or attempt_evidence.policy_snapshot_id
+                            != seed_policy_snapshot_id
+                            or attempt_evidence.flags.get(
+                                "verification_attempt_index"
+                            )
+                            != attempt_index
+                        ):
+                            raise EngineError(
+                                f"bootstrap seed {index} attempt context changed"
+                            )
+                        result = restore_durable_verification_result(
+                            evidence=attempt_evidence,
+                            adapter=adapter,
+                            state_path=attempt_state_path,
+                            descriptor_path=attempt_descriptor_path,
+                        )
+                    else:
+                        if (
+                            attempt_state_path.exists()
+                            or attempt_descriptor_path.exists()
+                            or attempt_completed_path.exists()
+                        ):
+                            raise EngineError(
+                                f"bootstrap seed {index} has a partial verifier attempt"
+                            )
+                        result = verify_persisted_answer(
+                            adapter=adapter,
+                            proposal=proposal,
+                            persisted_answer=persisted,
+                            verification_policy=verification_policy,
+                            harness_id=seed_harness_id,
+                            policy_snapshot_id=seed_policy_snapshot_id,
+                            attempt_index=attempt_index,
+                        )
+                        persist_verifier_trace(
+                            run_dir=layout.run_dir,
+                            result=result,
+                            phase=(
+                                "bootstrap_seed_verification_attempt_"
+                                f"{attempt_index}"
+                            ),
+                        )
+                        _write_json_once(
+                            attempt_evidence_path, result.evidence.to_dict()
+                        )
+                        if result.state is not None:
+                            _write_json_once(
+                                attempt_state_path, result.state.to_dict()
+                            )
+                            _write_json_once(
+                                attempt_descriptor_path,
+                                result.descriptor.to_dict(),
+                            )
+                    _write_json_once(
+                        attempt_completed_path,
+                        {
+                            "schema_version": 1,
+                            "attempt_index": attempt_index,
+                            "evidence_id": result.evidence.evidence_id,
+                            "resolved": result.evidence.resolved,
+                        },
+                    )
+                    if result.evidence.resolved:
+                        break
+                if result is None:
+                    raise EngineError(
+                        f"bootstrap seed {index} produced no verifier result"
+                    )
+            except (EngineError, VerificationWorkerError):
+                # A durable identity/schema conflict is controller corruption,
+                # not a scientifically bad seed and not retryable evidence.
+                raise
             except Exception as exc:
+                _write_json_once(
+                    error_path,
+                    {
+                        "schema_version": 1,
+                        "seed_index": index,
+                        "verifier_debited": verifier_attempts > 0,
+                        "verifier_attempts": verifier_attempts,
+                        "exception_type": type(exc).__name__,
+                        "message": str(exc)[:2048],
+                    },
+                )
                 failures.append(f"seed {index}: {type(exc).__name__}: {exc}")
                 continue
+            _write_json_once(evidence_path, result.evidence.to_dict())
             if not result.evidence.admitted or result.state is None:
                 failures.append(
                     f"seed {index}: verifier rejected: "
@@ -709,18 +1681,273 @@ class EvolveEngine:
                 continue
             archive = archive.ensure_cell(result.descriptor, force_empty_sampling=False)
             try:
-                archive, _decision = archive.offer(result.descriptor, proposal, result.state, result.evidence)
+                archive, seed_decision = archive.offer(
+                    result.descriptor, proposal, result.state, result.evidence
+                )
             except ArchiveAdmissionError as exc:
                 failures.append(f"seed {index}: archive rejected: {exc}")
                 continue
             admitted_count += 1
+            admitted_results.append((proposal, result.evidence))
+            _write_json_once(state_path, result.state.to_dict())
+            _write_json_once(descriptor_path, result.descriptor.to_dict())
+            _write_json_once(
+                archive_path, {"schema_version": 1, **vars(seed_decision)}
+            )
         if admitted_count == 0:
             detail = "; ".join(failures[:3]) or "problem returned no seed states"
             raise EngineError(
                 f"{self.config.problem} bootstrap admitted no seeds "
                 f"({len(seeds)} declared): {detail}"
             )
-        return replace(state, archive=archive)
+
+        # The finite-budget objective starts from the best independently
+        # verified seed, not from a problem failure sentinel. Confirm the saved
+        # payload exactly once (plus one bounded infrastructure retry) before
+        # publishing the bootstrap barrier.
+        seed_proposal, seed_evidence = max(
+            admitted_results,
+            key=lambda item: (
+                float(item[1].internal_reward),
+                item[1].evidence_id,
+            ),
+        )
+        confirmation_key = "bootstrap:record-confirmation"
+        try:
+            budget_ledger = BudgetService.debit(
+                budget_ledger,
+                resource="verifier_calls",
+                amount=2.0,
+                transaction_key=confirmation_key,
+            )
+        except BudgetOverrun as exc:
+            raise EngineError(
+                "bootstrap verifier budget cannot confirm the best seed"
+            ) from exc
+        confirmation_evidence_path = (
+            bootstrap_dir / "record.confirmation.evidence.json"
+        )
+        confirmation_state_path = (
+            bootstrap_dir / "record.confirmation.state.json"
+        )
+        confirmation_descriptor_path = (
+            bootstrap_dir / "record.confirmation.descriptor.json"
+        )
+        confirmation_result_path = (
+            bootstrap_dir / "record.confirmation.result.json"
+        )
+        confirmation_aborted_path = (
+            bootstrap_dir / "record.confirmation.aborted.json"
+        )
+        if confirmation_aborted_path.is_file():
+            raise EngineError(
+                "bootstrap record confirmation was already infrastructure-aborted"
+            )
+        if confirmation_evidence_path.is_file():
+            confirmation_evidence = EvidencePacket.from_dict(
+                json.loads(
+                    confirmation_evidence_path.read_text(encoding="utf-8")
+                )
+            )
+            _validate_confirmation_binding(
+                seed_proposal, seed_evidence, confirmation_evidence
+            )
+            if not confirmation_evidence.confirmed:
+                raise EngineError(
+                    "persisted bootstrap confirmation is not confirmed"
+                )
+            if (
+                confirmation_state_path.is_file()
+                and confirmation_descriptor_path.is_file()
+            ):
+                confirmation_state = VerifiedScientificState.from_dict(
+                    json.loads(
+                        confirmation_state_path.read_text(encoding="utf-8")
+                    )
+                )
+                confirmation_descriptor = Descriptor.from_dict(
+                    json.loads(
+                        confirmation_descriptor_path.read_text(encoding="utf-8")
+                    )
+                )
+            else:
+                restored_state, restored_descriptor = _restore_admitted_artifacts(
+                    confirmation_evidence, adapter=adapter
+                )
+                if confirmation_state_path.is_file():
+                    confirmation_state = VerifiedScientificState.from_dict(
+                        json.loads(
+                            confirmation_state_path.read_text(encoding="utf-8")
+                        )
+                    )
+                    if confirmation_state != restored_state:
+                        raise EngineError(
+                            "bootstrap confirmation state changed on recovery"
+                        )
+                else:
+                    confirmation_state = restored_state
+                    _write_json_once(
+                        confirmation_state_path, confirmation_state.to_dict()
+                    )
+                if confirmation_descriptor_path.is_file():
+                    confirmation_descriptor = Descriptor.from_dict(
+                        json.loads(
+                            confirmation_descriptor_path.read_text(
+                                encoding="utf-8"
+                            )
+                        )
+                    )
+                    if confirmation_descriptor != restored_descriptor:
+                        raise EngineError(
+                            "bootstrap confirmation descriptor changed on recovery"
+                        )
+                else:
+                    confirmation_descriptor = restored_descriptor
+                    _write_json_once(
+                        confirmation_descriptor_path,
+                        confirmation_descriptor.to_dict(),
+                    )
+            attempt_flag = confirmation_evidence.flags.get(
+                "verification_attempt_index"
+            )
+            attempts = (
+                _verification_attempt_index(attempt_flag, maximum=1) + 1
+                if attempt_flag is not None
+                else 2
+            )
+            if confirmation_result_path.is_file():
+                confirmation_result_document = json.loads(
+                    confirmation_result_path.read_text(encoding="utf-8")
+                )
+                durable_attempts = _confirmation_attempt_count(
+                    confirmation_result_document["attempts"]
+                )
+                _validate_attempt_count_covers_evidence(
+                    attempt_flag,
+                    durable_attempts,
+                    context="bootstrap confirmation",
+                )
+                attempts = durable_attempts
+                if (
+                    confirmation_result_document.get("evidence_id")
+                    != confirmation_evidence.evidence_id
+                    or confirmation_result_document.get("state_id")
+                    != confirmation_state.state_id
+                ):
+                    raise EngineError(
+                        "bootstrap confirmation result references different artifacts"
+                    )
+            if attempts < 2:
+                budget_ledger = BudgetService.refund(
+                    budget_ledger,
+                    resource="verifier_calls",
+                    amount=float(2 - attempts),
+                    transaction_key=f"{confirmation_key}:refund",
+                    debit_transaction_key=confirmation_key,
+                )
+            _write_json_once(
+                confirmation_result_path,
+                {
+                    "schema_version": 1,
+                    "evidence_id": confirmation_evidence.evidence_id,
+                    "state_id": confirmation_state.state_id,
+                    "attempts": attempts,
+                },
+            )
+            archive, confirmation_decision = archive.offer(
+                confirmation_descriptor,
+                seed_proposal,
+                confirmation_state,
+                confirmation_evidence,
+            )
+            _write_json_once(
+                bootstrap_dir / "record.confirmation.archive.json",
+                {"schema_version": 1, **vars(confirmation_decision)},
+            )
+            record = state.record.consider(
+                confirmation_state,
+                confirmation_evidence,
+                archive=archive,
+            )
+            return replace(
+                state,
+                archive=archive,
+                record=record,
+                budget_ledger=budget_ledger,
+            )
+        try:
+            confirmation, attempts = self._confirm(
+                seed_proposal,
+                seed_evidence,
+                adapter=adapter,
+                verification_policy=verification_policy,
+                run_dir=layout.run_dir,
+                attempt_dir=bootstrap_dir / "record.confirmation.attempts",
+                phase="bootstrap_record_confirmation",
+            )
+        except RecordConfirmationInfrastructureError as exc:
+            write_immutable_json(
+                bootstrap_dir / "record.confirmation.aborted.json",
+                {
+                    "schema_version": 1,
+                    "failure_kind": FailureKind.INFRASTRUCTURE.value,
+                    "exception_type": type(exc).__name__,
+                    "message": str(exc)[:2048],
+                    "attempts": 2,
+                },
+            )
+            raise
+        _validate_confirmation_binding(
+            seed_proposal, seed_evidence, confirmation.evidence
+        )
+        attempts = _confirmation_attempt_count(attempts)
+        if attempts < 2:
+            budget_ledger = BudgetService.refund(
+                budget_ledger,
+                resource="verifier_calls",
+                amount=float(2 - attempts),
+                transaction_key=f"{confirmation_key}:refund",
+                debit_transaction_key=confirmation_key,
+            )
+        _write_json_once(
+            confirmation_evidence_path, confirmation.evidence.to_dict()
+        )
+        if not confirmation.evidence.confirmed or confirmation.state is None:
+            raise EngineError("the best bootstrap seed could not be confirmed")
+        _write_json_once(confirmation_state_path, confirmation.state.to_dict())
+        _write_json_once(
+            confirmation_descriptor_path, confirmation.descriptor.to_dict()
+        )
+        _write_json_once(
+            confirmation_result_path,
+            {
+                "schema_version": 1,
+                "evidence_id": confirmation.evidence.evidence_id,
+                "state_id": confirmation.state.state_id,
+                "attempts": attempts,
+            },
+        )
+        archive, confirmation_decision = archive.offer(
+            confirmation.descriptor,
+            seed_proposal,
+            confirmation.state,
+            confirmation.evidence,
+        )
+        write_immutable_json(
+            bootstrap_dir / "record.confirmation.archive.json",
+            {"schema_version": 1, **vars(confirmation_decision)},
+        )
+        record = state.record.consider(
+            confirmation.state,
+            confirmation.evidence,
+            archive=archive,
+        )
+        return replace(
+            state,
+            archive=archive,
+            record=record,
+            budget_ledger=budget_ledger,
+        )
 
     def _confirm(
         self,
@@ -729,37 +1956,136 @@ class EvolveEngine:
         *,
         adapter: ProblemScientificAdapter,
         verification_policy: VerificationPolicy,
+        run_dir: Path,
+        attempt_dir: Path,
+        phase: str,
     ):
-        """Confirm a possible record by reverifying its saved payload only."""
+        """Confirm a saved payload with two durable, replayable attempts."""
 
         from evolve.verifier.models import PersistedAnswerPayload
         from evolve.verifier.service import confirm_persisted_answer
+        from evolve.workers.verification import (
+            persist_verifier_trace,
+            restore_durable_verification_result,
+        )
 
         persisted = PersistedAnswerPayload.create(
             problem_id=evidence.problem_id,
             artifact_uri=evidence.flags["answer_artifact_uri"],
             payload=evidence.answer_payload,
         )
+        _write_json_once(
+            attempt_dir / "request.json",
+            {
+                "schema_version": 1,
+                "proposal_id": proposal.proposal_id,
+                "prior_evidence_id": evidence.evidence_id,
+                "answer_payload_hash": content_hash(evidence.answer_payload),
+                "verifier_id": evidence.verifier_id,
+                "verifier_version": evidence.verifier_version,
+                "harness_id": evidence.harness_id,
+                "policy_snapshot_id": evidence.policy_snapshot_id,
+                "maximum_attempts": 2,
+            },
+        )
         last_result = None
         errors = []
         for attempt in range(1, 3):
-            try:
-                result = confirm_persisted_answer(
-                    adapter=adapter,
-                    proposal=proposal,
-                    persisted_answer=persisted,
-                    prior_evidence=evidence,
-                    verification_policy=verification_policy,
+            attempt_index = attempt - 1
+            stem = f"attempt{attempt_index:02d}"
+            evidence_path = attempt_dir / f"{stem}.evidence.json"
+            state_path = attempt_dir / f"{stem}.state.json"
+            descriptor_path = attempt_dir / f"{stem}.descriptor.json"
+            completed_path = attempt_dir / f"{stem}.completed.json"
+            error_path = attempt_dir / f"{stem}.error.json"
+            if evidence_path.is_file() and error_path.is_file():
+                raise EngineError(
+                    "record confirmation attempt has both evidence and error artifacts"
                 )
-            except Exception as exc:
-                errors.append(f"{type(exc).__name__}: {exc}")
+            if error_path.is_file():
+                if state_path.exists() or descriptor_path.exists() or completed_path.exists():
+                    raise EngineError(
+                        "failed confirmation attempt has contradictory derived artifacts"
+                    )
+                error_document = json.loads(error_path.read_text(encoding="utf-8"))
+                if (
+                    error_document.get("schema_version") != 1
+                    or error_document.get("attempt_index") != attempt_index
+                ):
+                    raise EngineError("record confirmation error artifact is malformed")
+                errors.append(
+                    f"{error_document.get('exception_type')}: "
+                    f"{error_document.get('message')}"
+                )
                 continue
+            if evidence_path.is_file():
+                attempt_evidence = EvidencePacket.from_dict(
+                    json.loads(evidence_path.read_text(encoding="utf-8"))
+                )
+                _validate_confirmation_binding(proposal, evidence, attempt_evidence)
+                if _verification_attempt_index(
+                    attempt_evidence.flags.get("verification_attempt_index"),
+                    maximum=1,
+                ) != attempt_index:
+                    raise EngineError("record confirmation attempt index changed")
+                result = restore_durable_verification_result(
+                    evidence=attempt_evidence,
+                    adapter=adapter,
+                    state_path=state_path,
+                    descriptor_path=descriptor_path,
+                )
+            else:
+                if state_path.exists() or descriptor_path.exists() or completed_path.exists():
+                    raise EngineError(
+                        "record confirmation has derived artifacts without evidence"
+                    )
+                try:
+                    result = confirm_persisted_answer(
+                        adapter=adapter,
+                        proposal=proposal,
+                        persisted_answer=persisted,
+                        prior_evidence=evidence,
+                        verification_policy=verification_policy,
+                        attempt_index=attempt_index,
+                    )
+                except Exception as exc:
+                    _write_json_once(
+                        error_path,
+                        {
+                            "schema_version": 1,
+                            "attempt_index": attempt_index,
+                            "exception_type": type(exc).__name__,
+                            "message": str(exc)[:2048],
+                        },
+                    )
+                    errors.append(f"{type(exc).__name__}: {exc}")
+                    continue
+                persist_verifier_trace(
+                    run_dir=run_dir,
+                    result=result,
+                    phase=f"{phase}_attempt_{attempt_index}",
+                )
+                _write_json_once(evidence_path, result.evidence.to_dict())
+                if result.state is not None:
+                    _write_json_once(state_path, result.state.to_dict())
+                    _write_json_once(
+                        descriptor_path, result.descriptor.to_dict()
+                    )
+            _write_json_once(
+                completed_path,
+                {
+                    "schema_version": 1,
+                    "attempt_index": attempt_index,
+                    "evidence_id": result.evidence.evidence_id,
+                    "resolved": result.evidence.resolved,
+                },
+            )
             last_result = result
             if result.evidence.failure_kind != FailureKind.INFRASTRUCTURE:
                 return result, attempt
         if last_result is not None:
             return last_result, 2
-        raise EngineError(
+        raise RecordConfirmationInfrastructureError(
             "record confirmation failed as infrastructure on both bounded "
             "attempts: " + " | ".join(errors)
         )
@@ -785,64 +2111,75 @@ class EvolveEngine:
         )
 
         resource_limits = {
-            "verifier_calls": state.budget_ledger.remaining("verifier_calls"),
+            # Keep two calls outside allocation for bounded confirmation of a
+            # possible new record. Unused reserve remains available next epoch.
+            "verifier_calls": max(
+                0.0,
+                state.budget_ledger.remaining("verifier_calls") - 2.0,
+            ),
         }
-        plan = plan_epoch(
-            epoch=epoch,
-            archive=state.archive,
-            option_registry=state.option_registry,
-            harness_registry=state.harness_registry,
-            posterior=state.posterior,
-            roles=[Role(name) for name in settings.roles.enabled],
-            max_inflight_branches=settings.workers.max_inflight_branches,
-            audit_fraction=settings.budget.audit_fraction,
-            no_memory_fraction=settings.audits.no_memory_fraction,
-            refinement_fraction=settings.budget.refinement_fraction,
-            harness_trial_fraction=settings.harnesses.trial_fraction,
-            empty_cell_fraction=settings.archive.empty_cell_fraction,
-            global_exploration_fraction=settings.scheduler.global_exploration_fraction,
-            resource_limits=resource_limits,
-            seed=epoch_seed,
-        )
-        # An allocation arm may execute a homogeneous replica group. This is
-        # required for on-policy max-seeking learning: one rollout cannot
-        # produce an OrderGrad rank advantage. Every role still receives at
-        # least one branch, while one role rotates as the learning role.
         enabled_roles = [Role(name) for name in settings.roles.enabled]
         learning_role = enabled_roles[epoch % len(enabled_roles)]
-        selected_plans = []
-        projected_branches = 0
-        production_capacity = max(
-            0,
-            settings.workers.max_inflight_branches
-            - plan.reservation_slots.audit_branch_slots
-            - plan.reservation_slots.refinement_slots
-            - plan.reservation_slots.harness_trial_slots,
-        )
-        for role in enabled_roles:
-            candidate = next(
-                (item for item in plan.planned_arms if item.arm.role == role),
-                None,
+        step_dir = layout.path(f"step{epoch:02d}")
+        plan_path = step_dir / "allocation_plan.json"
+        recovered_plan = plan_path.is_file()
+        if recovered_plan:
+            plan = _plan_from_document(
+                json.loads(plan_path.read_text(encoding="utf-8"))
             )
-            if candidate is None or candidate in selected_plans:
-                continue
-            replicas = settings.learning.group_k if role == learning_role else 1
-            if projected_branches + replicas <= production_capacity:
-                selected_plans.append(candidate)
-                projected_branches += replicas
-        for candidate in plan.planned_arms:
-            if candidate in selected_plans:
-                continue
-            replicas = (
-                settings.learning.group_k
-                if candidate.arm.role == learning_role
-                else 1
+            if plan.epoch != epoch or plan.seed != epoch_seed:
+                raise EngineError(
+                    "durable allocation plan belongs to another epoch or seed"
+                )
+            enabled_role_set = set(enabled_roles)
+            for planned in plan.planned_arms:
+                arm = planned.arm
+                if arm.channel != Channel.PRODUCTION:
+                    raise EngineError(
+                        "authoritative epoch plan contains a non-production arm"
+                    )
+                state.archive.cell(arm.cell_id)
+                if arm.role not in enabled_role_set:
+                    raise EngineError(
+                        "authoritative epoch plan references a disabled role"
+                    )
+                spec = state.option_registry.spec(arm.option_id)
+                state.harness_registry.spec(arm.harness_id)
+                if (
+                    arm.horizon > spec.max_horizon
+                    or arm.option_id
+                    not in state.option_registry.eligible_for(
+                        role=arm.role, harness_id=arm.harness_id
+                    )
+                ):
+                    raise EngineError(
+                        "authoritative epoch plan references an ineligible option"
+                    )
+        else:
+            plan = plan_epoch(
+                epoch=epoch,
+                archive=state.archive,
+                option_registry=state.option_registry,
+                harness_registry=state.harness_registry,
+                posterior=state.posterior,
+                roles=enabled_roles,
+                max_inflight_branches=settings.workers.max_inflight_branches,
+                audit_fraction=settings.budget.audit_fraction,
+                no_memory_fraction=settings.audits.no_memory_fraction,
+                refinement_fraction=settings.budget.refinement_fraction,
+                harness_trial_fraction=settings.harnesses.trial_fraction,
+                empty_cell_fraction=settings.archive.empty_cell_fraction,
+                global_exploration_fraction=settings.scheduler.global_exploration_fraction,
+                resource_limits=resource_limits,
+                seed=epoch_seed,
+                learning_role=learning_role,
+                group_k=settings.learning.group_k,
             )
-            if projected_branches + replicas > production_capacity:
-                continue
-            selected_plans.append(candidate)
-            projected_branches += replicas
-        plan = replace(plan, planned_arms=tuple(selected_plans))
+        if not plan.planned_arms:
+            raise EngineError(
+                "scheduler produced no executable production allocation; "
+                "refusing to commit an empty epoch"
+            )
 
         role_snapshots = state.role_registry.freeze_epoch(epoch)
         role_registry = state.role_registry
@@ -866,25 +2203,25 @@ class EvolveEngine:
             verifier_id=adapter.verifier_id, verifier_version=adapter.verifier_version,
             budget_ledger=budget_ledger, seed=epoch_seed,
         )
-        step_dir = layout.path(f"step{epoch:02d}")
         step_dir.mkdir(parents=True, exist_ok=True)
-        atomic_write_json(step_dir / "epoch.manifest.json", manifest.to_dict())
-        atomic_write_json(step_dir / "allocation_plan.json", _plan_document(plan))
+        _write_json_once(step_dir / "epoch.manifest.json", manifest.to_dict())
+        if not recovered_plan:
+            _write_json_once(plan_path, _plan_document(plan))
 
         executions: List[BranchExecution] = []
         group_members: List[GroupMember] = []
         arms_by_id: Dict[str, AllocationArm] = {}
         audit_pairs: List[AuditPair] = []
         audit_sides: Dict[str, AuditSide] = {}
-        refinement_sources: List[Tuple[AllocationArm, BranchSpec, Any]] = []
+        refinement_attempts: Dict[str, int] = {}
+        refinement_sources: List[_RefinementSource] = []
 
         branch_ordinal = 0
+        production_pending: List[_PendingBranch] = []
         for allocation_index, planned in enumerate(plan.planned_arms):
             arm = planned.arm
             arms_by_id[arm.arm_id] = arm
-            replica_count = (
-                settings.learning.group_k if arm.role == learning_role else 1
-            )
+            replica_count = planned.replicas
             for replica_index in range(replica_count):
                 index = branch_ordinal
                 branch_ordinal += 1
@@ -911,65 +2248,94 @@ class EvolveEngine:
                         amount=float(arm.hard_cost.get("verifier_calls", 1.0)),
                         transaction_key=debit_key,
                     )
-                except BudgetOverrun:
-                    continue
-
-                execution = self._execute_one_branch(
-                    branch=branch,
-                    arm=arm,
-                    role_snapshot=role_snapshot,
-                    option_registry=state.option_registry,
-                    workers=workers,
-                    start_verified=True,
-                    cell_empty=planned.reservation == "empty_cell",
-                )
-                unused_verifications = float(
-                    execution.outcome.unused_budget.get("verifier_calls", 0.0)
-                )
-                if unused_verifications > 0.0:
-                    budget_ledger = BudgetService.refund(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=unused_verifications,
-                        transaction_key=f"{debit_key}:refund",
-                        debit_transaction_key=debit_key,
+                except BudgetOverrun as exc:
+                    raise EngineError(
+                        "the persisted allocation plan exceeds the remaining "
+                        "verifier budget; refusing to silently drop an allocation"
+                    ) from exc
+                production_pending.append(
+                    _PendingBranch(
+                        branch=branch,
+                        arm=arm,
+                        role_snapshot=role_snapshot,
+                        ordinal=index,
+                        debit_key=debit_key,
+                        cell_empty=(
+                            state.archive.cell(arm.cell_id).tested_count == 0
+                        ),
                     )
-                self._persist_branch_execution(
-                    layout, branch=branch, execution=execution, ordinal=index
                 )
-                executions.append(execution)
-                already_entered = {
-                    entry.source_evidence_id for entry in nursery.values()
-                }
-                for observation in execution.observations:
-                    source_evidence = observation.verification.evidence
-                    if (
-                        not source_evidence.admitted
-                        and source_evidence.failure_kind
-                        not in (FailureKind.INFRASTRUCTURE, FailureKind.TIMEOUT)
-                        and source_evidence.evidence_id not in already_entered
-                    ):
-                        refinement_sources.append((arm, branch, observation))
-                archive, provenance, record, posterior, budget_ledger = self._fold_execution(
-                    execution=execution,
-                    arm=arm,
-                    identity_archive=archive,
-                    provenance=provenance,
-                    record=record,
-                    posterior=posterior,
-                    record_threshold=record_threshold,
-                    adapter=adapter,
-                    verification_policy=verification_policy,
-                    budget_ledger=budget_ledger,
-                )
-                if execution.policy_trace is not None:
-                    group_members.append(
-                        GroupMember(
-                            branch=branch,
-                            outcome=execution.outcome,
-                            trace=execution.policy_trace,
+
+        for pending, execution in self._dispatch_pending_branches(
+            production_pending,
+            state=state,
+            workers=workers,
+            adapter=adapter,
+            verification_policy=verification_policy,
+            layout=layout,
+        ):
+            arm = pending.arm
+            branch = pending.branch
+            index = pending.ordinal
+            debit_key = pending.debit_key
+            budget_ledger = _settle_branch_verifier_budget(
+                budget_ledger,
+                execution=execution,
+                debit_key=debit_key,
+                reserved=float(arm.hard_cost.get("verifier_calls", 1.0)),
+            )
+            self._persist_branch_execution(
+                layout, branch=branch, execution=execution, ordinal=index
+            )
+            executions.append(execution)
+            already_entered = {
+                entry.source_evidence_id for entry in nursery.values()
+            }
+            for observation in execution.observations:
+                source_evidence = observation.verification.evidence
+                if (
+                    not source_evidence.admitted
+                    and source_evidence.resolved
+                    and source_evidence.evidence_id not in already_entered
+                ):
+                    refinement_sources.append(
+                        _RefinementSource(
+                            arm=arm,
+                            proposal=observation.proposal,
+                            evidence=source_evidence,
+                            branch_id=branch.branch_id,
                         )
                     )
+                    already_entered.add(source_evidence.evidence_id)
+            # Fold each closed branch exactly once. Folding inside the
+            # observation loop would multiply posterior observations and
+            # provenance work by the option horizon.
+            archive, provenance, record, posterior, budget_ledger = self._fold_execution(
+                execution=execution,
+                arm=arm,
+                layout=layout,
+                epoch=epoch,
+                identity_archive=archive,
+                provenance=provenance,
+                record=record,
+                posterior=posterior,
+                record_threshold=record_threshold,
+                adapter=adapter,
+                verification_policy=verification_policy,
+                budget_ledger=budget_ledger,
+            )
+            if (
+                execution.policy_trace is not None
+                and execution.outcome.eligible_for_scheduler
+                and not execution.outcome.infrastructure_aborted
+            ):
+                group_members.append(
+                    GroupMember(
+                        branch=branch,
+                        outcome=execution.outcome,
+                        trace=execution.policy_trace,
+                    )
+                )
 
         # -- randomized audits (matched intervention vs. control option) --
         audit_slots = plan.reservation_slots.audit_branch_slots
@@ -977,9 +2343,9 @@ class EvolveEngine:
             planned for planned in plan.planned_arms
             if state.option_registry.eligible_for(role=planned.arm.role, harness_id=planned.arm.harness_id)
         ]
-        pairs_to_run = min(audit_slots // 2, len(audit_candidates))
+        pairs_to_run = audit_slots // 2 if audit_candidates else 0
         for pair_index in range(pairs_to_run):
-            planned = audit_candidates[pair_index]
+            planned = audit_candidates[pair_index % len(audit_candidates)]
             arm = planned.arm
             control_options = [
                 option_id
@@ -1006,9 +2372,14 @@ class EvolveEngine:
                 arm, option_id=control_option, channel=Channel.AUDIT,
                 option_registry=state.option_registry,
             )
+            treatment_slot = derive_seed(
+                "audit_treatment_slot", audit_seed, pair_index
+            ) % 2
+            intervention_ordinal = 1000 + pair_index * 2 + treatment_slot
+            control_ordinal = 1000 + pair_index * 2 + (1 - treatment_slot)
             intervention_branch, intervention_snapshot = self._freeze_branch(
                 state=state, arm=intervention_arm, role_snapshots=role_snapshots,
-                record_threshold=record_threshold, index=1000 + pair_index * 2,
+                record_threshold=record_threshold, index=intervention_ordinal,
                 epoch_seed=audit_seed, budget=arm.hard_cost, channel=Channel.AUDIT,
                 verifier_id=adapter.verifier_id,
                 verifier_version=adapter.verifier_version,
@@ -1016,7 +2387,7 @@ class EvolveEngine:
             )
             control_branch, _ = self._freeze_branch(
                 state=state, arm=control_arm, role_snapshots=role_snapshots,
-                record_threshold=record_threshold, index=1000 + pair_index * 2 + 1,
+                record_threshold=record_threshold, index=control_ordinal,
                 epoch_seed=audit_seed, budget=arm.hard_cost, channel=Channel.AUDIT,
                 shared_seed=intervention_branch.seed,
                 verifier_id=adapter.verifier_id,
@@ -1034,7 +2405,7 @@ class EvolveEngine:
 
             audit_dir = step_dir / "audits" / pair.audit_id
             audit_dir.mkdir(parents=True, exist_ok=True)
-            write_immutable_json(audit_dir / "pair.preassigned.json", pair.to_dict())
+            _write_json_once(audit_dir / "pair.preassigned.json", pair.to_dict())
             with ControllerEventWriter(layout.path("events.jsonl")) as event_writer:
                 event_writer.append(
                     "audit_preassigned",
@@ -1048,6 +2419,15 @@ class EvolveEngine:
                 for side_arm in (intervention_arm, control_arm)
             )
             if required_audit_calls > budget_ledger.remaining("verifier_calls"):
+                aborted_pair = abort_audit_pair(pair)
+                _write_json_once(
+                    audit_dir / "pair.aborted.json",
+                    {
+                        **aborted_pair.to_dict(),
+                        "abort_reason": "insufficient_verifier_budget",
+                    },
+                )
+                audit_pairs.append(aborted_pair)
                 continue
             audit_budget_available = True
             for side_name, side_arm in (
@@ -1067,43 +2447,73 @@ class EvolveEngine:
                     break
                 audit_debits.append((debit_key, side_arm))
             if not audit_budget_available:
+                aborted_pair = abort_audit_pair(pair)
+                _write_json_once(
+                    audit_dir / "pair.aborted.json",
+                    {
+                        **aborted_pair.to_dict(),
+                        "abort_reason": "verifier_budget_debit_failed",
+                    },
+                )
+                audit_pairs.append(aborted_pair)
                 continue
 
-            intervention_execution = self._execute_one_branch(
-                branch=intervention_branch, arm=intervention_arm, role_snapshot=intervention_snapshot,
-                option_registry=state.option_registry, workers=workers,
-                start_verified=True, cell_empty=False, memory_enabled=False,
+            audit_pending = [
+                _PendingBranch(
+                    branch=intervention_branch,
+                    arm=intervention_arm,
+                    role_snapshot=intervention_snapshot,
+                    ordinal=intervention_ordinal,
+                    debit_key=audit_debits[0][0],
+                    memory_enabled=False,
+                ),
+                _PendingBranch(
+                    branch=control_branch,
+                    arm=control_arm,
+                    role_snapshot=intervention_snapshot,
+                    ordinal=control_ordinal,
+                    debit_key=audit_debits[1][0],
+                    memory_enabled=False,
+                ),
+            ]
+            audit_results = self._dispatch_pending_branches(
+                audit_pending,
+                state=state,
+                workers=workers,
+                adapter=adapter,
+                verification_policy=verification_policy,
+                layout=layout,
             )
-            control_execution = self._execute_one_branch(
-                branch=control_branch, arm=control_arm, role_snapshot=intervention_snapshot,
-                option_registry=state.option_registry, workers=workers,
-                start_verified=True, cell_empty=False, memory_enabled=False,
-            )
+            audit_execution_by_branch = {
+                pending.branch.branch_id: execution
+                for pending, execution in audit_results
+            }
+            intervention_execution = audit_execution_by_branch[
+                intervention_branch.branch_id
+            ]
+            control_execution = audit_execution_by_branch[control_branch.branch_id]
             self._persist_branch_execution(
                 layout,
                 branch=intervention_branch,
                 execution=intervention_execution,
-                ordinal=1000 + pair_index * 2,
+                ordinal=intervention_ordinal,
             )
-            for (debit_key, _side_arm), side_execution in zip(
+            for (debit_key, side_arm), side_execution in zip(
                 audit_debits, (intervention_execution, control_execution)
             ):
-                unused = float(
-                    side_execution.outcome.unused_budget.get("verifier_calls", 0.0)
+                budget_ledger = _settle_branch_verifier_budget(
+                    budget_ledger,
+                    execution=side_execution,
+                    debit_key=debit_key,
+                    reserved=float(
+                        side_arm.hard_cost.get("verifier_calls", 1.0)
+                    ),
                 )
-                if unused > 0.0:
-                    budget_ledger = BudgetService.refund(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=unused,
-                        transaction_key=f"{debit_key}:refund",
-                        debit_transaction_key=debit_key,
-                    )
             self._persist_branch_execution(
                 layout,
                 branch=control_branch,
                 execution=control_execution,
-                ordinal=1000 + pair_index * 2 + 1,
+                ordinal=control_ordinal,
             )
             for execution, side_branch, side in (
                 (intervention_execution, intervention_branch, AuditSide.INTERVENTION),
@@ -1115,11 +2525,16 @@ class EvolveEngine:
                 arms_by_id.setdefault(control_arm.arm_id, control_arm)
                 archive, provenance, record, posterior, budget_ledger = self._fold_execution(
                     execution=execution, arm=intervention_arm if side == AuditSide.INTERVENTION else control_arm,
+                    layout=layout, epoch=epoch,
                     identity_archive=archive, provenance=provenance, record=record, posterior=posterior,
                     record_threshold=record_threshold, adapter=adapter, verification_policy=verification_policy,
                     budget_ledger=budget_ledger,
                 )
-                if execution.policy_trace is not None:
+                if (
+                    execution.policy_trace is not None
+                    and execution.outcome.eligible_for_scheduler
+                    and not execution.outcome.infrastructure_aborted
+                ):
                     group_members.append(
                         GroupMember(branch=side_branch, outcome=execution.outcome, trace=execution.policy_trace)
                     )
@@ -1130,15 +2545,33 @@ class EvolveEngine:
                     control_outcome=control_execution.outcome,
                 )
             except AuditEffectError:
-                audit_pairs.append(pair)
+                aborted_pair = abort_audit_pair(pair)
+                _write_json_once(
+                    audit_dir / "pair.aborted.json",
+                    {
+                        **aborted_pair.to_dict(),
+                        "abort_reason": "ineligible_or_infrastructure_side",
+                    },
+                )
+                audit_pairs.append(aborted_pair)
                 continue
             audit_pairs.append(closed_pair)
+            _write_json_once(audit_dir / "pair.closed.json", closed_pair.to_dict())
 
-            intervention_gain = default_gain(intervention_execution.outcome, frozen_record_threshold=record_threshold)
-            control_gain = default_gain(control_execution.outcome, frozen_record_threshold=record_threshold)
+            intervention_gain = _normalized_outcome_gain(
+                adapter,
+                intervention_execution.outcome,
+                frozen_record_threshold=record_threshold,
+            )
+            control_gain = _normalized_outcome_gain(
+                adapter,
+                control_execution.outcome,
+                frozen_record_threshold=record_threshold,
+            )
             effect = compute_audit_effect(
                 closed_pair, intervention_gain=intervention_gain, control_gain=control_gain
             )
+            _write_json_once(audit_dir / "effect.json", vars(effect))
             context = {"role": arm.role.value, "cell_id": arm.cell_id}
             record_id = memory_id_for(context=context, intervention_option_id=closed_pair.intervention_option_id)
             memory_record = memory.get(record_id) or new_memory_record(
@@ -1147,8 +2580,8 @@ class EvolveEngine:
                 promotion_min_support=settings.audits.min_pairs_for_promotion,
             )
             memory_record = add_effect(memory_record, pair=closed_pair, effect=effect, recency_epoch=epoch)
-            memory_record = stratify_drift(memory_record, current_epoch=epoch)
             memory_record = evaluate_promotion(memory_record)
+            memory_record = stratify_drift(memory_record, current_epoch=epoch)
             memory = memory.upsert(memory_record)
 
         # -- bounded refinement nursery and equal-cost fresh controls -----
@@ -1170,26 +2603,92 @@ class EvolveEngine:
             ),
             None,
         )
-        refinement_pairs_to_run = min(
-            plan.reservation_slots.refinement_slots // 2,
-            len(refinement_sources),
-        )
-        if repair_option_id is None or fresh_option_id is None:
-            refinement_pairs_to_run = 0
         nursery_policy = NurseryPolicy(
             max_attempts=settings.refinement.max_attempts,
             max_depth=settings.refinement.max_depth,
             fixed_cost={"verifier_calls": 1.0},
             ttl_epochs=2,
         )
+        queued_evidence_ids = {
+            source.evidence.evidence_id for source in refinement_sources
+        }
+        for entry in sorted(nursery.values(), key=lambda item: item.entry_id):
+            if not entry.can_attempt(epoch):
+                continue
+            evidence_id = entry.latest_evidence_id or entry.source_evidence_id
+            proposal_id = entry.latest_proposal_id or entry.source_proposal_id
+            if evidence_id in queued_evidence_ids:
+                continue
+            try:
+                source_evidence = archive.artifacts.evidence_packet(evidence_id)
+                source_proposal = archive.artifacts.proposal(proposal_id)
+                parent_state_id = source_proposal.parent_state_id
+                if parent_state_id is None:
+                    continue
+                parent_state = archive.artifacts.representative_state(parent_state_id)
+                source_cell = next(
+                    cell
+                    for cell in archive.cells
+                    if cell.descriptor_id == parent_state.descriptor_id
+                )
+                source_arm = next(
+                    (
+                        planned.arm
+                        for planned in plan.planned_arms
+                        if planned.arm.cell_id == source_cell.cell_id
+                    ),
+                    None,
+                )
+                if source_arm is None:
+                    fallback_candidates = enumerate_candidate_arms(
+                        archive=state.archive,
+                        option_registry=state.option_registry,
+                        harness_registry=state.harness_registry,
+                        roles=(Role.CHALLENGER,),
+                        cell_ids=(source_cell.cell_id,),
+                    )
+                    if not fallback_candidates:
+                        continue
+                    fallback = min(
+                        fallback_candidates,
+                        key=lambda item: item.identity.key(),
+                    )
+                    source_arm = make_allocation_arm(
+                        fallback.identity,
+                        expected_cost=fallback.expected_cost,
+                        hard_cost=fallback.hard_cost,
+                    )
+            except (KeyError, StopIteration):
+                continue
+            refinement_sources.append(
+                _RefinementSource(
+                    arm=source_arm,
+                    proposal=source_proposal,
+                    evidence=source_evidence,
+                    branch_id=entry.branch_id,
+                    entry=entry,
+                )
+            )
+            queued_evidence_ids.add(evidence_id)
+        refinement_sources.sort(
+            key=lambda source: (
+                0 if source.entry is not None else 1,
+                source.entry.entry_id if source.entry is not None else source.evidence.evidence_id,
+            )
+        )
+        refinement_pairs_to_run = min(
+            plan.reservation_slots.refinement_slots // 2,
+            len(refinement_sources),
+        )
+        if repair_option_id is None or fresh_option_id is None:
+            refinement_pairs_to_run = 0
         for pair_index in range(refinement_pairs_to_run):
-            source_arm, source_branch, source_observation = refinement_sources[
-                pair_index
-            ]
-            source_evidence = source_observation.verification.evidence
-            entry = open_entry(
+            source = refinement_sources[pair_index]
+            source_arm = source.arm
+            source_evidence = source.evidence
+            entry = source.entry or open_entry(
                 source_evidence=source_evidence,
-                branch_id=source_branch.branch_id,
+                branch_id=source.branch_id,
                 epoch=epoch,
                 policy=nursery_policy,
             )
@@ -1226,12 +2725,17 @@ class EvolveEngine:
             }
             intervention_arm = arms_by_option[intervention_option]
             control_arm = arms_by_option[control_option]
+            treatment_slot = derive_seed(
+                "refinement_treatment_slot", refinement_seed, entry.entry_id
+            ) % 2
+            intervention_ordinal = 3000 + pair_index * 2 + treatment_slot
+            control_ordinal = 3000 + pair_index * 2 + (1 - treatment_slot)
             frozen_refinement = {
-                "refinement_source": source_observation.proposal.source_text,
+                "refinement_source": source.proposal.source_text,
                 "refinement_source_evidence_id": source_evidence.evidence_id,
                 "refinement_diagnostics": dict(source_evidence.diagnostics),
             }
-            parent_state_id = source_observation.proposal.parent_state_id
+            parent_state_id = source.proposal.parent_state_id
             if parent_state_id is None:
                 continue
             intervention_branch, challenger_snapshot = self._freeze_branch(
@@ -1239,7 +2743,7 @@ class EvolveEngine:
                 arm=intervention_arm,
                 role_snapshots=role_snapshots,
                 record_threshold=record_threshold,
-                index=3000 + pair_index * 2,
+                index=intervention_ordinal,
                 epoch_seed=refinement_seed,
                 budget=intervention_arm.hard_cost,
                 channel=Channel.REFINEMENT,
@@ -1254,7 +2758,7 @@ class EvolveEngine:
                 arm=control_arm,
                 role_snapshots=role_snapshots,
                 record_threshold=record_threshold,
-                index=3000 + pair_index * 2 + 1,
+                index=control_ordinal,
                 epoch_seed=refinement_seed,
                 budget=control_arm.hard_cost,
                 channel=Channel.REFINEMENT,
@@ -1275,10 +2779,10 @@ class EvolveEngine:
             )
             refinement_dir = step_dir / "refinement" / entry.entry_id
             refinement_dir.mkdir(parents=True, exist_ok=True)
-            write_immutable_json(
+            _write_json_once(
                 refinement_dir / "entry.opened.json", vars(entry)
             )
-            write_immutable_json(
+            _write_json_once(
                 refinement_dir / "pair.preassigned.json", pair.to_dict()
             )
             required = sum(
@@ -1287,6 +2791,15 @@ class EvolveEngine:
             )
             if required > budget_ledger.remaining("verifier_calls"):
                 nursery[entry.entry_id] = entry
+                aborted_pair = abort_audit_pair(pair)
+                _write_json_once(
+                    refinement_dir / "pair.aborted.json",
+                    {
+                        **aborted_pair.to_dict(),
+                        "abort_reason": "insufficient_verifier_budget",
+                    },
+                )
+                audit_pairs.append(aborted_pair)
                 continue
             debit_records = []
             for side, refinement_arm in (
@@ -1306,43 +2819,69 @@ class EvolveEngine:
                     transaction_key=key,
                 )
                 debit_records.append(key)
-            intervention_execution = self._execute_one_branch(
-                branch=intervention_branch,
-                arm=intervention_arm,
-                role_snapshot=challenger_snapshot,
-                option_registry=state.option_registry,
+            refinement_pending = [
+                _PendingBranch(
+                    branch=intervention_branch,
+                    arm=intervention_arm,
+                    role_snapshot=challenger_snapshot,
+                    ordinal=intervention_ordinal,
+                    debit_key=debit_records[0],
+                    memory_enabled=False,
+                ),
+                _PendingBranch(
+                    branch=control_branch,
+                    arm=control_arm,
+                    role_snapshot=challenger_snapshot,
+                    ordinal=control_ordinal,
+                    debit_key=debit_records[1],
+                    memory_enabled=False,
+                ),
+            ]
+            refinement_results = self._dispatch_pending_branches(
+                refinement_pending,
+                state=state,
                 workers=workers,
-                start_verified=True,
-                cell_empty=False,
-                memory_enabled=False,
+                adapter=adapter,
+                verification_policy=verification_policy,
+                layout=layout,
             )
-            control_execution = self._execute_one_branch(
-                branch=control_branch,
-                arm=control_arm,
-                role_snapshot=challenger_snapshot,
-                option_registry=state.option_registry,
-                workers=workers,
-                start_verified=True,
-                cell_empty=False,
-                memory_enabled=False,
-            )
-            for offset, (refinement_branch, refinement_arm, execution) in enumerate(
+            refinement_execution_by_branch = {
+                pending.branch.branch_id: execution
+                for pending, execution in refinement_results
+            }
+            intervention_execution = refinement_execution_by_branch[
+                intervention_branch.branch_id
+            ]
+            control_execution = refinement_execution_by_branch[
+                control_branch.branch_id
+            ]
+            for refinement_branch, refinement_arm, execution, ordinal in (
                 (
-                    (intervention_branch, intervention_arm, intervention_execution),
-                    (control_branch, control_arm, control_execution),
+                    intervention_branch,
+                    intervention_arm,
+                    intervention_execution,
+                    intervention_ordinal,
+                ),
+                (
+                    control_branch,
+                    control_arm,
+                    control_execution,
+                    control_ordinal,
                 )
             ):
                 self._persist_branch_execution(
                     layout,
                     branch=refinement_branch,
                     execution=execution,
-                    ordinal=3000 + pair_index * 2 + offset,
+                    ordinal=ordinal,
                 )
                 executions.append(execution)
                 arms_by_id[refinement_arm.arm_id] = refinement_arm
                 archive, provenance, record, posterior, budget_ledger = self._fold_execution(
                     execution=execution,
                     arm=refinement_arm,
+                    layout=layout,
+                    epoch=epoch,
                     identity_archive=archive,
                     provenance=provenance,
                     record=record,
@@ -1352,36 +2891,56 @@ class EvolveEngine:
                     verification_policy=verification_policy,
                     budget_ledger=budget_ledger,
                 )
-            for debit_key, execution in zip(
-                debit_records, (intervention_execution, control_execution)
-            ):
-                unused = float(
-                    execution.outcome.unused_budget.get("verifier_calls", 0.0)
-                )
-                if unused > 0.0:
-                    budget_ledger = BudgetService.refund(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=unused,
-                        transaction_key=f"{debit_key}:refund",
-                        debit_transaction_key=debit_key,
+                if (
+                    execution.policy_trace is not None
+                    and execution.outcome.eligible_for_scheduler
+                    and not execution.outcome.infrastructure_aborted
+                ):
+                    refinement_attempts[refinement_branch.branch_id] = (
+                        entry.attempts_used + 1
                     )
+                    group_members.append(
+                        GroupMember(
+                            branch=refinement_branch,
+                            outcome=execution.outcome,
+                            trace=execution.policy_trace,
+                        )
+                    )
+            for debit_key, refinement_arm, execution in zip(
+                debit_records,
+                (intervention_arm, control_arm),
+                (intervention_execution, control_execution),
+            ):
+                budget_ledger = _settle_branch_verifier_budget(
+                    budget_ledger,
+                    execution=execution,
+                    debit_key=debit_key,
+                    reserved=float(
+                        refinement_arm.hard_cost.get("verifier_calls", 1.0)
+                    ),
+                )
             repair_execution = (
                 intervention_execution
                 if intervention_arm.option_id == repair_option_id
                 else control_execution
             )
-            if repair_execution.observations:
+            if (
+                repair_execution.observations
+                and not repair_execution.outcome.infrastructure_aborted
+            ):
+                repair_evidence = repair_execution.observations[-1].verification.evidence
+                if not repair_evidence.resolved:
+                    raise EngineError(
+                        "a scheduler-eligible repair produced unresolved evidence"
+                    )
                 entry = record_attempt(
                     entry,
-                    repair_evidence=(
-                        repair_execution.observations[0].verification.evidence
-                    ),
+                    repair_evidence=repair_evidence,
                     epoch=epoch,
                 )
             nursery[entry.entry_id] = entry
-            write_immutable_json(
-                refinement_dir / "entry.closed.json", vars(entry)
+            _write_json_once(
+                refinement_dir / "entry.after_attempt.json", vars(entry)
             )
             try:
                 closed_pair = close_audit_pair(
@@ -1390,20 +2949,34 @@ class EvolveEngine:
                     control_outcome=control_execution.outcome,
                 )
             except AuditEffectError:
-                audit_pairs.append(pair)
+                aborted_pair = abort_audit_pair(pair)
+                _write_json_once(
+                    refinement_dir / "pair.aborted.json",
+                    {
+                        **aborted_pair.to_dict(),
+                        "abort_reason": "ineligible_or_infrastructure_side",
+                    },
+                )
+                audit_pairs.append(aborted_pair)
                 continue
             audit_pairs.append(closed_pair)
+            _write_json_once(
+                refinement_dir / "pair.closed.json", closed_pair.to_dict()
+            )
             effect = compute_audit_effect(
                 closed_pair,
-                intervention_gain=default_gain(
+                intervention_gain=_normalized_outcome_gain(
+                    adapter,
                     intervention_execution.outcome,
                     frozen_record_threshold=record_threshold,
                 ),
-                control_gain=default_gain(
+                control_gain=_normalized_outcome_gain(
+                    adapter,
                     control_execution.outcome,
                     frozen_record_threshold=record_threshold,
                 ),
             )
+            _write_json_once(refinement_dir / "effect.json", vars(effect))
             context = {
                 "role": Role.CHALLENGER.value,
                 "cell_id": source_arm.cell_id,
@@ -1426,9 +2999,11 @@ class EvolveEngine:
                 effect=effect,
                 recency_epoch=epoch,
             )
-            memory = memory.upsert(evaluate_promotion(stratify_drift(
+            memory_record = evaluate_promotion(memory_record)
+            memory_record = stratify_drift(
                 memory_record, current_epoch=epoch
-            )))
+            )
+            memory = memory.upsert(memory_record)
 
         # -- matched harness calibration ---------------------------------
         inactive_harnesses = tuple(
@@ -1438,7 +3013,11 @@ class EvolveEngine:
         )
         harness_pairs_to_run = min(
             plan.reservation_slots.harness_trial_slots // 2,
-            1 if plan.planned_arms and inactive_harnesses else 0,
+            (
+                len(plan.planned_arms) * len(inactive_harnesses)
+                if plan.planned_arms and inactive_harnesses
+                else 0
+            ),
         )
         for pair_index in range(harness_pairs_to_run):
             base_arm = plan.planned_arms[pair_index % len(plan.planned_arms)].arm
@@ -1462,12 +3041,17 @@ class EvolveEngine:
                 pair_index,
                 base_seed=self.config.seed,
             )
+            candidate_slot = derive_seed(
+                "harness_candidate_slot", trial_seed, candidate_harness_id
+            ) % 2
+            candidate_ordinal = 2000 + pair_index * 2 + candidate_slot
+            incumbent_ordinal = 2000 + pair_index * 2 + (1 - candidate_slot)
             incumbent_branch, snapshot = self._freeze_branch(
                 state=state,
                 arm=incumbent_arm,
                 role_snapshots=role_snapshots,
                 record_threshold=record_threshold,
-                index=2000 + pair_index * 2,
+                index=incumbent_ordinal,
                 epoch_seed=trial_seed,
                 budget=incumbent_arm.hard_cost,
                 channel=Channel.AUDIT,
@@ -1480,7 +3064,7 @@ class EvolveEngine:
                 arm=candidate_arm,
                 role_snapshots=role_snapshots,
                 record_threshold=record_threshold,
-                index=2000 + pair_index * 2 + 1,
+                index=candidate_ordinal,
                 epoch_seed=trial_seed,
                 budget=candidate_arm.hard_cost,
                 channel=Channel.AUDIT,
@@ -1499,7 +3083,7 @@ class EvolveEngine:
             )
             harness_dir = step_dir / "audits" / context.context_id
             harness_dir.mkdir(parents=True, exist_ok=True)
-            write_immutable_json(
+            _write_json_once(
                 harness_dir / "harness.preassigned.json", context.to_dict()
             )
             required = sum(
@@ -1507,6 +3091,14 @@ class EvolveEngine:
                 for item in (incumbent_arm, candidate_arm)
             )
             if required > budget_ledger.remaining("verifier_calls"):
+                _write_json_once(
+                    harness_dir / "harness.aborted.json",
+                    {
+                        "schema_version": 1,
+                        "context_id": context.context_id,
+                        "reason": "insufficient_verifier_budget",
+                    },
+                )
                 continue
             debit_records = []
             for label, trial_arm in (
@@ -1527,43 +3119,69 @@ class EvolveEngine:
                 )
                 debit_records.append((key, trial_arm))
 
-            incumbent_execution = self._execute_one_branch(
-                branch=incumbent_branch,
-                arm=incumbent_arm,
-                role_snapshot=snapshot,
-                option_registry=state.option_registry,
+            harness_pending = [
+                _PendingBranch(
+                    branch=incumbent_branch,
+                    arm=incumbent_arm,
+                    role_snapshot=snapshot,
+                    ordinal=incumbent_ordinal,
+                    debit_key=debit_records[0][0],
+                    memory_enabled=False,
+                ),
+                _PendingBranch(
+                    branch=candidate_branch,
+                    arm=candidate_arm,
+                    role_snapshot=snapshot,
+                    ordinal=candidate_ordinal,
+                    debit_key=debit_records[1][0],
+                    memory_enabled=False,
+                ),
+            ]
+            harness_results = self._dispatch_pending_branches(
+                harness_pending,
+                state=state,
                 workers=workers,
-                start_verified=True,
-                cell_empty=False,
-                memory_enabled=False,
+                adapter=adapter,
+                verification_policy=verification_policy,
+                layout=layout,
             )
-            candidate_execution = self._execute_one_branch(
-                branch=candidate_branch,
-                arm=candidate_arm,
-                role_snapshot=snapshot,
-                option_registry=state.option_registry,
-                workers=workers,
-                start_verified=True,
-                cell_empty=False,
-                memory_enabled=False,
-            )
-            for offset, (trial_branch, trial_arm, trial_execution) in enumerate(
+            harness_execution_by_branch = {
+                pending.branch.branch_id: execution
+                for pending, execution in harness_results
+            }
+            incumbent_execution = harness_execution_by_branch[
+                incumbent_branch.branch_id
+            ]
+            candidate_execution = harness_execution_by_branch[
+                candidate_branch.branch_id
+            ]
+            for trial_branch, trial_arm, trial_execution, ordinal in (
                 (
-                    (incumbent_branch, incumbent_arm, incumbent_execution),
-                    (candidate_branch, candidate_arm, candidate_execution),
-                )
+                    incumbent_branch,
+                    incumbent_arm,
+                    incumbent_execution,
+                    incumbent_ordinal,
+                ),
+                (
+                    candidate_branch,
+                    candidate_arm,
+                    candidate_execution,
+                    candidate_ordinal,
+                ),
             ):
                 self._persist_branch_execution(
                     layout,
                     branch=trial_branch,
                     execution=trial_execution,
-                    ordinal=2000 + pair_index * 2 + offset,
+                    ordinal=ordinal,
                 )
                 executions.append(trial_execution)
                 arms_by_id[trial_arm.arm_id] = trial_arm
                 archive, provenance, record, posterior, budget_ledger = self._fold_execution(
                     execution=trial_execution,
                     arm=trial_arm,
+                    layout=layout,
+                    epoch=epoch,
                     identity_archive=archive,
                     provenance=provenance,
                     record=record,
@@ -1573,30 +3191,27 @@ class EvolveEngine:
                     verification_policy=verification_policy,
                     budget_ledger=budget_ledger,
                 )
-            for (debit_key, _trial_arm), trial_execution in zip(
+            for (debit_key, trial_arm), trial_execution in zip(
                 debit_records, (incumbent_execution, candidate_execution)
             ):
-                unused = float(
-                    trial_execution.outcome.unused_budget.get(
-                        "verifier_calls", 0.0
-                    )
+                budget_ledger = _settle_branch_verifier_budget(
+                    budget_ledger,
+                    execution=trial_execution,
+                    debit_key=debit_key,
+                    reserved=float(
+                        trial_arm.hard_cost.get("verifier_calls", 1.0)
+                    ),
                 )
-                if unused > 0.0:
-                    budget_ledger = BudgetService.refund(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=unused,
-                        transaction_key=f"{debit_key}:refund",
-                        debit_transaction_key=debit_key,
-                    )
             trial = HarnessTrialRecord.from_context(
                 context,
                 epoch=epoch,
-                incumbent_gain=default_gain(
+                incumbent_gain=_normalized_outcome_gain(
+                    adapter,
                     incumbent_execution.outcome,
                     frozen_record_threshold=record_threshold,
                 ),
-                candidate_gain=default_gain(
+                candidate_gain=_normalized_outcome_gain(
+                    adapter,
                     candidate_execution.outcome,
                     frozen_record_threshold=record_threshold,
                 ),
@@ -1619,14 +3234,45 @@ class EvolveEngine:
                     else "none"
                 ),
             )
+            _write_json_once(harness_dir / "harness.result.json", vars(trial))
             harness_registry = harness_registry.record_trial(trial)
+            promotion_decision = {
+                "schema_version": 1,
+                "context_id": context.context_id,
+                "candidate_harness_id": candidate_harness_id,
+                "min_trials": settings.audits.min_pairs_for_promotion,
+                "approved": False,
+                "reason": "conservative_evidence_threshold_not_met",
+            }
             try:
                 harness_registry = harness_registry.promote(
                     candidate_harness_id,
                     min_trials=settings.audits.min_pairs_for_promotion,
                 )
-            except HarnessPromotionError:
-                pass
+                promotion_decision.update(
+                    {"approved": True, "reason": "conservative_effect_positive"}
+                )
+            except HarnessPromotionError as exc:
+                promotion_decision["detail"] = str(exc)[:2048]
+            _write_json_once(
+                harness_dir / "harness.promotion.json", promotion_decision
+            )
+
+        # Confirm the best provisional observation only after every scheduled
+        # branch has closed. This makes the committed record independent of
+        # worker completion order and verifies the saved answer payload rather
+        # than rerunning proposal code.
+        archive, record, budget_ledger = self._confirm_epoch_record(
+            layout=layout,
+            epoch=epoch,
+            executions=executions,
+            archive=archive,
+            record=record,
+            budget_ledger=budget_ledger,
+            frozen_record_threshold=record_threshold,
+            adapter=adapter,
+            verification_policy=verification_policy,
+        )
 
         # -- role-isolated learning ------------------------------------
         traces_by_id = {member.trace.trace_id: member.trace for member in group_members}
@@ -1637,28 +3283,52 @@ class EvolveEngine:
             top_m=settings.learning.top_m,
             group_k=settings.learning.group_k,
             audit_sides=audit_sides,
+            refinement_attempts=refinement_attempts,
+            gain_fn=lambda outcome, threshold: _normalized_outcome_gain(
+                adapter, outcome, frozen_record_threshold=threshold
+            ),
         )
         learning_dir = step_dir / "learning"
         learning_dir.mkdir(parents=True, exist_ok=True)
         for group in groups:
-            write_immutable_json(learning_dir / f"{group.group_id}.inputs.json", group.to_dict())
+            _write_json_once(learning_dir / f"{group.group_id}.inputs.json", group.to_dict())
         for trace in traces_by_id.values():
-            write_immutable_json(learning_dir / f"{trace.trace_id}.trace.json", trace.to_dict())
+            _write_json_once(learning_dir / f"{trace.trace_id}.trace.json", trace.to_dict())
         updates, role_registry = train_barrier(
             groups, traces_by_id=traces_by_id, registry=role_registry, epoch=epoch,
             gradient_step=workers.gradient_step, kl_penalty_coef=self.config.kl_penalty_coef,
         )
         for update in updates:
-            write_immutable_json(
+            _write_json_once(
                 learning_dir / f"{update.role_snapshot_id_before}.update.json",
                 {
+                    "schema_version": 1,
+                    "role": update.groups[0].role.value,
                     "role_snapshot_id_before": update.role_snapshot_id_before,
                     "adapter_hash_before": update.adapter_hash_before,
                     "adapter_hash_after": update.adapter_hash_after,
+                    "objective": update.groups[0].objective.value,
+                    "objective_version": update.groups[0].objective_version,
                     "group_ids": [group.group_id for group in update.groups],
+                    "group_members": [
+                        {
+                            "group_id": group.group_id,
+                            "branch_ids": list(group.branch_ids),
+                            "trace_ids": list(group.trace_ids),
+                            "outcome_ids": list(group.outcome_ids),
+                            "advantages": list(group.advantages),
+                        }
+                        for group in update.groups
+                    ],
+                    "token_masks": {
+                        trace_id: [list(mask) for mask in traces_by_id[trace_id].token_masks]
+                        for group in update.groups
+                        for trace_id in group.trace_ids
+                    },
                     "loss": update.result.loss,
                     "kl": update.result.kl,
                     "gradient_norm": update.result.gradient_norm,
+                    "optimizer_state": dict(update.result.optimizer_state),
                 },
             )
 
@@ -1702,38 +3372,38 @@ class EvolveEngine:
         step_dir = layout.path(f"step{branch.epoch:02d}")
         branch_dir = step_dir / "branches" / branch.branch_id
         branch_dir.mkdir(parents=True, exist_ok=True)
-        write_immutable_json(branch_dir / "branch.spec.json", branch.to_dict())
+        _write_json_once(branch_dir / "branch.spec.json", branch.to_dict())
         for observation_index, observation in enumerate(execution.observations):
             prefix = f"observation{observation_index:03d}"
             segment = observation.policy_segment
             if segment is not None:
-                write_immutable_text(branch_dir / f"{prefix}.prompt.txt", segment.prompt)
-                write_immutable_text(
+                _write_text_once(branch_dir / f"{prefix}.prompt.txt", segment.prompt)
+                _write_text_once(
                     branch_dir / f"{prefix}.response.txt", segment.response_segment
                 )
             else:
-                write_immutable_text(
+                _write_text_once(
                     branch_dir / f"{prefix}.response.txt",
                     observation.proposal.source_text,
                 )
-            write_immutable_json(
+            _write_json_once(
                 branch_dir / f"{prefix}.proposal.json",
                 observation.proposal.to_dict(),
             )
-            write_immutable_json(
+            _write_json_once(
                 branch_dir / f"{prefix}.evidence.json",
                 observation.verification.evidence.to_dict(),
             )
             if observation.verification.state is not None:
-                write_immutable_json(
+                _write_json_once(
                     branch_dir / f"{prefix}.state.json",
                     observation.verification.state.to_dict(),
                 )
             flat = f"step{branch.epoch:02d}_group{ordinal:04d}_rollout{observation_index:03d}"
             if segment is not None:
-                write_immutable_text(step_dir / f"{flat}.prompt.txt", segment.prompt)
-            write_immutable_text(step_dir / f"{flat}.txt", observation.proposal.source_text)
-            write_immutable_json(
+                _write_text_once(step_dir / f"{flat}.prompt.txt", segment.prompt)
+            _write_text_once(step_dir / f"{flat}.txt", observation.proposal.source_text)
+            _write_json_once(
                 step_dir / f"{flat}.meta.json",
                 {
                     "branch_id": branch.branch_id,
@@ -1744,9 +3414,9 @@ class EvolveEngine:
                     "costs": dict(observation.costs),
                 },
             )
-        write_immutable_json(branch_dir / "branch.outcome.json", execution.outcome.to_dict())
+        _write_json_once(branch_dir / "branch.outcome.json", execution.outcome.to_dict())
         if execution.policy_trace is not None:
-            write_immutable_json(
+            _write_json_once(
                 branch_dir / "policy.trace.json", execution.policy_trace.to_dict()
             )
         with ControllerEventWriter(layout.path("events.jsonl")) as event_writer:
@@ -1815,6 +3485,7 @@ class EvolveEngine:
             else None
         )
         generation_settings = {
+            "role": arm.role.value,
             "temperature": self.config.temperature,
             "top_p": self.config.top_p,
             "max_new_tokens": self.config.max_new_tokens,
@@ -1855,7 +3526,22 @@ class EvolveEngine:
             return cell.promising_state_ids[0]
         if cell.stepping_stone_state_ids:
             return cell.stepping_stone_state_ids[0]
-        raise EngineError(f"cell {cell_id} has no verified state to branch from")
+        # Empty-cell exploration still freezes a real verified source state;
+        # the arm's cell remains the target descriptor cell. Prefer the global
+        # confirmed champion as the reproducible launch point.
+        champions = []
+        for candidate_cell in archive.cells:
+            if candidate_cell.champion_state_id is None:
+                continue
+            state = archive.artifacts.representative_state(
+                candidate_cell.champion_state_id
+            )
+            champions.append((float(state.internal_reward), state.state_id))
+        if champions:
+            return max(champions, key=lambda item: (item[0], item[1]))[1]
+        raise EngineError(
+            f"cell {cell_id} is empty and the archive has no verified launch state"
+        )
 
     def _execute_one_branch(
         self,
@@ -1880,11 +3566,134 @@ class EvolveEngine:
             role_snapshot=role_snapshot, executor=workers.branch_step_executor,
         )
 
+    def _persist_branch_assignment(
+        self,
+        layout: RunLayout,
+        pending: _PendingBranch,
+    ) -> None:
+        """Make a frozen assignment durable before any worker may execute it."""
+
+        branch_dir = layout.path(
+            f"step{pending.branch.epoch:02d}/branches/{pending.branch.branch_id}"
+        )
+        branch_dir.mkdir(parents=True, exist_ok=True)
+        _write_json_once(branch_dir / "branch.spec.json", pending.branch.to_dict())
+        _write_json_once(
+            branch_dir / "assignment.json",
+            {
+                "schema_version": 1,
+                "branch_id": pending.branch.branch_id,
+                "arm": pending.arm.to_dict(),
+                "role_snapshot": pending.role_snapshot.to_dict(),
+                "ordinal": pending.ordinal,
+                "debit_key": pending.debit_key,
+                "memory_enabled": pending.memory_enabled,
+            },
+        )
+
+    def _execute_pending_branch(
+        self,
+        pending: _PendingBranch,
+        *,
+        state: EpochState,
+        workers: EngineWorkers,
+        adapter: ProblemScientificAdapter,
+        verification_policy: VerificationPolicy,
+        layout: RunLayout,
+    ) -> BranchExecution:
+        # The production worker boundary converts generation/verifier failures
+        # into explicit unresolved evidence. Exceptions escaping that boundary
+        # are invariant, schema, or persistence failures and must stop recovery
+        # instead of being disguised as a low-quality scientific observation.
+        return self._execute_one_branch(
+            branch=pending.branch,
+            arm=pending.arm,
+            role_snapshot=pending.role_snapshot,
+            option_registry=state.option_registry,
+            workers=workers,
+            start_verified=True,
+            cell_empty=pending.cell_empty,
+            memory_enabled=pending.memory_enabled,
+        )
+
+    def _dispatch_pending_branches(
+        self,
+        pending: List[_PendingBranch],
+        *,
+        state: EpochState,
+        workers: EngineWorkers,
+        adapter: ProblemScientificAdapter,
+        verification_policy: VerificationPolicy,
+        layout: RunLayout,
+    ) -> List[Tuple[_PendingBranch, BranchExecution]]:
+        """Run a bounded phase and yield completed branches in arrival order."""
+
+        for item in pending:
+            self._persist_branch_assignment(layout, item)
+        if workers.submit_branch is None:
+            return [
+                (
+                    item,
+                    self._execute_pending_branch(
+                        item,
+                        state=state,
+                        workers=workers,
+                        adapter=adapter,
+                        verification_policy=verification_policy,
+                        layout=layout,
+                    ),
+                )
+                for item in pending
+            ]
+
+        by_future = {}
+        for item in pending:
+            future = workers.submit_branch(
+                lambda item=item: self._execute_pending_branch(
+                    item,
+                    state=state,
+                    workers=workers,
+                    adapter=adapter,
+                    verification_policy=verification_policy,
+                    layout=layout,
+                )
+            )
+            by_future[future] = item
+        completed = []
+        completed_verifications = 0
+        next_status = self.config.evolve.reporting.status_every_verifications
+        for future in as_completed(tuple(by_future)):
+            item = by_future[future]
+            execution = future.result()
+            self._persist_branch_execution(
+                layout,
+                branch=item.branch,
+                execution=execution,
+                ordinal=item.ordinal,
+            )
+            completed.append((item, execution))
+            completed_verifications += len(execution.observations)
+            if completed_verifications >= next_status:
+                self._write_live_progress_status(
+                    layout,
+                    state,
+                    epoch=item.branch.epoch,
+                    completed_branches=len(completed),
+                    total_branches=len(pending),
+                    completed_verifications=completed_verifications,
+                    executions=tuple(result for _, result in completed),
+                )
+                while completed_verifications >= next_status:
+                    next_status += self.config.evolve.reporting.status_every_verifications
+        return completed
+
     def _fold_execution(
         self,
         *,
         execution: BranchExecution,
         arm: AllocationArm,
+        layout: RunLayout,
+        epoch: int,
         identity_archive: ScientificArchive,
         provenance: ProvenanceStore,
         record: ConfirmedRecordTracker,
@@ -1916,71 +3725,51 @@ class EvolveEngine:
                 archive, decision = archive.offer(
                     descriptor, result.proposal, result.verification.state, evidence
                 )
-            except ArchiveAdmissionError:
-                continue
-            # A possible new record is confirmed by reverifying its saved
-            # payload only -- proposal code is never rerun.
-            if (
-                evidence.internal_reward is not None
-                and evidence.internal_reward > record_threshold
-            ):
-                confirmation_debit = (
-                    f"epoch-confirm:{execution.outcome.branch_id}:"
-                    f"{evidence.evidence_id}"
-                )
-                # Confirmation may make one bounded infrastructure retry. Reserve
-                # both calls first so a possible record can never overrun the
-                # global verifier ledger, then return the unused retry.
-                try:
-                    budget_ledger = BudgetService.debit(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=2.0,
-                        transaction_key=confirmation_debit,
-                    )
-                except BudgetOverrun:
-                    continue
-                confirmation, attempts = self._confirm(
-                    result.proposal, evidence, adapter=adapter, verification_policy=verification_policy
-                )
-                if attempts < 2:
-                    budget_ledger = BudgetService.refund(
-                        budget_ledger,
-                        resource="verifier_calls",
-                        amount=float(2 - attempts),
-                        transaction_key=f"{confirmation_debit}:refund",
-                        debit_transaction_key=confirmation_debit,
-                    )
-                archive = replace(
-                    archive,
-                    artifacts=archive.artifacts.add_observation(
-                        result.proposal, confirmation.evidence
+            except ArchiveAdmissionError as exc:
+                _write_json_once(
+                    layout.path(
+                        f"step{epoch:02d}/branches/{execution.outcome.branch_id}/"
+                        f"archive/{evidence.evidence_id}.rejected.json"
                     ),
+                    {
+                        "schema_version": 1,
+                        "exception_type": type(exc).__name__,
+                        "message": str(exc),
+                    },
                 )
-                if confirmation.evidence.confirmed and confirmation.state is not None:
-                    try:
-                        archive, decision = archive.offer(
-                            confirmation.descriptor, result.proposal, confirmation.state, confirmation.evidence
-                        )
-                    except ArchiveAdmissionError:
-                        continue
-                    record = record.consider(
-                        confirmation.state, confirmation.evidence, archive=archive
-                    )
+                raise EngineError(
+                    "common-verifier-admitted state violated archive invariants"
+                ) from exc
+            _write_json_once(
+                layout.path(
+                    f"step{epoch:02d}/branches/{execution.outcome.branch_id}/"
+                    f"archive/{evidence.evidence_id}.decision.json"
+                ),
+                {
+                    "schema_version": 1,
+                    **vars(decision),
+                },
+            )
         if execution.provenance_edges:
             provenance = provenance.with_artifacts(archive.artifacts)
             for edge in execution.provenance_edges:
                 try:
                     provenance = provenance.append(edge)
-                except Exception:
-                    continue
+                except Exception as exc:
+                    raise EngineError(
+                        f"verified provenance edge {edge.edge_id} was rejected"
+                    ) from exc
 
         from evolve.scheduler.arms import ArmIdentity
 
         identity = ArmIdentity.from_arm(arm)
         maximum_reward = execution.outcome.maximum_reward
         record_improved = maximum_reward is not None and maximum_reward > record_threshold
-        gain = max(0.0, (maximum_reward if maximum_reward is not None else record_threshold) - record_threshold)
+        gain = _normalized_outcome_gain(
+            adapter,
+            execution.outcome,
+            frozen_record_threshold=record_threshold,
+        )
         posterior = posterior.observe(
             identity,
             admitted=execution.outcome.eligible_for_scheduler and execution.outcome.maximum_state_id is not None,
@@ -1990,6 +3779,326 @@ class EvolveEngine:
             costs=execution.outcome.costs,
         )
         return archive, provenance, record, posterior, budget_ledger
+
+    def _confirm_epoch_record(
+        self,
+        *,
+        layout: RunLayout,
+        epoch: int,
+        executions: Sequence[BranchExecution],
+        archive: ScientificArchive,
+        record: ConfirmedRecordTracker,
+        budget_ledger: BudgetLedger,
+        frozen_record_threshold: float,
+        adapter: ProblemScientificAdapter,
+        verification_policy: VerificationPolicy,
+    ) -> Tuple[ScientificArchive, ConfirmedRecordTracker, BudgetLedger]:
+        """Confirm provisional record candidates in descending reward order.
+
+        A durable result is replayed by ID after a crash. Infrastructure-aborted
+        confirmation attempts remain unresolved evidence and are never retried
+        under a different implicit sample identity.
+        """
+
+        candidates: Dict[str, Tuple[Proposal, EvidencePacket]] = {}
+        for execution in executions:
+            if execution.outcome.infrastructure_aborted:
+                continue
+            for observation in execution.observations:
+                evidence = observation.verification.evidence
+                if (
+                    evidence.admitted
+                    and evidence.resolved
+                    and evidence.internal_reward is not None
+                    and float(evidence.internal_reward) > frozen_record_threshold
+                ):
+                    candidates[evidence.evidence_id] = (
+                        observation.proposal,
+                        evidence,
+                    )
+        ordered = sorted(
+            candidates.values(),
+            key=lambda item: (
+                -float(item[1].internal_reward),
+                item[1].evidence_id,
+            ),
+        )
+        confirmation_root = layout.path(
+            f"step{epoch:02d}/confirmations"
+        )
+        for proposal, prior_evidence in ordered:
+            if budget_ledger.remaining("verifier_calls") < 2.0:
+                break
+            confirmation_debit = (
+                f"epoch-confirm:{epoch}:{prior_evidence.evidence_id}"
+            )
+            budget_ledger = BudgetService.debit(
+                budget_ledger,
+                resource="verifier_calls",
+                amount=2.0,
+                transaction_key=confirmation_debit,
+            )
+            confirmation_dir = confirmation_root / prior_evidence.evidence_id
+            confirmation_dir.mkdir(parents=True, exist_ok=True)
+            _write_json_once(
+                confirmation_dir / "request.json",
+                {
+                    "schema_version": 1,
+                    "epoch": epoch,
+                    "proposal_id": proposal.proposal_id,
+                    "prior_evidence_id": prior_evidence.evidence_id,
+                    "answer_payload_hash": content_hash(
+                        prior_evidence.answer_payload
+                    ),
+                    "verifier_id": prior_evidence.verifier_id,
+                    "verifier_version": prior_evidence.verifier_version,
+                },
+            )
+            result_path = confirmation_dir / "result.json"
+            aborted_path = confirmation_dir / "aborted.json"
+            evidence_path = confirmation_dir / "evidence.json"
+            state_path = confirmation_dir / "state.json"
+            descriptor_path = confirmation_dir / "descriptor.json"
+            attempts_path = confirmation_dir / "attempts.json"
+            if aborted_path.is_file() and evidence_path.is_file():
+                raise EngineError(
+                    "record confirmation has both aborted and durable evidence artifacts"
+                )
+            if aborted_path.is_file() and not result_path.is_file():
+                continue
+
+            if result_path.is_file():
+                result_document = json.loads(
+                    result_path.read_text(encoding="utf-8")
+                )
+                attempts = _confirmation_attempt_count(result_document["attempts"])
+                confirmation_evidence = EvidencePacket.from_dict(
+                    json.loads(evidence_path.read_text(encoding="utf-8"))
+                )
+                _validate_confirmation_binding(
+                    proposal, prior_evidence, confirmation_evidence
+                )
+                if result_document.get("evidence_id") != confirmation_evidence.evidence_id:
+                    raise EngineError("confirmation result/evidence identity mismatch")
+                attempt_flag = confirmation_evidence.flags.get(
+                    "verification_attempt_index"
+                )
+                _validate_attempt_count_covers_evidence(
+                    attempt_flag, attempts, context="confirmation result"
+                )
+                confirmation_state = None
+                confirmation_descriptor = None
+                if result_document.get("state_id") is not None:
+                    confirmation_state = VerifiedScientificState.from_dict(
+                        json.loads(state_path.read_text(encoding="utf-8"))
+                    )
+                    confirmation_descriptor = Descriptor.from_dict(
+                        json.loads(descriptor_path.read_text(encoding="utf-8"))
+                    )
+                    if result_document.get("state_id") != confirmation_state.state_id:
+                        raise EngineError("confirmation result/state identity mismatch")
+            elif evidence_path.is_file():
+                # The common-verifier packet is the durable output. Complete
+                # derived files and the marker without invoking the verifier a
+                # second time under the same sample identity.
+                confirmation_evidence = EvidencePacket.from_dict(
+                    json.loads(evidence_path.read_text(encoding="utf-8"))
+                )
+                _validate_confirmation_binding(
+                    proposal, prior_evidence, confirmation_evidence
+                )
+                attempt_flag = confirmation_evidence.flags.get(
+                    "verification_attempt_index"
+                )
+                attempts = (
+                    _verification_attempt_index(attempt_flag, maximum=1) + 1
+                    if attempt_flag is not None
+                    else 2
+                )
+                if attempts_path.is_file():
+                    durable_attempts = _confirmation_attempt_count(
+                        json.loads(attempts_path.read_text(encoding="utf-8"))["attempts"]
+                    )
+                    _validate_attempt_count_covers_evidence(
+                        attempt_flag,
+                        durable_attempts,
+                        context="confirmation marker",
+                    )
+                    attempts = durable_attempts
+                confirmation_state = None
+                confirmation_descriptor = None
+                if confirmation_evidence.confirmed:
+                    if state_path.is_file() and descriptor_path.is_file():
+                        confirmation_state = VerifiedScientificState.from_dict(
+                            json.loads(state_path.read_text(encoding="utf-8"))
+                        )
+                        confirmation_descriptor = Descriptor.from_dict(
+                            json.loads(
+                                descriptor_path.read_text(encoding="utf-8")
+                            )
+                        )
+                    else:
+                        restored_state, restored_descriptor = (
+                            _restore_admitted_artifacts(
+                                confirmation_evidence, adapter=adapter
+                            )
+                        )
+                        if state_path.is_file():
+                            confirmation_state = VerifiedScientificState.from_dict(
+                                json.loads(state_path.read_text(encoding="utf-8"))
+                            )
+                            if confirmation_state != restored_state:
+                                raise EngineError(
+                                    "partial confirmation state changed on recovery"
+                                )
+                        else:
+                            confirmation_state = restored_state
+                            _write_json_once(
+                                state_path, confirmation_state.to_dict()
+                            )
+                        if descriptor_path.is_file():
+                            confirmation_descriptor = Descriptor.from_dict(
+                                json.loads(
+                                    descriptor_path.read_text(encoding="utf-8")
+                                )
+                            )
+                            if confirmation_descriptor != restored_descriptor:
+                                raise EngineError(
+                                    "partial confirmation descriptor changed on recovery"
+                                )
+                        else:
+                            confirmation_descriptor = restored_descriptor
+                            _write_json_once(
+                                descriptor_path,
+                                confirmation_descriptor.to_dict(),
+                            )
+                _write_json_once(
+                    result_path,
+                    {
+                        "schema_version": 1,
+                        "evidence_id": confirmation_evidence.evidence_id,
+                        "state_id": (
+                            confirmation_state.state_id
+                            if confirmation_state is not None
+                            else None
+                        ),
+                        "confirmed": confirmation_evidence.confirmed,
+                        "attempts": attempts,
+                    },
+                )
+            else:
+                try:
+                    confirmation, attempts = self._confirm(
+                        proposal,
+                        prior_evidence,
+                        adapter=adapter,
+                        verification_policy=verification_policy,
+                        run_dir=layout.run_dir,
+                        attempt_dir=confirmation_dir / "attempts",
+                        phase="epoch_record_confirmation",
+                    )
+                except RecordConfirmationInfrastructureError as exc:
+                    _write_json_once(
+                        aborted_path,
+                        {
+                            "schema_version": 1,
+                            "failure_kind": FailureKind.INFRASTRUCTURE.value,
+                            "exception_type": type(exc).__name__,
+                            "message": str(exc)[:2048],
+                            "attempts": 2,
+                        },
+                    )
+                    continue
+                confirmation_evidence = confirmation.evidence
+                confirmation_state = confirmation.state
+                confirmation_descriptor = confirmation.descriptor
+                attempts = _confirmation_attempt_count(attempts)
+                _validate_confirmation_binding(
+                    proposal, prior_evidence, confirmation_evidence
+                )
+                _write_json_once(
+                    evidence_path,
+                    confirmation_evidence.to_dict(),
+                )
+                if confirmation_state is not None:
+                    _write_json_once(
+                        state_path,
+                        confirmation_state.to_dict(),
+                    )
+                    _write_json_once(
+                        descriptor_path,
+                        confirmation_descriptor.to_dict(),
+                    )
+                _write_json_once(
+                    attempts_path,
+                    {"schema_version": 1, "attempts": attempts},
+                )
+                _write_json_once(
+                    result_path,
+                    {
+                        "schema_version": 1,
+                        "evidence_id": confirmation_evidence.evidence_id,
+                        "state_id": (
+                            confirmation_state.state_id
+                            if confirmation_state is not None
+                            else None
+                        ),
+                        "confirmed": confirmation_evidence.confirmed,
+                        "attempts": attempts,
+                    },
+                )
+
+            if attempts < 2:
+                budget_ledger = BudgetService.refund(
+                    budget_ledger,
+                    resource="verifier_calls",
+                    amount=float(2 - attempts),
+                    transaction_key=f"{confirmation_debit}:refund",
+                    debit_transaction_key=confirmation_debit,
+                )
+            archive = replace(
+                archive,
+                artifacts=archive.artifacts.add_observation(
+                    proposal, confirmation_evidence
+                ),
+            )
+            if confirmation_evidence.confirmed and confirmation_state is not None:
+                try:
+                    archive, confirmation_decision = archive.offer(
+                        confirmation_descriptor,
+                        proposal,
+                        confirmation_state,
+                        confirmation_evidence,
+                    )
+                except ArchiveAdmissionError as exc:
+                    _write_json_once(
+                        confirmation_dir / "archive.rejected.json",
+                        {
+                            "schema_version": 1,
+                            "exception_type": type(exc).__name__,
+                            "message": str(exc),
+                        },
+                    )
+                    raise EngineError(
+                        "confirmed record state violated archive invariants"
+                    ) from exc
+                _write_json_once(
+                    confirmation_dir / "archive.decision.json",
+                    {"schema_version": 1, **vars(confirmation_decision)},
+                )
+                prior_record_evidence_id = record.evidence_id
+                record = record.consider(
+                    confirmation_state,
+                    confirmation_evidence,
+                    archive=archive,
+                )
+                # A noisy confirmation can move below the frozen record even
+                # when its provisional observation ranked first. Only stop once
+                # confirmation actually advances the record; otherwise another
+                # candidate may be tried if refunded/unused budget permits.
+                if record.evidence_id != prior_record_evidence_id:
+                    break
+        return archive, record, budget_ledger
 
     # -- barrier commit + reporting --------------------------------------
 
@@ -2003,14 +4112,26 @@ class EvolveEngine:
         workers: EngineWorkers,
     ) -> None:
         self._publish_snapshots(layout, state)
-        if workers.persist_roles is not None:
+        role_artifacts = (
             workers.persist_roles(state)
+            if workers.persist_roles is not None
+            else state.role_artifacts
+        ) or {}
         checkpoint_dir = layout.path("checkpoints")
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        checkpoint = _checkpoint_payload(state)
+        checkpoint = _checkpoint_payload(state, role_artifacts=role_artifacts)
         checkpoint_path = checkpoint_dir / f"checkpoint_epoch{state.epoch:03d}.json"
-        atomic_write_json(checkpoint_path, checkpoint)
+        _write_json_once(checkpoint_path, checkpoint)
+        self._persist_training_state(
+            layout,
+            state=state,
+            checkpoint=checkpoint,
+            workers=workers,
+            epoch=state.epoch,
+        )
         checkpoint_hash = content_hash(checkpoint)
+        training_state_path = checkpoint_dir / f"checkpoint_epoch{state.epoch:03d}.pt"
+        training_state_hash = _file_sha256(training_state_path)
         costs: Dict[str, float] = {}
         for execution in report.branch_executions:
             for resource, amount in execution.outcome.costs.items():
@@ -2024,8 +4145,29 @@ class EvolveEngine:
             "confirmed_raw_score": state.record.raw_score,
             "archive_coverage": state.archive.coverage,
             "costs": costs,
+            "budget_consumed": {
+                resource: state.budget_ledger.consumed(resource)
+                for resource in state.budget_ledger.limits
+            },
+            "admitted_branches": sum(
+                1
+                for item in report.branch_executions
+                if item.outcome.maximum_state_id is not None
+            ),
+            "infrastructure_aborted": sum(
+                1
+                for item in report.branch_executions
+                if item.outcome.infrastructure_aborted
+            ),
+            "closed_audit_pairs": sum(
+                1 for pair in report.audit_pairs if pair.status == AuditStatus.CLOSED
+            ),
+            "aborted_audit_pairs": sum(
+                1 for pair in report.audit_pairs if pair.status == AuditStatus.ABORTED
+            ),
             "reservation_slots": {
                 "audit_branch_slots": report.plan.reservation_slots.audit_branch_slots,
+                "no_memory_audit_slots": report.plan.reservation_slots.no_memory_audit_slots,
                 "refinement_slots": report.plan.reservation_slots.refinement_slots,
                 "harness_trial_slots": report.plan.reservation_slots.harness_trial_slots,
                 "empty_cell_slots": report.plan.reservation_slots.empty_cell_slots,
@@ -2034,7 +4176,11 @@ class EvolveEngine:
                 "remaining_production_slots": report.plan.reservation_slots.remaining_production_slots,
             },
             "arms_by_role": {
-                role: sum(1 for planned in report.plan.planned_arms if planned.arm.role.value == role)
+                role: sum(
+                    planned.replicas
+                    for planned in report.plan.planned_arms
+                    if planned.arm.role.value == role
+                )
                 for role in sorted({planned.arm.role.value for planned in report.plan.planned_arms})
             },
         }
@@ -2044,6 +4190,8 @@ class EvolveEngine:
                 "committed_epoch": state.epoch,
                 "checkpoint": checkpoint_path.name,
                 "checkpoint_hash": checkpoint_hash,
+                "training_state": training_state_path.name,
+                "training_state_hash": training_state_hash,
             }
         )
         atomic_write_json(
@@ -2056,12 +4204,37 @@ class EvolveEngine:
             },
         )
         step_dir = layout.path(f"step{report.epoch:02d}")
-        atomic_write_json(step_dir / f"step{report.epoch:02d}.summary.json", summary)
+        _write_json_once(
+            step_dir / f"step{report.epoch:02d}.summary.json", summary
+        )
+        self._publish_role_pointers(
+            layout, role_artifacts=role_artifacts, epoch=state.epoch
+        )
+        with ControllerEventWriter(layout.path("events.jsonl")) as event_writer:
+            event_writer.append(
+                "barrier_committed",
+                {
+                    "kind": "epoch",
+                    "epoch": report.epoch,
+                    "next_epoch": state.epoch,
+                    "checkpoint": checkpoint_path.name,
+                    "checkpoint_hash": checkpoint_hash,
+                },
+                idempotency_key=f"barrier-committed:epoch:{report.epoch}",
+            )
         if report.record_improved:
             self._publish_best(layout, state, adapter=adapter)
         self._write_status(
             layout, state, note=f"epoch {report.epoch} committed", report=report
         )
+        if (
+            not report.record_improved
+            and state.record.evidence_id is not None
+            and state.epoch % self.config.evolve.reporting.plots_every_epochs == 0
+        ):
+            from evolve.reporting import print_best_answer
+
+            print_best_answer(layout.run_dir)
         if state.epoch % self.config.evolve.reporting.plots_every_epochs == 0:
             try:
                 from evolve.viz.run import generate_plots
@@ -2075,12 +4248,75 @@ class EvolveEngine:
                         "allocation",
                         "audits",
                         "roles",
+                        "posterior",
+                        "failures",
+                        "resources",
                     ),
                     out_dir=layout.path("plots"),
                 )
-            except Exception:
+            except Exception as exc:
                 # Barrier durability and discovery never depend on plotting.
-                pass
+                try:
+                    _write_json_once(
+                        layout.path(
+                            f"logs/plot_epoch{report.epoch:03d}.error.json"
+                        ),
+                        {
+                            "schema_version": 1,
+                            "epoch": report.epoch,
+                            "exception_type": type(exc).__name__,
+                            "message": str(exc)[:2048],
+                        },
+                    )
+                except Exception:
+                    # Logging the non-critical plotting error is itself
+                    # best-effort; the completed barrier remains authoritative.
+                    pass
+
+    def _publish_role_pointers(
+        self,
+        layout: RunLayout,
+        *,
+        role_artifacts: Mapping[str, Mapping[str, Any]],
+        epoch: int,
+    ) -> None:
+        """Publish compatibility pointers only after their checkpoint is durable."""
+
+        for role_name, artifact in role_artifacts.items():
+            atomic_write_json(
+                layout.path(f"roles/{role_name}/latest.json"),
+                {"epoch": epoch, **dict(artifact)},
+            )
+
+    def _persist_training_state(
+        self,
+        layout: RunLayout,
+        *,
+        state: EpochState,
+        checkpoint: Mapping[str, Any],
+        workers: Optional[EngineWorkers],
+        epoch: int,
+    ) -> None:
+        targets = (
+            layout.path(f"checkpoints/checkpoint_epoch{epoch:03d}.pt"),
+            layout.path("training_state.pt"),
+        )
+        callback = workers.persist_training_state if workers is not None else None
+        if callback is not None:
+            callback(state, checkpoint, targets)
+            return
+        # Fake-worker fixtures still receive complete compatibility artifacts;
+        # the JSON envelope is intentionally marked so it cannot masquerade as
+        # a production optimizer/RNG checkpoint.
+        fallback = {
+            "format": "evolve_json_fixture_training_state_v1",
+            "checkpoint": dict(checkpoint),
+        }
+        for target in targets:
+            if target.parent.name == "checkpoints":
+                _write_json_once(target, fallback)
+            else:
+                atomic_write_json(target, fallback)
 
     def _publish_snapshots(self, layout: RunLayout, state: EpochState) -> None:
         """Publish complete committed subsystem views before the checkpoint."""
@@ -2112,11 +4348,42 @@ class EvolveEngine:
                 "cells": archive_document["cells"],
             },
         )
-        write_immutable_json(
+        append_jsonl_records(
+            layout.path("archive/candidates.jsonl"),
+            (item.to_dict() for item in state.archive.artifacts.proposals),
+            id_field="proposal_id",
+        )
+        append_jsonl_records(
+            layout.path("archive/evidence.jsonl"),
+            (item.to_dict() for item in state.archive.artifacts.evidence),
+            id_field="evidence_id",
+        )
+        append_jsonl_records(
+            layout.path("archive/provenance.jsonl"),
+            (item.to_dict() for item in state.provenance.edges),
+            id_field="edge_id",
+        )
+        append_jsonl_records(
+            layout.path("causal_memory/records.jsonl"),
+            (
+                {
+                    "memory_version_id": content_id(
+                        "causal_memory_version", item.to_dict()
+                    ),
+                    "memory_id": item.memory_id,
+                    "record": item.to_dict(),
+                }
+                for item in sorted(
+                    state.memory.records.values(), key=lambda record: record.memory_id
+                )
+            ),
+            id_field="memory_version_id",
+        )
+        _write_json_once(
             layout.path(f"archive/snapshots/epoch{state.epoch:03d}.json"),
             archive_document,
         )
-        write_immutable_json(
+        _write_json_once(
             layout.path(
                 f"causal_memory/snapshots/epoch{state.epoch:03d}.json"
             ),
@@ -2144,54 +4411,189 @@ class EvolveEngine:
 
         record = state.record
         if record.state_id is None or record.evidence_id is None:
-            return
+            raise EngineError(
+                "best publication was requested without a confirmed record"
+            )
         try:
             evidence = state.archive.artifacts.evidence_packet(record.evidence_id)
             verified_state = state.archive.artifacts.state_binding(
                 record.state_id, evidence.proposal_id, record.evidence_id
             )
-        except Exception:
-            return
+        except Exception as exc:
+            raise EngineError(
+                "confirmed record cannot be resolved from the committed archive"
+            ) from exc
         best_dir = layout.path("best")
         best_dir.mkdir(parents=True, exist_ok=True)
-        staging = layout.path(f".best-{verified_state.state_id}")
-        if staging.exists():
-            shutil.rmtree(staging)
-        staging.mkdir(parents=True, exist_ok=False)
-        try:
-            atomic_write_json(staging / "state.json", verified_state.to_dict())
-            atomic_write_json(staging / "evidence.json", evidence.to_dict())
-            atomic_write_json(
-                staging / "candidate.json",
-                {
-                    "state_id": verified_state.state_id,
-                    "proposal_id": verified_state.proposal_id,
-                    "answer_payload": verified_state.answer_payload,
-                },
-            )
-            try:
-                adapter.problem.render_best(
-                    verified_state.answer_payload, evidence, staging
-                )
-            except Exception as exc:
-                atomic_write_json(
-                    staging / "answer.json", verified_state.answer_payload
-                )
-                atomic_write_text(
-                    staging / "renderer.error.txt",
-                    f"{type(exc).__name__}: {exc}\n",
-                )
-            for path in sorted(staging.iterdir()):
-                os.replace(path, best_dir / path.name)
-        finally:
+        snapshots_dir = best_dir / "snapshots"
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_dir = snapshots_dir / evidence.evidence_id
+        if not snapshot_dir.is_dir():
+            staging = layout.path(f".best-{evidence.evidence_id}")
             if staging.exists():
                 shutil.rmtree(staging)
+            staging.mkdir(parents=True, exist_ok=False)
+            try:
+                atomic_write_json(staging / "state.json", verified_state.to_dict())
+                atomic_write_json(staging / "evidence.json", evidence.to_dict())
+                atomic_write_json(
+                    staging / "candidate.json",
+                    {
+                        "state_id": verified_state.state_id,
+                        "proposal_id": verified_state.proposal_id,
+                        "answer_payload": verified_state.answer_payload,
+                    },
+                )
+                try:
+                    adapter.problem.render_best(
+                        verified_state.answer_payload, evidence, staging
+                    )
+                except Exception as exc:
+                    atomic_write_json(
+                        staging / "answer.json", verified_state.answer_payload
+                    )
+                    atomic_write_text(
+                        staging / "renderer.error.txt",
+                        f"{type(exc).__name__}: {exc}\n",
+                    )
+                if not (staging / "answer.txt").is_file() and not (
+                    staging / "answer.py"
+                ).is_file():
+                    atomic_write_text(
+                        staging / "answer.txt",
+                        json.dumps(
+                            evidence.answer_payload,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            indent=2,
+                        )
+                        + "\n",
+                    )
+                compatibility_files = sorted(
+                    path.name for path in staging.iterdir() if path.is_file()
+                )
+                atomic_write_json(
+                    staging / "snapshot.manifest.json",
+                    {
+                        "schema_version": 1,
+                        "state_id": verified_state.state_id,
+                        "evidence_id": evidence.evidence_id,
+                        "compatibility_files": compatibility_files,
+                    },
+                )
+                os.replace(staging, snapshot_dir)
+                fsync_directory(snapshots_dir)
+            finally:
+                if staging.exists():
+                    shutil.rmtree(staging)
+        snapshot_manifest = json.loads(
+            (snapshot_dir / "snapshot.manifest.json").read_text(encoding="utf-8")
+        )
+        if (
+            snapshot_manifest.get("state_id") != verified_state.state_id
+            or snapshot_manifest.get("evidence_id") != evidence.evidence_id
+        ):
+            raise EngineError("best snapshot identity conflicts with the record")
+
+        old_pointer = {}
+        best_pointer = best_dir / "latest.json"
+        if best_pointer.is_file():
+            try:
+                old_pointer = json.loads(best_pointer.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                old_pointer = {}
+        compatibility_files = tuple(snapshot_manifest["compatibility_files"])
+        for name in compatibility_files:
+            source = snapshot_dir / name
+            if not source.is_file():
+                raise EngineError(f"best snapshot is missing {name}")
+            atomic_write_bytes(best_dir / name, source.read_bytes())
+        pointer_document = {
+            "schema_version": 1,
+            "state_id": verified_state.state_id,
+            "evidence_id": evidence.evidence_id,
+            "snapshot": f"snapshots/{evidence.evidence_id}",
+            "compatibility_files": list(compatibility_files),
+        }
+        atomic_write_json(best_pointer, pointer_document)
+        for stale_name in old_pointer.get("compatibility_files", ()):
+            if stale_name in compatibility_files:
+                continue
+            stale_path = best_dir / str(stale_name)
+            if stale_path.parent == best_dir and stale_path.is_file():
+                stale_path.unlink()
+                fsync_directory(best_dir)
         proposal = state.archive.artifacts.proposal(verified_state.proposal_id)
         atomic_write_text(layout.run_dir / "best_code.py", proposal.source_text)
         atomic_write_json(
             layout.run_dir / "best_construction.json",
             {"answer_payload": evidence.answer_payload, "internal_reward": evidence.internal_reward},
         )
+        print(
+            "\n=== EVOLVE confirmed record ===\n"
+            + json.dumps(
+                evidence.answer_payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+            + "\n=== end confirmed record ===\n",
+            flush=True,
+        )
+
+    def _write_live_progress_status(
+        self,
+        layout: RunLayout,
+        state: EpochState,
+        *,
+        epoch: int,
+        completed_branches: int,
+        total_branches: int,
+        completed_verifications: int,
+        executions: Sequence[BranchExecution],
+    ) -> None:
+        """Refresh live progress without publishing an in-epoch record."""
+
+        provisional = [
+            execution.outcome.maximum_reward
+            for execution in executions
+            if execution.outcome.maximum_reward is not None
+        ]
+        document = {}
+        status_path = layout.path("status.json")
+        if status_path.is_file():
+            try:
+                document = json.loads(status_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                document = {}
+        document.update(
+            {
+                "schema_version": 1,
+                "run_id": state.run_id,
+                "epoch": state.epoch,
+                "confirmed_record": {
+                    "state_id": state.record.state_id,
+                    "cell_id": state.record.cell_id,
+                    "internal_reward": state.record.internal_reward,
+                    "raw_score": state.record.raw_score,
+                },
+                "live_epoch": {
+                    "epoch": epoch,
+                    "completed_branches": completed_branches,
+                    "total_branches": total_branches,
+                    "completed_verifications": completed_verifications,
+                    "infrastructure_aborted": sum(
+                        1 for item in executions if item.outcome.infrastructure_aborted
+                    ),
+                    "provisional_observation": (
+                        max(provisional) if provisional else None
+                    ),
+                    "provisional_is_committed": False,
+                },
+                "note": f"epoch {epoch} active",
+            }
+        )
+        atomic_write_json(status_path, document)
 
     def _write_status(
         self,
@@ -2215,9 +4617,72 @@ class EvolveEngine:
                     "policy_snapshot_id": evidence.policy_snapshot_id,
                     "confirmed_at": evidence.completed_at,
                 }
+                branch_specs = list(
+                    layout.run_dir.glob(
+                        f"step*/branches/{evidence.branch_id}/branch.spec.json"
+                    )
+                )
+                if branch_specs:
+                    branch_document = json.loads(
+                        branch_specs[-1].read_text(encoding="utf-8")
+                    )
+                    holder_role = branch_document.get(
+                        "generation_settings", {}
+                    ).get("role")
+                    if holder_role is None:
+                        assignment_path = branch_specs[-1].with_name(
+                            "assignment.json"
+                        )
+                        if assignment_path.is_file():
+                            assignment = json.loads(
+                                assignment_path.read_text(encoding="utf-8")
+                            )
+                            holder_role = assignment.get("arm", {}).get("role")
+                    holder.update(
+                        {
+                            "epoch": branch_document.get("epoch"),
+                            "role": holder_role,
+                            "option_id": branch_document.get("option_id"),
+                        }
+                    )
             except Exception:
                 holder = None
         outcomes = tuple(report.branch_executions) if report is not None else ()
+        branch_documents = []
+        for execution in outcomes:
+            paths = list(
+                layout.run_dir.glob(
+                    f"step*/branches/{execution.outcome.branch_id}/branch.spec.json"
+                )
+            )
+            if paths:
+                try:
+                    branch_documents.append(
+                        json.loads(paths[-1].read_text(encoding="utf-8"))
+                    )
+                except (OSError, json.JSONDecodeError):
+                    pass
+        channels = {}
+        roles = {}
+        options = {}
+        harnesses = {}
+        for branch in branch_documents:
+            channel = str(branch.get("channel", "unknown"))
+            role = str(branch.get("generation_settings", {}).get("role", "unknown"))
+            option = str(branch.get("option_id", "unknown"))
+            harness = str(branch.get("harness_id", "unknown"))
+            channels[channel] = channels.get(channel, 0) + 1
+            roles[role] = roles.get(role, 0) + 1
+            options[option] = options.get(option, 0) + 1
+            harnesses[harness] = harnesses.get(harness, 0) + 1
+        closed_audits = (
+            sum(1 for pair in report.audit_pairs if pair.status == AuditStatus.CLOSED)
+            if report is not None else 0
+        )
+        aborted_audits = (
+            sum(1 for pair in report.audit_pairs if pair.status == AuditStatus.ABORTED)
+            if report is not None else 0
+        )
         status = {
             "schema_version": 1,
             "run_id": state.run_id,
@@ -2228,6 +4693,11 @@ class EvolveEngine:
                 "internal_reward": state.record.internal_reward,
                 "raw_score": state.record.raw_score,
                 "holder": holder,
+                "age_epochs": (
+                    max(0, state.epoch - int(holder["epoch"]))
+                    if holder is not None and holder.get("epoch") is not None
+                    else None
+                ),
             },
             "archive_coverage": state.archive.coverage,
             "archive_cells": len(state.archive.cells),
@@ -2249,6 +4719,19 @@ class EvolveEngine:
                 }
                 for role in state.role_registry.roles
             },
+            "latest_learning": {
+                role.value: {
+                    "group_id": (
+                        state.role_registry.state(role).learning.group_ids[-1]
+                        if state.role_registry.state(role).learning.group_ids
+                        else None
+                    ),
+                    "optimizer_step": state.role_registry.state(role).optimizer.step,
+                    "adapter_version": state.role_registry.state(role).adapter.version,
+                    "adapter_hash": state.role_registry.state(role).adapter.adapter_hash,
+                }
+                for role in state.role_registry.roles
+            },
             "causal_memory": {
                 "records": len(state.memory.records),
                 "promoted": sum(
@@ -2256,6 +4739,22 @@ class EvolveEngine:
                     for record in state.memory.records.values()
                     if record.status.value == "promoted"
                 ),
+                "quarantined": sum(
+                    1
+                    for record in state.memory.records.values()
+                    if record.status.value == "quarantined"
+                ),
+                "rejected": sum(
+                    1
+                    for record in state.memory.records.values()
+                    if record.status.value == "rejected"
+                ),
+            },
+            "allocations": {
+                "by_channel": channels,
+                "by_role": roles,
+                "by_option": options,
+                "by_harness": harnesses,
             },
             "latest_epoch": {
                 "branches": len(outcomes),
@@ -2266,6 +4765,18 @@ class EvolveEngine:
                     1 for item in outcomes if item.outcome.infrastructure_aborted
                 ),
                 "audit_pairs": len(report.audit_pairs) if report is not None else 0,
+                "closed_audit_pairs": closed_audits,
+                "aborted_audit_pairs": aborted_audits,
+                "admission_rate": (
+                    sum(1 for item in outcomes if item.outcome.maximum_state_id is not None)
+                    / len(outcomes)
+                    if outcomes else 0.0
+                ),
+                "infrastructure_rate": (
+                    sum(1 for item in outcomes if item.outcome.infrastructure_aborted)
+                    / len(outcomes)
+                    if outcomes else 0.0
+                ),
             },
             "note": note,
         }
@@ -2278,7 +4789,11 @@ def _objective_enum(value: str):
     return LearningObjective(value)
 
 
-def _checkpoint_payload(state: EpochState) -> Mapping[str, Any]:
+def _checkpoint_payload(
+    state: EpochState,
+    *,
+    role_artifacts: Optional[Mapping[str, Mapping[str, Any]]] = None,
+) -> Mapping[str, Any]:
     return {
         "record_type": "evolve_epoch_checkpoint",
         "schema_version": 1,
@@ -2310,12 +4825,32 @@ def _checkpoint_payload(state: EpochState) -> Mapping[str, Any]:
             "raw_score": state.record.raw_score,
         },
         "roles": state.role_registry.checkpoint_payload(),
+        "role_artifacts": {
+            role: dict(payload)
+            for role, payload in (role_artifacts or state.role_artifacts).items()
+        },
+        "component_schema_versions": dict(COMPONENT_SCHEMA_VERSIONS),
     }
 
 
 def _state_from_checkpoint(checkpoint: Mapping[str, Any], *, config: EvolveConfig) -> EpochState:
     from evolve.archive import ScientificArtifactStore
     from evolve.types import ArchiveCell, Descriptor, EvidencePacket, Proposal, ProvenanceEdge, VerifiedScientificState, CausalMemoryRecord
+
+    if checkpoint.get("record_type") != "evolve_epoch_checkpoint":
+        raise EngineError("resume checkpoint is not an EVOLVE epoch checkpoint")
+    schema_version = checkpoint.get("schema_version")
+    if schema_version != 1:
+        direction = "future" if isinstance(schema_version, int) and schema_version > 1 else "unsupported"
+        raise EngineError(f"{direction} EVOLVE checkpoint schema: {schema_version!r}")
+    component_versions = checkpoint.get("component_schema_versions", {})
+    for component, saved_version in component_versions.items():
+        supported = COMPONENT_SCHEMA_VERSIONS.get(component)
+        if supported is None or not isinstance(saved_version, int) or saved_version > supported:
+            raise EngineError(
+                f"unsupported future checkpoint component {component!r} "
+                f"version {saved_version!r}"
+            )
 
     archive_doc = checkpoint["archive"]
     artifacts = ScientificArtifactStore()
@@ -2360,6 +4895,17 @@ def _state_from_checkpoint(checkpoint: Mapping[str, Any], *, config: EvolveConfi
         harness_eligibility=tuple(sorted(harness_registry.specs)),
         max_horizon=config.evolve.options.max_horizon,
     )
+    saved_option_ids = tuple(checkpoint.get("option_ids", ()))
+    if saved_option_ids and saved_option_ids != option_registry.option_ids():
+        raise EngineError(
+            "resume option registry differs from the frozen checkpoint; "
+            "an explicit supported migration is required"
+        )
+    if record.state_id is not None:
+        record_state = artifacts.representative_state(record.state_id)
+        record_evidence = artifacts.evidence_packet(record.evidence_id)
+        if not record_evidence.confirmed or record_state.evidence_id != record.evidence_id:
+            raise EngineError("checkpoint record is not backed by its confirmed evidence")
     return EpochState(
         run_id=checkpoint["run_id"], epoch=checkpoint["epoch"], archive=archive,
         provenance=provenance,
@@ -2369,6 +4915,10 @@ def _state_from_checkpoint(checkpoint: Mapping[str, Any], *, config: EvolveConfi
         nursery={
             payload["entry_id"]: NurseryEntry(**payload)
             for payload in checkpoint.get("nursery", ())
+        },
+        role_artifacts={
+            role: dict(payload)
+            for role, payload in checkpoint.get("role_artifacts", {}).items()
         },
     )
 
@@ -2381,23 +4931,65 @@ def _latest_completed_checkpoint(layout: RunLayout) -> Path:
     if bootstrap.is_file():
         summaries.append(bootstrap)
     summaries.extend(layout.run_dir.glob("step*/step*.summary.json"))
+    if not summaries:
+        raise EngineError(
+            f"no completed-barrier checkpoint found in {layout.run_dir}"
+        )
     candidates = []
     for summary_path in summaries:
         try:
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
-            epoch = int(summary.get("committed_epoch", summary.get("epoch", -1)))
+            if summary.get("schema_version") != 1:
+                raise ValueError("unsupported completion-marker schema")
+            epoch = summary.get("committed_epoch", summary.get("epoch"))
+            if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch < 0:
+                raise ValueError("invalid committed epoch")
             filename = summary["checkpoint"]
             expected_hash = summary["checkpoint_hash"]
+            if (
+                not isinstance(filename, str)
+                or Path(filename).name != filename
+                or not filename.endswith(".json")
+            ):
+                raise ValueError("unsafe checkpoint filename")
+            if (
+                not isinstance(expected_hash, str)
+                or len(expected_hash) != 64
+                or any(character not in "0123456789abcdef" for character in expected_hash)
+            ):
+                raise ValueError("invalid checkpoint hash")
             path = layout.path(f"checkpoints/{filename}")
             document = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, KeyError, json.JSONDecodeError):
-            continue
-        if content_hash(document) == expected_hash:
-            candidates.append((epoch, path))
-    if not candidates:
-        raise EngineError(
-            f"no completed-barrier checkpoint found in {layout.run_dir}"
-        )
+            if content_hash(document) != expected_hash:
+                raise ValueError("checkpoint content hash mismatch")
+            training_filename = summary.get("training_state")
+            training_hash = summary.get("training_state_hash")
+            if (training_filename is None) != (training_hash is None):
+                raise ValueError("incomplete training-state companion binding")
+            if training_filename is not None:
+                if (
+                    not isinstance(training_filename, str)
+                    or Path(training_filename).name != training_filename
+                    or not training_filename.endswith(".pt")
+                    or not isinstance(training_hash, str)
+                    or len(training_hash) != 64
+                    or any(
+                        character not in "0123456789abcdef"
+                        for character in training_hash
+                    )
+                ):
+                    raise ValueError("invalid training-state companion binding")
+                training_path = layout.path(f"checkpoints/{training_filename}")
+                if _file_sha256(training_path) != training_hash:
+                    raise ValueError("training-state companion hash mismatch")
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise EngineError(
+                f"invalid completed-barrier marker {summary_path}: {exc}"
+            ) from exc
+        candidates.append((epoch, path))
+    epochs = [epoch for epoch, _path in candidates]
+    if len(set(epochs)) != len(epochs):
+        raise EngineError("multiple completed-barrier markers claim the same epoch")
     return max(candidates, key=lambda item: item[0])[1]
 
 
@@ -2450,6 +5042,13 @@ def _gpu_manifest(config: EvolveConfig) -> List[Mapping[str, Any]]:
     if config.kernel_gpu_id is not None and config.kernel_gpu_id not in physical_ids:
         physical_ids.append(config.kernel_gpu_id)
     entries: List[Mapping[str, Any]] = []
+    evaluation_shares_model_gpu = (
+        config.kernel_gpu_id is not None
+        and (
+            config.kernel_gpu_id == config.training_gpu_id
+            or config.kernel_gpu_id in config.gpu_ids
+        )
+    )
     for gpu_id in physical_ids:
         purposes = []
         if config.training_gpu_id == gpu_id or (
@@ -2461,7 +5060,7 @@ def _gpu_manifest(config: EvolveConfig) -> List[Mapping[str, Any]]:
         if config.kernel_gpu_id == gpu_id:
             purposes.append(
                 "serialized_evaluation"
-                if gpu_id in config.runtime_gpu_ids
+                if evaluation_shares_model_gpu
                 else "exclusive_evaluation"
             )
         entries.append(
@@ -2475,6 +5074,13 @@ def _gpu_manifest(config: EvolveConfig) -> List[Mapping[str, Any]]:
 
 
 def _worker_topology(config: EvolveConfig) -> Mapping[str, Any]:
+    evaluation_shares_model_gpu = (
+        config.kernel_gpu_id is not None
+        and (
+            config.kernel_gpu_id == config.training_gpu_id
+            or config.kernel_gpu_id in config.gpu_ids
+        )
+    )
     return {
         "max_inflight_branches": config.evolve.workers.max_inflight_branches,
         "generation_backend": config.generation_backend,
@@ -2484,11 +5090,7 @@ def _worker_topology(config: EvolveConfig) -> Mapping[str, Any]:
         "generation_gpu_ids": list(config.gpu_ids),
         "runtime_visible_gpu_ids": list(config.runtime_gpu_ids),
         "exclusive_evaluation_gpu_id": config.kernel_gpu_id,
-        "evaluation_is_serialized_with_model_phase": (
-            config.kernel_gpu_id in config.runtime_gpu_ids
-            if config.kernel_gpu_id is not None
-            else False
-        ),
+        "evaluation_is_serialized_with_model_phase": evaluation_shares_model_gpu,
     }
 
 

@@ -63,32 +63,16 @@ def stratify_drift(
 ) -> CausalMemoryRecord:
     """Re-quarantine a promoted record whose recent evidence has drifted.
 
-    Only the most recent window's audit pairs are retained, so the record can
-    only re-promote from fresh, undrifted evidence rather than being
-    permanently anchored to a stale effect estimate.
+    Matched-pair evidence is append-only: drift changes eligibility, never the
+    persisted support, effects, propensities, or lineage used to reconstruct
+    the decision. Later audits may resolve the drift and permit promotion.
     """
 
     if record.status != MemoryStatus.PROMOTED or not detect_drift(record, window=window):
         return record
-    audit_pair_ids = record.audit_pair_ids[-window:]
-    propensities = record.propensities[-window:]
-    effects = record.effects[-window:]
-    n = len(effects)
-    effect_mean = sum(effects) / n
-    if n > 1:
-        variance = sum((value - effect_mean) ** 2 for value in effects) / (n - 1)
-        uncertainty = math.sqrt(variance / n)
-    else:
-        uncertainty = abs(effect_mean)
     updated = replace(
         record,
         status=MemoryStatus.QUARANTINED,
-        audit_pair_ids=audit_pair_ids,
-        propensities=propensities,
-        effects=effects,
-        effect_mean=effect_mean,
-        uncertainty=uncertainty,
-        support=n,
         recency_epoch=current_epoch,
     )
     object.__setattr__(updated, "schema_version", record.schema_version)

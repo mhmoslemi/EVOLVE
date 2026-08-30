@@ -939,6 +939,7 @@ class PolicyTrace(SchemaRecord):
     response_segments: Tuple[str, ...]
     token_masks: Tuple[Tuple[bool, ...], ...]
     log_probabilities: Tuple[Tuple[float, ...], ...]
+    token_ids: Tuple[Tuple[int, ...], ...] = ()
     persisted: bool = True
 
     @property
@@ -965,6 +966,11 @@ class PolicyTrace(SchemaRecord):
         _require(count > 0, "a PolicyTrace must contain at least one policy decision")
         _require(len(self.response_segments) == count == len(self.token_masks) == len(self.log_probabilities),
                  "prompt, response, mask, and log-probability segments must align")
+        if self.token_ids:
+            _require(
+                len(self.token_ids) == count,
+                "PolicyTrace token-id segments must align",
+            )
         for index, (mask, logps) in enumerate(zip(self.token_masks, self.log_probabilities)):
             _require(len(mask) == len(logps),
                      f"token mask/log probabilities differ in segment {index}")
@@ -972,6 +978,16 @@ class PolicyTrace(SchemaRecord):
                      f"token_masks[{index}] must contain booleans")
             for value in logps:
                 _finite(value, f"log_probabilities[{index}]")
+            if self.token_ids:
+                ids = self.token_ids[index]
+                _require(
+                    len(ids) == len(mask),
+                    f"token IDs/mask differ in segment {index}",
+                )
+                _require(
+                    all(isinstance(item, int) and not isinstance(item, bool) and item >= 0 for item in ids),
+                    f"token_ids[{index}] must contain non-negative integers",
+                )
         _require(any(keep for mask in self.token_masks for keep in mask),
                  "PolicyTrace must contain at least one role-policy token")
         _require(self.persisted is True,

@@ -597,7 +597,17 @@ class ExecutableOption:
                 raise OptionEligibilityError(
                     f"branch budget omits hard-bounded resource {resource!r}"
                 )
-            if float(context.budget[resource]) < float(hard_limit):
+            # The allocation arm chooses a bounded horizon. Built-in option
+            # costs describe the full registered maximum, so shorter frozen
+            # branches reserve the same proportional hard bound used by the
+            # scheduler instead of being incorrectly rejected for not funding
+            # steps they are forbidden to execute.
+            required = (
+                float(hard_limit)
+                * float(context.requested_horizon)
+                / float(self.spec.max_horizon)
+            )
+            if float(context.budget[resource]) + 1e-12 < required:
                 raise OptionEligibilityError(
                     f"branch budget for {resource!r} is below the option hard cost"
                 )

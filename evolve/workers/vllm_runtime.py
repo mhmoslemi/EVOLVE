@@ -56,8 +56,10 @@ def _build_engine_options(
     if config.vllm_quantization != "auto":
         options["quantization"] = config.vllm_quantization
 
-    if supported_engine_args is None or "swap_space" in supported_engine_args:
-        options["swap_space"] = config.vllm_swap_space_gb
+    # ``vllm_swap_space_gb`` remains in the resolved schema so old EVOLVE
+    # configs and resumes remain readable, but vLLM 0.28 removed the public
+    # EngineArgs field. Do not forward it, even when an older install happens
+    # to expose a similarly named argument: runtime behavior is version-frozen.
 
     split_devices = tuple(config.runtime_gpu_ids) != tuple(config.gpu_ids)
     if split_devices:
@@ -172,6 +174,7 @@ class TensorParallelVLLM:
         self.config = config
         self.adapter_paths = paths
         self._lora_id_owners: Dict[int, str] = {}
+        self._request_ids = set()
         engine_options = _build_engine_options(
             config, supported_engine_args=_engine_arg_names(EngineArgs)
         )
@@ -181,6 +184,7 @@ class TensorParallelVLLM:
         self,
         *,
         prompt: str,
+        request_id: str,
         role: Role,
         role_snapshot_id: str,
         seed: int,
@@ -196,6 +200,13 @@ class TensorParallelVLLM:
 
         if role not in self.adapter_paths:
             raise VLLMRuntimeError(f"no vLLM adapter registered for role {role.value}")
+        if not isinstance(request_id, str) or not request_id:
+            raise VLLMRuntimeError("vLLM generation requires a stable request ID")
+        if request_id in self._request_ids:
+            raise VLLMRuntimeError(
+                f"vLLM request ID alias detected: {request_id}"
+            )
+        self._request_ids.add(request_id)
         lora_id = _positive_lora_id(role_snapshot_id)
         existing_owner = self._lora_id_owners.get(lora_id)
         if existing_owner is not None and existing_owner != role_snapshot_id:
@@ -215,12 +226,19 @@ class TensorParallelVLLM:
             seed=int(seed),
             logprobs=1,
         )
-        outputs = self.engine.generate(
-            [prompt],
-            sampling_params=sampling,
-            lora_request=lora_request,
-            use_tqdm=False,
-        )
+        try:
+            outputs = self.engine.generate(
+                [prompt],
+                sampling_params=sampling,
+                lora_request=lora_request,
+                use_tqdm=False,
+            )
+        except BaseException:
+            # A failed call may be retried by the controller under the same
+            # logical sample identity after an engine restart, but never
+            # aliased to another live request in this engine instance.
+            self._request_ids.discard(request_id)
+            raise
         if len(outputs) != 1 or len(outputs[0].outputs) != 1:
             raise VLLMRuntimeError("vLLM returned an unexpected output cardinality")
         completion = outputs[0].outputs[0]

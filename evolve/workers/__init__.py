@@ -24,16 +24,20 @@ from .generation import (
 from .resources import ResourceLease, ResourceLeaseError, ResourceLeaseManager
 from .verification import (
     BackpressureQueue,
+    DurableVerificationConflict,
     GenerationOutcome,
     VerificationWorkerError,
     build_proposal_and_verify,
     persist_answer_artifact,
+    persist_verifier_trace,
+    restore_durable_verification_result,
 )
 
 __all__ = [
     "AdapterRequest",
     "AdapterRequestRegistry",
     "BackpressureQueue",
+    "DurableVerificationConflict",
     "GeneratedSample",
     "GenerationBackend",
     "GenerationBatch",
@@ -56,6 +60,8 @@ __all__ = [
     "execute_worker_shard",
     "partition_generation_jobs",
     "persist_answer_artifact",
+    "persist_verifier_trace",
+    "restore_durable_verification_result",
     "requests_for_job",
     "vllm_lora_capacity",
 ]

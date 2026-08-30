@@ -65,8 +65,16 @@ def production_option_registry(
     """
 
     harness_ids = tuple(harness_eligibility)
-    bound = dict(hard_cost) if hard_cost is not None else {"verifier_calls": float(max_horizon)}
-    expected = dict(expected_cost) if expected_cost is not None else dict(bound)
+    bound = (
+        dict(hard_cost)
+        if hard_cost is not None
+        else {"verifier_calls": float(max_horizon)}
+    )
+    expected = (
+        dict(expected_cost)
+        if expected_cost is not None
+        else {"verifier_calls": float(max_horizon)}
+    )
     registry = OptionRegistry()
     registry = registry.register(
         create_explore_option_spec(

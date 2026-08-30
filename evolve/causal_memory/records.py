@@ -83,6 +83,14 @@ def add_effect(
     if pair.intervention_option_id != record.intervention_option_id:
         raise CausalMemoryError("audit pair intervention does not match this memory record")
     if pair.audit_id in record.audit_pair_ids:
+        index = record.audit_pair_ids.index(pair.audit_id)
+        if (
+            record.propensities[index] != pair.assignment_probability
+            or record.effects[index] != effect.effect
+        ):
+            raise CausalMemoryError(
+                "replayed audit pair disagrees with its persisted causal effect"
+            )
         return record
 
     audit_pair_ids = record.audit_pair_ids + (pair.audit_id,)

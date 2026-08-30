@@ -26,6 +26,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
 
 from evolve.ids import canonical_json, content_hash, content_id
+from evolve.runio.atomic import fsync_directory
 from evolve.types import FrozenDict, Role
 
 from .adapters import (
@@ -773,8 +774,16 @@ class NamedAdapterBackendPort:
         *,
         state: RoleAdapterState,
         destination: Union[os.PathLike, str],
+        companion_files: Optional[Mapping[str, bytes]] = None,
     ) -> AdapterArtifact:
-        """Atomically create a never-overwritten, content-checked adapter directory."""
+        """Atomically create a never-overwritten role-training artifact.
+
+        Optional companion files (normally the matching optimizer state) are
+        written into the same staging directory before its file manifest is
+        hashed and the directory is atomically published. This prevents a
+        completed adapter from ever being paired with a recomputed optimizer
+        after an interrupted barrier.
+        """
 
         owner = coerce_role(role)
         self._validate_adapter_state(state, owner)
@@ -801,6 +810,31 @@ class NamedAdapterBackendPort:
                     selected_adapters=[adapter_name],
                     safe_serialization=True,
                 )
+                for relative_name, payload in dict(companion_files or {}).items():
+                    if not isinstance(relative_name, str) or not relative_name:
+                        raise AdapterArtifactError(
+                            "adapter companion filename must be non-empty"
+                        )
+                    relative_path = PurePosixPath(relative_name)
+                    if (
+                        relative_path.is_absolute()
+                        or ".." in relative_path.parts
+                        or relative_path.as_posix() == ADAPTER_MANIFEST_NAME
+                    ):
+                        raise AdapterArtifactError(
+                            "adapter companion filename must stay inside the artifact"
+                        )
+                    if not isinstance(payload, bytes):
+                        raise AdapterArtifactError(
+                            "adapter companion payload must be bytes"
+                        )
+                    companion_path = staging.joinpath(*relative_path.parts)
+                    if companion_path.exists():
+                        raise AdapterArtifactError(
+                            f"adapter companion collides with model payload: {relative_name}"
+                        )
+                    companion_path.parent.mkdir(parents=True, exist_ok=True)
+                    companion_path.write_bytes(payload)
                 relative = _locate_adapter_payload(staging, adapter_name)
                 files = _artifact_files(staging)
                 artifact = AdapterArtifact.create(
@@ -818,7 +852,24 @@ class NamedAdapterBackendPort:
                     canonical_json(artifact.to_dict()) + "\n",
                     encoding="utf-8",
                 )
+                for file_path in sorted(
+                    (path for path in staging.rglob("*") if path.is_file()),
+                    key=lambda path: path.as_posix(),
+                ):
+                    descriptor = os.open(os.fspath(file_path), os.O_RDONLY)
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+                for directory in sorted(
+                    (path for path in staging.rglob("*") if path.is_dir()),
+                    key=lambda path: len(path.parts),
+                    reverse=True,
+                ):
+                    fsync_directory(directory)
+                fsync_directory(staging)
                 os.replace(staging, destination_path)
+                fsync_directory(destination_path.parent)
                 return artifact
             except Exception:
                 if staging.exists():

@@ -221,6 +221,7 @@ class GenerationJob:
     sample_count: int
     generation_parameters: GenerationParameters
     seed: int
+    common_random_seed: Optional[int] = None
     schema_version: int = GENERATION_JOB_SCHEMA_VERSION
     extensions: FrozenDict = field(default_factory=FrozenDict)
 
@@ -245,6 +246,7 @@ class GenerationJob:
             "sample_count",
             "generation_parameters",
             "seed",
+            "common_random_seed",
             "schema_version",
             "extensions",
         }
@@ -288,6 +290,7 @@ class GenerationJob:
         sample_index_start: int,
         sample_count: int,
         generation_parameters: GenerationParameters,
+        common_random_seed: Optional[int] = None,
     ) -> "GenerationJob":
         normalized_role = role if isinstance(role, Role) else Role(role)
         fields = {
@@ -308,6 +311,8 @@ class GenerationJob:
             "sample_count": sample_count,
             "generation_parameters": generation_parameters.identity_payload(),
         }
+        if common_random_seed is not None:
+            fields["common_random_seed"] = int(common_random_seed)
         job_id = content_id("generation_job", fields)
         seed = derive_seed(
             "generation_job_seed_v1",
@@ -333,10 +338,11 @@ class GenerationJob:
             sample_count=sample_count,
             generation_parameters=generation_parameters,
             seed=seed,
+            common_random_seed=common_random_seed,
         )
 
     def identity_payload(self) -> dict:
-        return {
+        payload = {
             "schema_version": self.schema_version,
             "run_id": self.run_id,
             "epoch": self.epoch,
@@ -354,6 +360,9 @@ class GenerationJob:
             "sample_count": self.sample_count,
             "generation_parameters": self.generation_parameters.identity_payload(),
         }
+        if self.common_random_seed is not None:
+            payload["common_random_seed"] = self.common_random_seed
+        return payload
 
     def __post_init__(self) -> None:
         if self.schema_version != GENERATION_JOB_SCHEMA_VERSION:
@@ -373,6 +382,12 @@ class GenerationJob:
         _nonnegative_int(self.sample_index_start, "sample_index_start")
         _positive_int(self.sample_count, "sample_count")
         _nonnegative_int(self.seed, "seed")
+        if self.common_random_seed is not None:
+            _nonnegative_int(self.common_random_seed, "common_random_seed")
+            if self.common_random_seed > _MAX_SEED:
+                raise GenerationContractError(
+                    "common_random_seed must fit a signed 63-bit integer"
+                )
         if self.seed > _MAX_SEED:
             raise GenerationContractError("seed must fit a signed 63-bit integer")
         normalized_role = self.role if isinstance(self.role, Role) else Role(self.role)
@@ -537,15 +552,25 @@ def _generation_request_fields(job: GenerationJob, sample_index: int) -> dict:
         raise GenerationContractError("sample_index is outside the job range")
     payload = {"job_id": job.job_id, "sample_index": sample_index}
     request_id = content_id("generation_request", payload)
-    seed = rollout_seed(
-        run_id=job.run_id,
-        epoch=job.epoch,
-        allocation_id=job.allocation_id,
-        branch_step=job.branch_step,
-        sample_index=sample_index,
-        role=job.role.value,
-        base_seed=job.policy_snapshot.rng_seed,
-    )
+    if job.common_random_seed is None:
+        seed = rollout_seed(
+            run_id=job.run_id,
+            epoch=job.epoch,
+            allocation_id=job.allocation_id,
+            branch_step=job.branch_step,
+            sample_index=sample_index,
+            role=job.role.value,
+            base_seed=job.policy_snapshot.rng_seed,
+        )
+    else:
+        seed = derive_seed(
+            "generation_common_randomness_v1",
+            job.common_random_seed,
+            job.epoch,
+            job.branch_step,
+            sample_index,
+            job.role.value,
+        )
     return {
         "request_id": request_id,
         "hf_request_id": content_id(

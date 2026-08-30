@@ -3,7 +3,7 @@
 Members sharing role, policy snapshot, start cell, context, option, harness,
 horizon, cost class, generation settings, frozen threshold, and channel (and,
 within the audit or refinement channel, one audit side or attempt) are
-bucketed together and chunked to at most ``group_k`` members; everything
+bucketed together and admitted only in exact ``group_k`` chunks; everything
 else is rejected by construction rather than mixed, matching
 :class:`~evolve.types.LearningGroup`'s own homogeneity invariant.
 """
@@ -11,7 +11,7 @@ else is rejected by construction rather than mixed, matching
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from evolve.ids import content_hash, content_id
 from evolve.types import (
@@ -111,11 +111,14 @@ def build_learning_groups(
     objective: LearningObjective,
     top_m: int,
     group_k: int,
-    audit_sides: Mapping[str, AuditSide] = {},
-    refinement_attempts: Mapping[str, int] = {},
+    audit_sides: Optional[Mapping[str, AuditSide]] = None,
+    refinement_attempts: Optional[Mapping[str, int]] = None,
+    gain_fn: Optional[Callable[[BranchOutcome, float], float]] = None,
 ) -> Tuple[LearningGroup, ...]:
     """Partition members into maximal homogeneous chunks and score each."""
 
+    audit_sides = audit_sides or {}
+    refinement_attempts = refinement_attempts or {}
     buckets: Dict[Tuple, List[GroupMember]] = {}
     for member in members:
         branch = member.branch
@@ -146,6 +149,7 @@ def build_learning_groups(
                     top_m=min(top_m, len(chunk)),
                     audit_sides=audit_sides,
                     refinement_attempts=refinement_attempts,
+                    gain_fn=gain_fn,
                 )
             )
     return tuple(groups)
@@ -160,6 +164,7 @@ def _build_one_group(
     top_m: int,
     audit_sides: Mapping[str, AuditSide],
     refinement_attempts: Mapping[str, int],
+    gain_fn: Optional[Callable[[BranchOutcome, float], float]],
 ) -> LearningGroup:
     first = chunk[0]
     arm = arms[first.branch.arm_id]
@@ -173,12 +178,17 @@ def _build_one_group(
     # frozen threshold. Non-admitted branches therefore contribute zero,
     # never negative infinity or an infrastructure-derived pseudo-score.
     threshold = first.branch.frozen_record_threshold
-    rewards = [
-        max(0.0, float(member.outcome.maximum_reward) - threshold)
-        if member.outcome.maximum_reward is not None
-        else 0.0
-        for member in chunk
-    ]
+    rewards = []
+    for member in chunk:
+        if gain_fn is None:
+            reward = (
+                max(0.0, float(member.outcome.maximum_reward) - threshold)
+                if member.outcome.maximum_reward is not None
+                else 0.0
+            )
+        else:
+            reward = float(gain_fn(member.outcome, threshold))
+        rewards.append(reward)
     advantages = advantages_for_objective(rewards, objective=objective, top_m=top_m)
 
     branch_ids = tuple(member.branch.branch_id for member in chunk)

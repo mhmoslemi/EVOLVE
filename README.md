@@ -56,9 +56,10 @@ multi-GPU tensor parallelism; use a native/MXFP4 base there.
 `vllm_quantization` is the independent inference setting; the gpt-oss examples
 use `auto` so vLLM reads checkpoint-native MXFP4.
 
-Kernel configurations normally reserve the last/highest physical GPU as
-`kernel_gpu_id`. With two GPUs it may share the training GPU while vLLM uses the
-other device. With one GPU, EVOLVE shuts down the model phase and releases its
+Kernel configurations normally reserve the last GPU in the user's ordered list
+as `kernel_gpu_id`; physical CUDA numbers need not be numerically increasing.
+With two GPUs evaluation shares the training GPU while vLLM uses the other
+device. With one GPU, EVOLVE shuts down the model phase and releases its
 CUDA allocations before each isolated, spawned benchmark; this is safe but
 incurs model-reload overhead. GPU-mode YAMLs must declare the real `gpu_type`
 because benchmark targets and scientific evidence depend on the hardware.

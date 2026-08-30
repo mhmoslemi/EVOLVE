@@ -29,13 +29,29 @@ def plot_archive(run_dir: Union[str, Path], output_path: Union[str, Path]) -> Op
     else:
         empty_figure_message(axes[0], "no committed epochs yet")
 
-    cells = (checkpoint or {}).get("archive", {}).get("cells", [])
+    archive = (checkpoint or {}).get("archive", {})
+    cells = archive.get("cells", [])
     if cells:
-        tested = sorted((cell.get("tested_count", 0) for cell in cells), reverse=True)
-        axes[1].bar(range(len(tested)), tested, color="tab:green")
-        axes[1].set_xlabel("cell (ranked by depth)")
-        axes[1].set_ylabel("tested_count")
-        axes[1].set_title(f"Per-cell testing depth ({len(cells)} cells)")
+        rewards_by_state = {
+            state["state_id"]: state.get("internal_reward")
+            for state in archive.get("states", [])
+        }
+        quality = sorted(
+            (
+                float(rewards_by_state[cell["champion_state_id"]])
+                for cell in cells
+                if cell.get("champion_state_id") in rewards_by_state
+                and rewards_by_state[cell["champion_state_id"]] is not None
+            ),
+            reverse=True,
+        )
+        if quality:
+            axes[1].bar(range(len(quality)), quality, color="tab:green")
+            axes[1].set_xlabel("occupied cell (ranked)")
+            axes[1].set_ylabel("confirmed champion reward")
+            axes[1].set_title(f"Archive quality ({len(quality)} occupied cells)")
+        else:
+            empty_figure_message(axes[1], "no confirmed cell champions yet")
     else:
         empty_figure_message(axes[1], "no archive cells yet")
 

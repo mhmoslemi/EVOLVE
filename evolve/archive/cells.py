@@ -252,12 +252,6 @@ class ScientificArchive:
         if state.problem_id != descriptor.problem_id:
             raise ArchiveAdmissionError("candidate and descriptor problem IDs disagree")
 
-        duplicate_binding = any(
-            item.state_id == state.state_id
-            and item.proposal_id == state.proposal_id
-            and item.evidence_id == state.evidence_id
-            for item in self.artifacts.states
-        )
         new_cell_state = not any(
             item.state_id == state.state_id
             and item.descriptor_id == descriptor.descriptor_id
@@ -355,7 +349,10 @@ class ScientificArchive:
             cell_id=updated_cell.cell_id,
             state_id=state.state_id,
             evidence_id=evidence.evidence_id,
-            duplicate=duplicate_binding,
+            # Scientific identity belongs to the verified answer payload, not
+            # the proposal binding. A new source/proposal that reproduces an
+            # existing state is therefore still an explicit duplicate.
+            duplicate=not new_cell_state,
             champion_changed=(
                 old_cell.champion_state_id,
                 old_cell.champion_evidence_id,

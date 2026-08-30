@@ -56,6 +56,22 @@ def close_audit_pair(
     return updated
 
 
+def abort_audit_pair(pair: AuditPair) -> AuditPair:
+    """Close an unfinishable preassigned pair without manufacturing an effect.
+
+    Budget exhaustion and infrastructure failures are durable audit outcomes,
+    but they are not scientific control observations and therefore cannot be
+    admitted to causal memory.
+    """
+
+    if pair.status not in (AuditStatus.PREASSIGNED, AuditStatus.RUNNING):
+        raise AuditEffectError(f"audit pair {pair.audit_id} is already {pair.status.value}")
+    updated = replace(pair, status=AuditStatus.ABORTED)
+    object.__setattr__(updated, "schema_version", pair.schema_version)
+    object.__setattr__(updated, "extensions", pair.extensions)
+    return updated
+
+
 @dataclass(frozen=True)
 class AuditEffect:
     """One closed pair's normalized, problem-defined causal effect."""
@@ -85,4 +101,11 @@ def compute_audit_effect(
     )
 
 
-__all__ = ["AuditEffect", "AuditEffectError", "close_audit_pair", "compute_audit_effect", "default_gain"]
+__all__ = [
+    "AuditEffect",
+    "AuditEffectError",
+    "abort_audit_pair",
+    "close_audit_pair",
+    "compute_audit_effect",
+    "default_gain",
+]

@@ -19,7 +19,10 @@ class MemoryStoreError(ValueError):
 
 
 def _context_matches(record_context: Mapping[str, Any], query_context: Mapping[str, Any]) -> bool:
-    return all(record_context.get(key) == value for key, value in query_context.items())
+    # A record may only apply when every context dimension under which its
+    # causal effect was measured is present and equal in the query. A narrower
+    # production query must never retrieve a refinement/audit-scoped record.
+    return all(query_context.get(key) == value for key, value in record_context.items())
 
 
 def _contraindicated(record: CausalMemoryRecord, query_context: Mapping[str, Any]) -> bool:
@@ -49,6 +52,18 @@ class MemoryStore:
                 f"causal memory {record.memory_id} would regress support "
                 f"{existing.support} -> {record.support}"
             )
+        if existing is not None:
+            prefix = existing.support
+            if (
+                record.audit_pair_ids[:prefix] != existing.audit_pair_ids
+                or record.propensities[:prefix] != existing.propensities
+                or record.effects[:prefix] != existing.effects
+                or record.lineage_ids[: len(existing.lineage_ids)]
+                != existing.lineage_ids
+            ):
+                raise MemoryStoreError(
+                    f"causal memory {record.memory_id} would rewrite prior audit evidence"
+                )
         records = dict(self.records)
         records[record.memory_id] = record
         return replace(self, records=records)

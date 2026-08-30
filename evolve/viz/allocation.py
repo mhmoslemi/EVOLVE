@@ -1,4 +1,4 @@
-"""Plot scheduler allocation by role over time and the latest reservation mix."""
+"""Plot committed allocation by role, cell, option, and harness."""
 
 from __future__ import annotations
 
@@ -10,36 +10,41 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from ._common import empty_figure_message, load_epoch_summaries
+from ._common import empty_figure_message, load_allocation_plans
 
 
 def plot_allocation(run_dir: Union[str, Path], output_path: Union[str, Path]) -> Optional[Path]:
-    summaries = load_epoch_summaries(run_dir)
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    plans = load_allocation_plans(run_dir)
+    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+    flat_axes = tuple(axes.flat)
 
-    if summaries:
-        roles = sorted({role for item in summaries for role in item.get("arms_by_role", {})})
-        epochs = [item["epoch"] for item in summaries]
-        for role in roles:
-            counts = [item.get("arms_by_role", {}).get(role, 0) for item in summaries]
-            axes[0].plot(epochs, counts, marker="o", label=role)
-        if roles:
-            axes[0].legend()
-        axes[0].set_xlabel("epoch")
-        axes[0].set_ylabel("planned arms")
-        axes[0].set_title("Allocation by role")
-
-        latest_slots = summaries[-1].get("reservation_slots", {})
-        if latest_slots:
-            labels = list(latest_slots.keys())
-            values = [latest_slots[key] for key in labels]
-            axes[1].barh(labels, values, color="tab:blue")
-            axes[1].set_title(f"Reservation slots (epoch {summaries[-1]['epoch']})")
-        else:
-            empty_figure_message(axes[1], "no reservation data yet")
+    if plans:
+        latest = plans[-1]
+        fields = (
+            ("role", "Role allocation"),
+            ("cell_id", "Cell allocation"),
+            ("option_id", "Option allocation"),
+            ("harness_id", "Harness allocation"),
+        )
+        for axis, (field, title) in zip(flat_axes, fields):
+            counts = {}
+            for planned in latest.get("planned_arms", ()):
+                label = str(planned.get("arm", {}).get(field, "unknown"))
+                counts[label] = counts.get(label, 0) + int(planned.get("replicas", 1))
+            if not counts:
+                empty_figure_message(axis, "no committed allocations")
+                continue
+            ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+            labels = [item[0] for item in ranked]
+            values = [item[1] for item in ranked]
+            axis.barh(range(len(labels)), values, color="tab:blue")
+            axis.set_yticks(range(len(labels)), labels=labels)
+            axis.invert_yaxis()
+            axis.set_xlabel("branch replicas")
+            axis.set_title(f"{title} (epoch {latest['epoch']})")
     else:
-        empty_figure_message(axes[0], "no committed epochs yet")
-        empty_figure_message(axes[1], "no committed epochs yet")
+        for axis in flat_axes:
+            empty_figure_message(axis, "no committed allocation plans yet")
 
     fig.tight_layout()
     output_path = Path(output_path)

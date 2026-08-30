@@ -21,14 +21,32 @@ def plot_provenance(run_dir: Union[str, Path], output_path: Union[str, Path]) ->
     if not edges:
         empty_figure_message(ax, "no provenance edges yet")
     else:
+        record_state_id = (checkpoint or {}).get("record", {}).get("state_id")
+        parent_by_child = {
+            edge["child_state_id"]: edge["parent_state_id"] for edge in edges
+        }
+        record_lineage = set()
+        cursor = record_state_id
+        while cursor is not None and cursor not in record_lineage:
+            record_lineage.add(cursor)
+            cursor = parent_by_child.get(cursor)
         children_by_parent = {}
         for edge in edges:
             children_by_parent.setdefault(edge["parent_state_id"], []).append(edge["child_state_id"])
-        branching = sorted((len(children) for children in children_by_parent.values()), reverse=True)
-        ax.bar(range(len(branching)), branching, color="tab:purple")
+        ranked = sorted(
+            children_by_parent.items(), key=lambda item: (-len(item[1]), item[0])
+        )
+        branching = [len(children) for _, children in ranked]
+        colors = [
+            "tab:orange" if parent in record_lineage else "tab:purple"
+            for parent, _ in ranked
+        ]
+        ax.bar(range(len(branching)), branching, color=colors)
         ax.set_xlabel("parent state (ranked by descendant count)")
         ax.set_ylabel("descendant count")
-        ax.set_title(f"Provenance branching ({len(edges)} edges, {len(children_by_parent)} parents)")
+        ax.set_title(
+            f"Provenance branching ({len(edges)} edges; orange=record lineage)"
+        )
 
     fig.tight_layout()
     output_path = Path(output_path)

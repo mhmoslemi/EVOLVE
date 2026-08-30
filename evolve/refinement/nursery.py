@@ -80,6 +80,8 @@ class NurseryEntry:
     depth: int = 0
     closed: bool = False
     admitted_evidence_id: Optional[str] = None
+    latest_proposal_id: Optional[str] = None
+    latest_evidence_id: Optional[str] = None
 
     @property
     def expiry_epoch(self) -> int:
@@ -163,6 +165,8 @@ def record_attempt(
         depth=depth,
         closed=closed,
         admitted_evidence_id=admitted_evidence_id,
+        latest_proposal_id=repair_evidence.proposal_id,
+        latest_evidence_id=repair_evidence.evidence_id,
     )
 
 

@@ -97,12 +97,15 @@ def compute_reservation_slots(
     ):
         raise ReservationError("max_inflight_branches must be a positive integer")
     inflight = max_inflight_branches
-    audit_slots = _paired_slots(
+    requested_audit_slots = _paired_slots(
         inflight, _fraction(audit_fraction, "audit_fraction")
     )
-    no_memory_slots = min(
-        audit_slots, _slots(inflight, _fraction(no_memory_fraction, "no_memory_fraction"))
+    no_memory_slots = _paired_slots(
+        inflight, _fraction(no_memory_fraction, "no_memory_fraction")
     )
+    # No-memory evidence is itself a matched audit, so its reservation cannot
+    # disappear merely because the general audit fraction is lower or zero.
+    audit_slots = max(requested_audit_slots, no_memory_slots)
     refinement_slots = _paired_slots(
         inflight, _fraction(refinement_fraction, "refinement_fraction")
     )
@@ -162,28 +165,64 @@ def resolve_single_arm_reservations(
 
     rng_seed = derive_seed("reservation_selection", seed, slots.total_inflight)
     rng = random.Random(rng_seed)
-    remaining_pool: List[ArmCandidate] = list(candidates)
+    all_candidates: List[ArmCandidate] = list(candidates)
+
+    def candidate_key(candidate: ArmCandidate):
+        return candidate.identity.key()
 
     role_arms: List[ArmCandidate] = []
     for role in dict.fromkeys(roles):
-        role_pool = [candidate for candidate in remaining_pool if candidate.identity.role == role]
+        role_pool = [
+            candidate for candidate in all_candidates
+            if candidate.identity.role == role
+        ]
         if not role_pool:
             continue
         picked = rng.choice(role_pool)
         role_arms.append(picked)
-        remaining_pool = [candidate for candidate in remaining_pool if candidate is not picked]
 
     empty_pool = [
-        candidate for candidate in remaining_pool
+        candidate for candidate in all_candidates
         if candidate.cell_empty or candidate.cell_under_tested
     ]
-    empty_arms = _select_unique(rng, empty_pool, slots.empty_cell_slots)
-    empty_ids = {id(candidate) for candidate in empty_arms}
-    remaining_pool = [candidate for candidate in remaining_pool if id(candidate) not in empty_ids]
+    role_keys = {candidate_key(candidate) for candidate in role_arms}
+    empty_overlap = [
+        candidate for candidate in empty_pool
+        if candidate_key(candidate) in role_keys
+    ]
+    empty_other = [
+        candidate for candidate in empty_pool
+        if candidate_key(candidate) not in role_keys
+    ]
+    rng.shuffle(empty_overlap)
+    rng.shuffle(empty_other)
+    empty_arms = (empty_overlap + empty_other)[: slots.empty_cell_slots]
 
-    exploration_arms = _select_unique(rng, remaining_pool, slots.global_exploration_slots)
-    exploration_ids = {id(candidate) for candidate in exploration_arms}
-    remaining_pool = [candidate for candidate in remaining_pool if id(candidate) not in exploration_ids]
+    # A randomized global-exploration branch may simultaneously satisfy a role
+    # or empty-cell reservation. Prefer those already-reserved arms so finite
+    # capacity is spent on execution rather than duplicated labels, while the
+    # choice within each stratum remains seed-reproducible.
+    prior = role_arms + empty_arms
+    prior_by_key = {candidate_key(candidate): candidate for candidate in prior}
+    exploration_overlap = list(prior_by_key.values())
+    exploration_other = [
+        candidate for candidate in all_candidates
+        if candidate_key(candidate) not in prior_by_key
+    ]
+    rng.shuffle(exploration_overlap)
+    rng.shuffle(exploration_other)
+    exploration_arms = (
+        exploration_overlap + exploration_other
+    )[: slots.global_exploration_slots]
+
+    reserved_keys = {
+        candidate_key(candidate)
+        for candidate in (*role_arms, *empty_arms, *exploration_arms)
+    }
+    remaining_pool = [
+        candidate for candidate in all_candidates
+        if candidate_key(candidate) not in reserved_keys
+    ]
 
     return ResolvedReservations(
         role_guarantee_arms=tuple(role_arms),

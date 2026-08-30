@@ -18,6 +18,7 @@ from .events import (
     EventWriterOwnershipError,
     IdempotencyConflictError,
 )
+from .jsonl import ArtifactStreamError, append_jsonl_records
 from .layout import (
     RUN_SUBDIRECTORIES,
     RunAttachmentError,
@@ -49,6 +50,7 @@ from .schema import (
 
 __all__ = [
     "EVENT_SCHEMA_VERSION",
+    "ArtifactStreamError",
     "RUN_SUBDIRECTORIES",
     "CURRENT_CONFIG_SCHEMA_VERSION",
     "CURRENT_MANIFEST_SCHEMA_VERSION",
@@ -72,6 +74,7 @@ __all__ = [
     "atomic_write_bytes",
     "atomic_write_json",
     "atomic_write_text",
+    "append_jsonl_records",
     "canonical_config_bytes",
     "create_fresh_run_layout",
     "detect_run_schema",

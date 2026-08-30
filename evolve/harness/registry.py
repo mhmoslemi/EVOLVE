@@ -277,7 +277,11 @@ class HarnessRegistry:
         """Conservative mean-minus-uncertainty gain of ``harness_id`` as candidate."""
 
         matched = tuple(
-            trial for trial in self.trials if trial.candidate_harness_id == harness_id
+            trial
+            for trial in self.trials
+            if trial.candidate_harness_id == harness_id
+            and trial.incumbent_failure_kind != "infrastructure"
+            and trial.candidate_failure_kind != "infrastructure"
         )
         if not matched:
             return HarnessEffectSummary(

@@ -427,7 +427,10 @@ class EvolveSettings:
             return slots if slots % 2 == 0 else slots + 1
 
         reserved = (
-            paired_slots(self.budget.audit_fraction)
+            max(
+                paired_slots(self.budget.audit_fraction),
+                paired_slots(self.audits.no_memory_fraction),
+            )
             + paired_slots(self.budget.refinement_fraction)
             + paired_slots(self.harnesses.trial_fraction)
         )
@@ -526,9 +529,13 @@ class EvolveConfig:
     def runtime_gpu_ids(self) -> Tuple[int, ...]:
         """Physical GPUs visible to the controller, in stable logical order."""
 
-        if self.training_gpu_id is None:
-            return self.gpu_ids
-        return tuple(dict.fromkeys((self.training_gpu_id, *self.gpu_ids)))
+        ordered = []
+        if self.training_gpu_id is not None:
+            ordered.append(self.training_gpu_id)
+        ordered.extend(self.gpu_ids)
+        if self.kernel_gpu_id is not None:
+            ordered.append(self.kernel_gpu_id)
+        return tuple(dict.fromkeys(ordered))
 
     @property
     def training_device_index(self) -> Optional[int]:
@@ -968,17 +975,10 @@ def _validate_cross_section(config: EvolveConfig) -> None:
                 "gpu_mode requires kernel_timeout_s so evaluation always runs "
                 "in a spawned, bounded child process"
             )
-        shared_with_training = config.kernel_gpu_id == config.training_gpu_id
-        if (
-            config.gpu_ids
-            and not shared_with_training
-            and not shared_generation_eval
-            and config.kernel_gpu_id <= max(config.gpu_ids)
-        ):
-            raise EvolveConfigError(
-                "kernel_gpu_id must be the last/highest allocated physical GPU; "
-                "unless it shares the explicitly assigned training GPU"
-            )
+        # Physical CUDA IDs are opaque labels, not an ordering by ownership or
+        # performance. ``run.sh`` maps the user's ordered list into explicit
+        # training/generation/evaluation fields, so a dedicated evaluation GPU
+        # need only be disjoint; it need not have the numerically largest ID.
         if "task_yaml" not in config.problem_config:
             raise EvolveConfigError("gpu_mode requires problem key task_yaml")
         if not ({"lib_dir", "kernel_lib_dir"} & set(config.problem_config)):

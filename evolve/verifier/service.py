@@ -318,11 +318,24 @@ def _verify(
     extra_flags: Optional[Mapping[str, Any]] = None,
     expected_descriptor_id: Optional[str] = None,
     expected_fingerprint: Optional[str] = None,
+    attempt_index: int = 0,
 ) -> ScientificVerificationResult:
+    if (
+        isinstance(attempt_index, bool)
+        or not isinstance(attempt_index, int)
+        or attempt_index < 0
+    ):
+        raise VerificationServiceError(
+            "verification attempt_index must be a non-negative integer"
+        )
     decision = _invoke_adapter(
         adapter=adapter,
         persisted_answer=persisted_answer,
         verification_policy=verification_policy,
+    )
+    decision = replace(
+        decision,
+        capture=replace(decision.capture, attempt_index=attempt_index),
     )
     descriptor, fingerprint, decision = _descriptor_and_fingerprint(
         adapter=adapter,
@@ -371,6 +384,7 @@ def verify_persisted_answer(
     verification_policy: VerificationPolicy,
     harness_id: str,
     policy_snapshot_id: str,
+    attempt_index: int = 0,
 ) -> ScientificVerificationResult:
     """Verify one saved answer and create observation-specific evidence."""
 
@@ -390,6 +404,7 @@ def verify_persisted_answer(
         harness_id=harness_id,
         policy_snapshot_id=policy_snapshot_id,
         confirmation=False,
+        attempt_index=attempt_index,
     )
 
 
@@ -454,6 +469,7 @@ def confirm_persisted_answer(
     persisted_answer: PersistedAnswerPayload,
     prior_evidence: EvidencePacket,
     verification_policy: VerificationPolicy,
+    attempt_index: int = 0,
 ) -> ScientificVerificationResult:
     """Reverify the exact saved payload; proposal code is never replayed."""
 
@@ -487,6 +503,7 @@ def confirm_persisted_answer(
         },
         expected_descriptor_id=prior_evidence.descriptor_id,
         expected_fingerprint=prior_evidence.fingerprint,
+        attempt_index=attempt_index,
     )
 
 

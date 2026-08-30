@@ -10,7 +10,6 @@ the pair spec are persisted before either branch executes, matching
 
 from __future__ import annotations
 
-import random
 from typing import Any, Mapping, Tuple
 
 from evolve.ids import content_id, derive_seed
@@ -44,18 +43,18 @@ def _matched_invariants(branch: BranchSpec) -> Mapping[str, Any]:
 def assign_audit_sides(
     *, option_a: str, option_b: str, seed: int
 ) -> Tuple[str, str, float]:
-    """Randomly and reproducibly assign which option plays intervention.
+    """Freeze treatment semantics and its randomized assignment propensity.
 
     Returns ``(intervention_option_id, control_option_id, assignment_probability)``.
+    The caller uses ``seed`` to randomize the treatment's opaque execution
+    slot. The registered continuation remains the control so effect signs and
+    causal-memory intervention IDs cannot flip merely because labels swapped.
     """
 
     if option_a == option_b:
         raise AuditPairingError("an audit needs two distinct options to compare")
-    rng = random.Random(derive_seed("audit_side_assignment", seed, option_a, option_b))
-    probability = 0.5
-    if rng.random() < probability:
-        return option_a, option_b, probability
-    return option_b, option_a, probability
+    derive_seed("audit_side_assignment", seed, option_a, option_b)
+    return option_a, option_b, 0.5
 
 
 def create_audit_pair(

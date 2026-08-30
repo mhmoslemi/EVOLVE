@@ -126,6 +126,9 @@ class ArmCandidate:
     hard_cost: Mapping[str, float]
     cell_empty: bool
     cell_under_tested: bool
+    start_state_id: Optional[str] = None
+    fingerprint_family: str = ""
+    option_family: str = ""
 
 
 def enumerate_candidate_arms(
@@ -150,8 +153,48 @@ def enumerate_candidate_arms(
     )
     candidates = []
     normalized_roles = tuple(role if isinstance(role, Role) else Role(role) for role in roles)
+    global_launch_state_id: Optional[str] = None
+    global_launch_fingerprint = ""
+    global_champions = []
+    for archive_cell in archive.cells:
+        if archive_cell.champion_state_id is None:
+            continue
+        state = archive.artifacts.representative_state(
+            archive_cell.champion_state_id,
+            descriptor_id=archive_cell.descriptor_id,
+        )
+        global_champions.append(
+            (float(state.internal_reward), state.state_id, state.fingerprint)
+        )
+    if global_champions:
+        _, global_launch_state_id, global_launch_fingerprint = max(
+            global_champions, key=lambda item: (item[0], item[1])
+        )
     for cell in cells:
         satisfied = {"verified_start"} if cell.tested_count > 0 else set()
+        start_state_id = (
+            cell.champion_state_id
+            or (cell.promising_state_ids[0] if cell.promising_state_ids else None)
+            or (cell.stepping_stone_state_ids[0] if cell.stepping_stone_state_ids else None)
+            or global_launch_state_id
+        )
+        fingerprint_family = (
+            global_launch_fingerprint
+            if start_state_id == global_launch_state_id
+            else ""
+        )
+        if (
+            start_state_id is not None
+            and start_state_id != global_launch_state_id
+        ):
+            try:
+                fingerprint_family = archive.artifacts.representative_state(
+                    start_state_id, descriptor_id=cell.descriptor_id
+                ).fingerprint
+            except Exception:
+                # Identity is still exact through cell/start; a missing optional
+                # family label must not make an otherwise valid arm disappear.
+                fingerprint_family = ""
         for role in normalized_roles:
             for harness_id in harness_registry.active_ids:
                 for option_id in option_registry.eligible_for(role=role, harness_id=harness_id):
@@ -163,23 +206,38 @@ def enumerate_candidate_arms(
                         continue
                     if not set(spec.prerequisites) <= satisfied:
                         continue
-                    identity = ArmIdentity(
-                        cell_id=cell.cell_id,
-                        role=role,
-                        option_id=option_id,
-                        harness_id=harness_id,
-                        horizon=spec.max_horizon,
-                        cost_class=cost_class,
-                    )
-                    candidates.append(
-                        ArmCandidate(
-                            identity=identity,
-                            expected_cost=dict(spec.expected_cost),
-                            hard_cost=dict(spec.hard_cost),
-                            cell_empty=cell.tested_count == 0,
-                            cell_under_tested=cell.under_tested,
+                    for horizon in range(1, spec.max_horizon + 1):
+                        scale = float(horizon) / float(spec.max_horizon)
+                        identity = ArmIdentity(
+                            cell_id=cell.cell_id,
+                            role=role,
+                            option_id=option_id,
+                            harness_id=harness_id,
+                            horizon=horizon,
+                            cost_class=cost_class,
                         )
-                    )
+                        candidates.append(
+                            ArmCandidate(
+                                identity=identity,
+                                expected_cost={
+                                    resource: float(amount) * scale
+                                    for resource, amount in spec.expected_cost.items()
+                                },
+                                hard_cost={
+                                    resource: (
+                                        float(amount)
+                                        * scale
+                                        * (2.0 if resource == "verifier_calls" else 1.0)
+                                    )
+                                    for resource, amount in spec.hard_cost.items()
+                                },
+                                cell_empty=cell.tested_count == 0,
+                                cell_under_tested=cell.under_tested,
+                                start_state_id=start_state_id,
+                                fingerprint_family=fingerprint_family,
+                                option_family=spec.state_machine,
+                            )
+                        )
     return tuple(candidates)
 
 
