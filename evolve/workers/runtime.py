@@ -140,6 +140,7 @@ class LiveEvolveRuntime:
         self.port = None
         self.optimizers = None
         self.vllm = None
+        self._vllm_log_announced = False
         self._rng_restore_checked = False
         self._role_artifacts = {
             role: dict(payload)
@@ -229,9 +230,14 @@ class LiveEvolveRuntime:
             raise RuntimeError("HF must be released before vLLM startup")
         from evolve.workers.vllm_runtime import TensorParallelVLLM
 
+        log_path = self.layout.path("logs/workers/vllm.log")
+        if not self._vllm_log_announced:
+            print(f"EVOLVE · vLLM diagnostics · {log_path}", flush=True)
+            self._vllm_log_announced = True
         self.vllm = TensorParallelVLLM(
             config=self.config,
             adapter_paths=self._latest_adapter_paths(),
+            log_path=log_path,
         )
 
     def _unload_vllm(self) -> None:
@@ -276,10 +282,21 @@ class LiveEvolveRuntime:
             self._unload_hf()
             self._load_vllm()
 
-    def _parent_context(self, state_id: str) -> ParentContext:
-        state = self.state.archive.artifacts.representative_state(state_id)
-        evidence = self.state.archive.artifacts.evidence_packet(state.evidence_id)
-        proposal = self.state.archive.artifacts.proposal(state.proposal_id)
+    def _parent_context(self, request: BranchStepRequest) -> ParentContext:
+        # Descendants admitted earlier in this branch are intentionally absent
+        # from the frozen epoch archive until the barrier. The pure branch
+        # executor carries that exact verified binding forward so only this
+        # branch can use it as its next local parent. Initial branch parents
+        # continue to resolve from the frozen archive.
+        if request.parent_state is not None:
+            state = request.parent_state
+            proposal = request.parent_proposal
+            assert proposal is not None
+        else:
+            state = self.state.archive.artifacts.representative_state(
+                request.parent_state_id
+            )
+            proposal = self.state.archive.artifacts.proposal(state.proposal_id)
         answer = state.answer_payload
         construction = answer
         if isinstance(answer, Mapping):
@@ -539,7 +556,7 @@ class LiveEvolveRuntime:
             try:
                 self._generation_lock.acquire()
                 generation_lock_held = True
-                parent = self._parent_context(request.parent_state_id)
+                parent = self._parent_context(request)
                 prompt = self._render_prompt(request, parent)
                 generation_request = self._persist_generation_contract(
                     request, prompt
@@ -687,7 +704,7 @@ class LiveEvolveRuntime:
             )
 
         if parent is None:
-            parent = self._parent_context(request.parent_state_id)
+            parent = self._parent_context(request)
         if reused_generation and evaluation_shares_model_gpu:
             self._generation_lock.acquire()
             generation_lock_held = True

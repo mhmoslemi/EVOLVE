@@ -1,0 +1,12 @@
+{
+  "admitted": false,
+  "branch_id": "branch:df9d9a198c99aa46f68522312dea48816661eae2f1abf4b00f033cdf11be1fb7",
+  "costs": {
+    "tokens": 128.0,
+    "verifier_calls": 1.0,
+    "verifier_wall_time_s": 0.0001440858468413353
+  },
+  "evidence_id": "evidence:ca10dd5f71c330b19f762601290dd327e3d94596e0187b66ff294fe8cef8acbc",
+  "failure_kind": "constraint",
+  "proposal_id": "proposal:11344c28b6219b943d672f40ceac33e0b5644bc3e2d87537ed1218f51b3f6018"
+}

@@ -1,0 +1,18 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:063564b495c64d04ab77845bb3a3426bca50195a6fbabe0d8059f635dab67d9c",
+  "capture_hash": "61aa7a644187333ceb7b058c10ebe968cfb77df8d8036696d1d0fc2d430e02d9",
+  "completed_at": "2026-08-30T04:24:16.923162Z",
+  "diagnostics": {
+    "message": "Erdos answer must be a payload, an h_values sequence, or (h_values, claimed_c5, n_points)"
+  },
+  "evidence_id": "evidence:d4415841939ba701eeffdcd55bf8786178b29204cefd9a0fef09323b646463bd",
+  "phase": "independent_verification_attempt_0",
+  "proposal_id": "proposal:4361d7091e690244b281b6ae7045aad3d21b7314f91fbdf98a56dc41bac5c149",
+  "resources": {
+    "verifier_calls": 1,
+    "verifier_wall_time_s": 0.0001611551269888878
+  },
+  "schema_version": 1,
+  "started_at": "2026-08-30T04:24:16.922988Z"
+}

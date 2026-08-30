@@ -1,0 +1,63 @@
+```python
+import numpy as np
+import scipy.optimize as optimize
+import time
+
+# Pre-imported initial solution
+initial_h_values = [0.18463107836353193, 0.3409054485290476, 0.6203300295910438, 0.8700723704256288, 0.19080707334515862, 0.6262334571765071, 0.7433070409735469, 0.5320044534767051, 0.7216558187241402, 0.8272428258791049, 0.5221669572588927, 0.7587737367565517, 0.1669874751571035, 0.7071369895059625, 0.7411718298101755, 0.17602559194193396, 0.20689697302085464, 0.43492537257696057, 0.38372059581690526, 0.32419774586298217, 0.7971915035227723, 0.12850681338277214, 0.26773169716155504, 0.633484465697802, 0.5058525103424685, 0.5237621128636435, 0.6676059101179728, 0.16728198516241194, 0.7099110744861223, 0.6454977381300697, 0.8428511110541352, 0.6204112730627964, 0.9161287747314493, 0.5206644547861512, 0.6993059988228139, 0.1573260492059893, 0.33038023294168106, 0.2612644616004159, 0.5590106170254208, 0.4814006621790201, 0.2770893017132045, 0.4937777804714631, 0.22840152535856967, 0.4838534765842302, 0.8882480271862889, 0.5315789084504143, 0.4823592091619433, 0.5101024954639957, 0.3207933561708651, 0.5841349247847331, 0.24937417345258767, 0.20271989872105023, 0.515732196702088, 0.2296044807169076, 0.6650001822991272, 0.6155348920298767, 0.4954794856311117, 0.2839893421829861, 0.4440398957498207, 0.8782629119704282, 0.6726091834552566, 0.7713483009303264, 0.2437587655505743, 0.898352134416883, 0.4124840624025352, 0.4231817003538969, 0.42561542199982016, 0.20243829252813417, 0.7182178276907307, 0.3371555353999507]
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    
+    # Start from the initial solution
+    n_points = len(initial_h_values)
+    h = np.array(initial_h_values, dtype=np.float64)
+    
+    # Function to evaluate the overlap integral
+    def evaluate_overlap(h_values):
+        h = h_values
+        n = len(h)
+        dx = 2.0 / n
+        corr = np.correlate(h, 1 - h, mode="full")
+        max_overlap = np.max(corr) * dx
+        return max_overlap
+    
+    # Function to ensure the integral constraint is satisfied
+    def integral_constraint(h_values):
+        return np.sum(h_values) * (2.0 / len(h_values)) - 1.0
+    
+    # Optimization objective: minimize the max overlap
+    def objective(h_values):
+        return evaluate_overlap(h_values)
+    
+    # Use a simple greedy descent strategy with random perturbations
+    best_h = h.copy()
+    best_c5 = evaluate_overlap(best_h)
+    time_start = time.time()
+    
+    for _ in range(1000):  # Limit iterations to stay under budget
+        if time.time() - time_start > budget_s:
+            break
+        
+        # Perturb the solution
+        perturbation = np.random.normal(0, 0.05, size=h.shape)
+        new_h = h + perturbation
+        new_h = np.clip(new_h, 0.0, 1.0)
+        
+        # Enforce integral constraint
+        integral = np.sum(new_h) * (2.0 / len(new_h))
+        if abs(integral - 1.0) > 1e-6:
+            # Adjust to maintain integral constraint
+            diff = (1.0 - integral) / len(new_h)
+            new_h += diff
+        
+        # Evaluate the new solution
+        new_c5 = evaluate_overlap(new_h)
+        
+        # Update best solution
+        if new_c5 < best_c5:
+            best_h = new_h.copy()
+            best_c5 = new_c5
+    
+    return (best_h.tolist(), best_c5, n_points)
+```

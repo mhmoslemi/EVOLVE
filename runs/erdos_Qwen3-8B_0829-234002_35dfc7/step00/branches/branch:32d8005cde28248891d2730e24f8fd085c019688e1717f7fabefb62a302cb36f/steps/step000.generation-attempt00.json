@@ -1,0 +1,9 @@
+{
+  "attempt": 0,
+  "branch_id": "branch:32d8005cde28248891d2730e24f8fd085c019688e1717f7fabefb62a302cb36f",
+  "exception_type": "EngineDeadError",
+  "message": "EngineCore encountered an issue. See stack trace (above) for the root cause.",
+  "schema_version": 1,
+  "seed": 6248614420389178265,
+  "step_index": 0
+}

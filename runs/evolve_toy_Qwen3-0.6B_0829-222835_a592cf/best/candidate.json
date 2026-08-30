@@ -1,0 +1,10 @@
+{
+  "internal_reward": 0.16666666666666666,
+  "point": [
+    4,
+    -4
+  ],
+  "problem": "evolve_toy",
+  "raw_score": 5.0,
+  "schema_version": 1
+}

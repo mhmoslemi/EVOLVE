@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:f6e84cd8fe2a8512c2a9b53c8c14920c80bf7173496ed29b9b6d1003fe84405f",
+  "created_at": "2026-08-30T02:58:43.938977Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:ae4dfb3dfc8de21c1c423b1c058c59573c5a6d725b4016e495652ca8f749537e",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "1e440e23a93614aa11091e5ab509ebea93631413ce12e610c2f17e0d65a3a210",
+  "source_text": "```python\ndef run_toy():\n    # Define the target squared distance to (3, -2)\n    target_squared_distance = 0.0\n    \n    # Define the original parent point\n    parent_point = [-4, -4]\n    \n    # Define the run_toy function\n    def run_toy():\n        # Repeatedly move in a direction to minimize the square distance to the target (3, -2)\n        # Begin at the parent point\n        while True:\n            # Calculate current point\n            current_point = parent_point\n            \n            # Generate a random perturbation in a direction to improve the square"
+}

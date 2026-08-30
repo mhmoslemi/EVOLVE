@@ -1,0 +1,8 @@
+{
+  "exception_type": "ValueError",
+  "message": "circle answer must be a payload or (centers, radii, claimed_sum)",
+  "schema_version": 1,
+  "seed_index": 1,
+  "verifier_attempts": 0,
+  "verifier_debited": false
+}

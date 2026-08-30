@@ -1,0 +1,87 @@
+# AC2 inequality-construction subtype. It shares the scientific adapter in
+# `problems/ac_inequalities.py` but retains a separate problem YAML and target.
+engine: evolve
+schema_version: 1
+problem: ac2
+problem_type: ac2
+
+# Problem/verifier layer.
+target: 0.97
+budget_s: 1000
+num_seed_states: 8
+sandbox_timeout_s: 1100
+
+# Frozen backbone and three isolated role-LoRAs.
+model_name: unsloth/gpt-oss-120b
+backend: unsloth
+generation_backend: vllm
+max_seq_length: 32000
+max_new_tokens: 26000
+temperature: 1.0
+top_p: 1.0
+load_in_4bit: true  # Training only; never forwarded to vLLM.
+lora_rank: 32
+lora_alpha: 32
+lora_dropout: 0.0
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+learning_rate: 4.0e-5
+kl_penalty_coef: 0.1
+gen_micro_batch: 1
+
+# GPUs 0-3 form ONE TP=4 vLLM engine and host Unsloth learning at barriers.
+# On a seven-H100 host, GPUs 4-6 are deliberately unassigned. GPT-OSS has 64
+# attention heads, so TP=7 is invalid; TP=4 is a supported exact partition.
+gpu_ids: [0, 1, 2, 3]
+num_gpus: 4
+vllm_tensor_parallel_size: 4
+vllm_quantization: auto  # Native GPT-OSS MXFP4; unrelated to training QLoRA.
+vllm_gpu_memory_utilization: 0.85
+vllm_max_num_seqs: 4
+vllm_max_num_batched_tokens: 8192
+vllm_cpu_offload_gb: 0
+vllm_swap_space_gb: 4
+vllm_enforce_eager: true
+vllm_enable_prefix_caching: true
+vllm_fully_sharded_loras: true
+seed: 42
+deterministic: false
+
+evolve:
+  # Global epoch/verifier budget and matched audit/refinement reservations.
+  budget:
+    epochs: 50
+    verifier_calls: 25000
+    audit_fraction: 0.15
+    refinement_fraction: 0.05
+  # Descriptor-indexed quality-diversity archive.
+  archive:
+    elites_per_cell: 3
+    empty_cell_fraction: 0.10
+  roles:
+    enabled: [scout, mechanist, challenger]
+  options:
+    max_horizon: 4
+    branch_budget: 64
+  # Harness is part of the scheduler arm and is calibrated by matched trials.
+  harnesses:
+    trial_fraction: 0.05
+    active_versions: [baseline_v1]
+  scheduler:
+    posterior: zero_inflated_tail
+    global_exploration_fraction: 0.10
+  # Only randomized matched pairs may promote causal memory.
+  audits:
+    no_memory_fraction: 0.05
+    min_pairs_for_promotion: 5
+  learning:
+    objective: ordergrad
+    top_m: 1
+    group_k: 8
+  refinement:
+    max_attempts: 3
+    max_depth: 2
+  reporting:
+    status_every_verifications: 25
+    plots_every_epochs: 1
+  workers:
+    max_inflight_branches: 20

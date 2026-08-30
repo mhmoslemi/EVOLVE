@@ -1,0 +1,111 @@
+```python
+import numpy as np
+import scipy.optimize as opt
+import time
+import copy
+import random
+import cvxpy as cp
+
+# Pre-imported functions
+initial_h_values = [0.18463107836353193, 0.3409054485290476, 0.6203300295910438, 0.8700723704256288, 0.19080707334515862, 0.6262334571765071, 0.7433070409735469, 0.5320044534767051, 0.7216558187241402, 0.8272428258791049, 0.5221669572588927, 0.7587737367565517, 0.1669874751571035, 0.7071369895059625, 0.7411718298101755, 0.17602559194193396, 0.20689697302085464, 0.43492537257696057, 0.38372059581690526, 0.32419774586298217, 0.7971915035227723, 0.12850681338277214, 0.26773169716155504, 0.633484465697802, 0.5058525103424685, 0.5237621128636435, 0.6676059101179728, 0.16728198516241194, 0.7099110744861223, 0.6454977381300697, 0.8428511110541352, 0.6204112730627964, 0.9161287747314493, 0.5206644547861512, 0.6993059988228139, 0.1573260492059893, 0.33038023294168106, 0.2612644616004159, 0.5590106170254208, 0.4814006621790201, 0.2770893017132045, 0.4937777804714631, 0.22840152535856967, 0.4838534765842302, 0.8882480271862889, 0.5315789084504143, 0.4823592091619433, 0.5101024954639957, 0.3207933561708651, 0.5841349247847331, 0.24937417345258767, 0.20271989872105023, 0.515732196702088, 0.2296044807169076, 0.6650001822991272, 0.6155348920298767, 0.4954794856311117, 0.2839893421829861, 0.4440398957498207, 0.8782629119704282, 0.6726091834552566, 0.7713483009303264, 0.2437587655505743, 0.898352134416883, 0.4124840624025352, 0.4231817003538969, 0.42561542199982016, 0.20243829252813417, 0.7182178276907307, 0.3371555353999507]
+
+def evaluate_erdos_solution(h_values):
+    n_points = len(h_values)
+    dx = 2.0 / n_points
+    h = np.array(h_values)
+    conv = np.correlate(h, 1 - h, mode="full")
+    c5 = np.max(conv) * dx
+    return c5
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    start_time = time.time()
+    
+    # Start with the initial solution
+    h = np.array(initial_h_values)
+    n_points = len(h)
+    dx = 2.0 / n_points
+    
+    # Function to compute the overlap integral
+    def compute_c5(h_values):
+        n_points = len(h_values)
+        dx = 2.0 / n_points
+        h = np.array(h_values)
+        conv = np.correlate(h, 1 - h, mode="full")
+        c5 = np.max(conv) * dx
+        return c5
+    
+    # Optimization: Use gradient descent with regularized loss
+    def optimize_h(h_initial, max_iter=100, learning_rate=0.01, reg_strength=0.01):
+        n_points = len(h_initial)
+        h = h_initial.copy()
+        best_h = h.copy()
+        best_c5 = compute_c5(h)
+        
+        for _ in range(max_iter):
+            # Compute the overlap integral
+            c5 = compute_c5(h)
+            if c5 < best_c5:
+                best_c5 = c5
+                best_h = h.copy()
+            
+            # Compute gradient (approximate)
+            grad = np.zeros(n_points)
+            for i in range(n_points):
+                h_plus = h.copy()
+                h_plus[i] += 1e-5
+                c5_plus = compute_c5(h_plus)
+                h_minus = h.copy()
+                h_minus[i] -= 1e-5
+                c5_minus = compute_c5(h_minus)
+                grad[i] = (c5_plus - c5_minus) / (2 * 1e-5)
+            
+            # Compute step
+            h -= learning_rate * grad
+            h = np.clip(h, 0, 1)
+            
+            # Regularization
+            h += reg_strength * np.random.normal(0, 0.1, size=n_points)
+            h = np.clip(h, 0, 1)
+        
+        return best_h, best_c5
+    
+    # Run optimization
+    best_h, best_c5 = optimize_h(h)
+    
+    # Try random mutations to escape local optima
+    for _ in range(5):
+        mutation = np.random.normal(0, 0.05, size=len(best_h))
+        h_mutated = np.clip(best_h + mutation, 0, 1)
+        c5_mutated = compute_c5(h_mutated)
+        if c5_mutated < best_c5:
+            best_h = h_mutated
+            best_c5 = c5_mutated
+    
+    # Check if we need to refine further
+    if time.time() - start_time < budget_s * 0.8:
+        # Run more optimization
+        best_h, best_c5 = optimize_h(best_h, max_iter=50, learning_rate=0.005, reg_strength=0.005)
+    
+    # Final check
+    if time.time() - start_time < budget_s * 0.95:
+        # Try a few more random mutations
+        for _ in range(5):
+            mutation = np.random.normal(0, 0.02, size=len(best_h))
+            h_mutated = np.clip(best_h + mutation, 0, 1)
+            c5_mutated = compute_c5(h_mutated)
+            if c5_mutated < best_c5:
+                best_h = h_mutated
+                best_c5 = c5_mutated
+    
+    # Ensure the area is 1
+    total_area = np.sum(best_h) * dx
+    if not np.isclose(total_area, 1, atol=1e-3):
+        # Adjust h to ensure area constraint
+        scaling_factor = 1.0 / (np.sum(best_h) * dx)
+        best_h *= scaling_factor
+    
+    # Final check
+    final_c5 = compute_c5(best_h)
+    return best_h.tolist(), final_c5, len(best_h)
+```

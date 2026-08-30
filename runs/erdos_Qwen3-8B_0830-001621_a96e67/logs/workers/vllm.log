@@ -1,0 +1,81 @@
+
+=== EVOLVE vLLM startup ===
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.entrypoints.serve.utils.api_utils:272] non-default args: {'trust_remote_code': True, 'seed': 42, 'max_model_len': 32000, 'distributed_executor_backend': 'mp', 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.85, 'max_num_batched_tokens': 8192, 'max_num_seqs': 4, 'disable_log_stats': True, 'enforce_eager': True, 'enable_lora': True, 'max_loras': 3, 'max_lora_rank': 32, 'fully_sharded_loras': True, 'max_cpu_loras': 6, 'enable_chunked_prefill': True, 'model': 'Qwen/Qwen3-8B'}
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.model:672] Resolved architecture: Qwen3ForCausalLM
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.model:1965] Using max model len 32000
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.scheduler:242] Chunked prefill is enabled with max_num_batched_tokens=8192.
+WARNING 2026-08-30 00:16:54 [pid=2587592 vllm.config.vllm:1285] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 2026-08-30 00:16:54 [pid=2587592 vllm.config.vllm:1354] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.kernel:308] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'])
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.vllm:1533] Cudagraph is disabled under eager mode
+INFO 2026-08-30 00:16:54 [pid=2587592 vllm.config.compilation:329] Enabled custom fusions: norm_quant, act_quant
+WARNING 2026-08-30 00:16:58 [pid=2587592 vllm.utils.system_utils:157] We must use the `spawn` multiprocessing start method. Overriding VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. See https://docs.vllm.ai/en/latest/usage/troubleshooting.html#python-multiprocessing for more information. Reasons: CUDA is initialized
+W0830 00:17:09.555000 2587775 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W0830 00:17:09.597000 2587775 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+INFO 2026-08-30 00:17:14 [pid=2587775 vllm.v1.engine.core:122] Initializing a V1 LLM engine (v0.28.0) with config: model='Qwen/Qwen3-8B', speculative_config=None, tokenizer='Qwen/Qwen3-8B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=main, tokenizer_revision=main, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=32000, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=42, served_model_name=Qwen/Qwen3-8B, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+INFO 2026-08-30 00:17:14 [pid=2587775 vllm.v1.executor.multiproc_executor:150] DP group leader: node_rank=0, node_rank_within_dp=0, master_addr=127.0.0.1, mq_connect_ip=10.1.1.8 (local), world_size=1, local_world_size=1
+W0830 00:17:23.227000 2587863 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W0830 00:17:23.273000 2587863 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+INFO 2026-08-30 00:17:34 [pid=2587863 vllm.distributed.parallel_state:1638] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_574333fa9bb046fba984039751552352 backend=nccl
+INFO 2026-08-30 00:17:34 [pid=2587863 vllm.distributed.parallel_state:1982] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+INFO 2026-08-30 00:17:34 [pid=2587863 vllm.v1.worker.gpu_worker:396] Using V2 Model Runner
+INFO 2026-08-30 00:17:35 [pid=2587863 vllm.v1.worker.gpu.model_runner:358] Loading model from scratch...
+INFO 2026-08-30 00:17:37 [pid=2587863 vllm.platforms.cuda:486] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+INFO 2026-08-30 00:17:37 [pid=2587863 vllm.v1.attention.backends.flash_attn:866] Using FlashAttention version 2
+INFO 2026-08-30 00:17:37 [pid=2587863 vllm.model_executor.model_loader.weight_utils:858] Filesystem type for checkpoints: NFS. Checkpoint size: 15.26 GiB. Available RAM: 467.41 GiB.
+INFO 2026-08-30 00:17:37 [pid=2587863 vllm.model_executor.model_loader.weight_utils:820] Prefetching checkpoint files into page cache started (in background, num_threads=8, block_size=16777216 bytes)
+(Worker pid=2587863) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+INFO 2026-08-30 00:17:39 [pid=2587863 vllm.model_executor.model_loader.weight_utils:792] Prefetching checkpoint files: 10% (1/5)
+(Worker pid=2587863) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:03<00:15,  3.79s/it]
+INFO 2026-08-30 00:17:41 [pid=2587863 vllm.model_executor.model_loader.weight_utils:792] Prefetching checkpoint files: 20% (2/5)
+INFO 2026-08-30 00:17:42 [pid=2587863 vllm.model_executor.model_loader.weight_utils:792] Prefetching checkpoint files: 30% (3/5)
+INFO 2026-08-30 00:17:42 [pid=2587863 vllm.model_executor.model_loader.weight_utils:792] Prefetching checkpoint files: 40% (4/5)
+INFO 2026-08-30 00:17:42 [pid=2587863 vllm.model_executor.model_loader.weight_utils:792] Prefetching checkpoint files: 50% (5/5)
+INFO 2026-08-30 00:17:42 [pid=2587863 vllm.model_executor.model_loader.weight_utils:815] Prefetching checkpoint files into page cache finished in 4.33s
+(Worker pid=2587863) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:04<00:06,  2.22s/it]
+(Worker pid=2587863) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:05<00:03,  1.56s/it]
+(Worker pid=2587863) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:06<00:01,  1.21s/it]
+(Worker pid=2587863) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:06<00:00,  1.12it/s]
+(Worker pid=2587863) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:06<00:00,  1.34s/it]
+(Worker pid=2587863) 
+INFO 2026-08-30 00:17:44 [pid=2587863 vllm.model_executor.model_loader.default_loader:430] Loading weights took 6.74 seconds
+INFO 2026-08-30 00:17:44 [pid=2587863 vllm.lora.punica_wrapper.punica_selector:20] Using PunicaWrapperGPU.
+INFO 2026-08-30 00:17:45 [pid=2587863 vllm.v1.worker.gpu.model_runner:380] Model loading took 15.81 GiB memory and 10.406716 seconds
+INFO 2026-08-30 00:17:45 [pid=2587863 vllm.v1.sample.ops.topk_topp_sampler:46] FlashInfer top-p/top-k sampling disabled via VLLM_USE_FLASHINFER_SAMPLER=0.
+WARNING 2026-08-30 00:17:46 [pid=2587863 vllm.lora.ops.triton_ops.utils:279] Using default LoRA kernel configs
+INFO 2026-08-30 00:17:48 [pid=2587863 vllm.v1.worker.gpu_worker:578] Available KV cache memory: 20.9 GiB
+INFO 2026-08-30 00:17:48 [pid=2587775 vllm.v1.core.kv_cache_utils:1869] GPU KV cache size: 152,192 tokens, Maximum concurrency for 32,000 tokens per request: 4.76x
+WARNING 2026-08-30 00:17:49 [pid=2587863 vllm.utils.import_utils:408] Module vllm.third_party.deep_gemm was found but failed to import
+Traceback (most recent call last):
+  File "/scratch/mmoslem3/TTT-small/unsloth_env/lib/python3.11/site-packages/vllm/utils/import_utils.py", line 406, in _has_module
+    importlib.import_module(module_name)
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/scratch/mmoslem3/TTT-small/unsloth_env/lib/python3.11/site-packages/vllm/third_party/deep_gemm/__init__.py", line 126, in <module>
+    _find_cuda_home()                           # CUDA home
+    ^^^^^^^^^^^^^^^^^
+  File "/scratch/mmoslem3/TTT-small/unsloth_env/lib/python3.11/site-packages/vllm/third_party/deep_gemm/__init__.py", line 120, in _find_cuda_home
+    assert cuda_home is not None
+           ^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+INFO 2026-08-30 00:17:49 [pid=2587863 vllm.v1.worker.gpu_worker:804] Free memory on device (43.48/44.39 GiB) on startup. Desired GPU memory utilization is (0.85, 37.73 GiB). Actual usage is 16.02 GiB for consumed memory (weights + non-torch), 0.81 GiB for peak activation, and 0.0 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=22286356890` (20.76 GiB) to fit into requested memory, or `--kv-cache-memory=28455204864` (26.5 GiB) to fully utilize gpu memory. Current kv cache memory in use is 20.9 GiB.
+INFO 2026-08-30 00:17:50 [pid=2587863 vllm.utils.jit_monitor:85] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+INFO 2026-08-30 00:17:50 [pid=2587775 vllm.v1.engine.core:354] init engine (profile, create kv cache, warmup model) took 5.15 s
+WARNING 2026-08-30 00:17:52 [pid=2587775 vllm.config.vllm:1285] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 2026-08-30 00:17:52 [pid=2587775 vllm.config.vllm:1354] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+INFO 2026-08-30 00:17:52 [pid=2587775 vllm.config.kernel:308] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'])
+INFO 2026-08-30 00:17:52 [pid=2587775 vllm.config.vllm:1533] Cudagraph is disabled under eager mode
+INFO 2026-08-30 00:17:52 [pid=2587775 vllm.config.compilation:329] Enabled custom fusions: norm_quant, act_quant
+INFO 2026-08-30 00:17:54 [pid=2587592 vllm.renderers.hf:551] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
+
+=== EVOLVE vLLM first generation ===
+WARNING 2026-08-30 00:17:54 [pid=2587592 vllm.v1.engine.input_processor:170] vLLM has deprecated support for supporting different tokenizers for different LoRAs. By default, vLLM uses base model's tokenizer. If you are using a LoRA with its own tokenizer, consider specifying `--tokenizer [lora_path]` to use the LoRA tokenizer.
+WARNING 2026-08-30 00:17:54 [pid=2587863 vllm.utils.jit_monitor:141] Triton kernel JIT compilation during inference: _lora_expand_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+WARNING 2026-08-30 00:17:54 [pid=2587863 vllm.utils.jit_monitor:141] Triton kernel JIT compilation during inference: _lora_shrink_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.

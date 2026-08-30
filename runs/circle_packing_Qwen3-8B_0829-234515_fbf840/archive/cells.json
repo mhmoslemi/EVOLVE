@@ -1,0 +1,24 @@
+{
+  "cells": [
+    {
+      "cell_id": "cell:dd60204757cef2324337a195b5214e62331bb982bffec700915cc161a7c6dae9",
+      "champion_evidence_id": "evidence:3defd8d68804af17139eeb896125446734ee9a377381691cf58e8325c86f1852",
+      "champion_state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b",
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:1f466ae3d840b2cd227a1c9d50b158c5f9bf5df93098ea48dee5bff3a1397d80"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [
+        "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99"
+      ],
+      "tested_count": 8,
+      "under_tested": false
+    }
+  ],
+  "epoch": 0,
+  "schema_version": 1
+}

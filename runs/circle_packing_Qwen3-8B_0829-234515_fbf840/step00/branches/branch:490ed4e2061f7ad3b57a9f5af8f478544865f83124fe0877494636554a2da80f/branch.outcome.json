@@ -1,0 +1,29 @@
+{
+  "branch_id": "branch:490ed4e2061f7ad3b57a9f5af8f478544865f83124fe0877494636554a2da80f",
+  "branch_spec_hash": "c06d08d1f3b87176e387cd5d7464f46767e637579ec610cb9c95511bb502ca21",
+  "costs": {
+    "tokens": 1559.0,
+    "verifier_calls": 1.0,
+    "verifier_wall_time_s": 0.00014779996126890182
+  },
+  "descendant_proposal_ids": [
+    "proposal:975c0fd789c635c9dd34866b669803c250291749b0076230db6f39db24665c72"
+  ],
+  "descendant_state_ids": [],
+  "eligible_for_scheduler": true,
+  "evidence_ids": [
+    "evidence:5d77784c7077e3114b38961a523c437e7c6fa2dbc894dd5e41df6fdd861a7977"
+  ],
+  "extensions": {},
+  "infrastructure_aborted": false,
+  "maximum_evidence_id": null,
+  "maximum_reward": null,
+  "maximum_state_id": null,
+  "outcome_id": "branch_outcome:cc95ffc68b58023a55be512890763e0ec9522e95a015eace744ca6ef4ba8e5cf",
+  "record_type": "branch_outcome",
+  "schema_version": 1,
+  "status": "closed",
+  "unused_budget": {
+    "verifier_calls": 1.0
+  }
+}

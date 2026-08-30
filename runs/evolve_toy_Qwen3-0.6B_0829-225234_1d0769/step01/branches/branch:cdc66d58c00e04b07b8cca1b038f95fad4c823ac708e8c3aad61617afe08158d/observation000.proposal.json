@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:cdc66d58c00e04b07b8cca1b038f95fad4c823ac708e8c3aad61617afe08158d",
+  "created_at": "2026-08-30T02:58:36.749368Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": [
+    -4,
+    -4
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:2753c0b8c03332d713c78bcaf28d658884114caad11987bf4f2e7b84ae4d0f91",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "1bda369eee5a61ba47a7705c47e2f945964da27787de6c79c83fe99466fc396a",
+  "source_text": "```python\ndef run_toy():\n    initial_point = [-4, -4]\n    target_distance = 0.0\n    return initial_point\n```"
+}

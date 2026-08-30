@@ -1,0 +1,118 @@
+{
+  "backend": "hf",
+  "checkpoint_path": null,
+  "config_hash": "b6af89265d40e2e996a083965c2edda3a4f989e7eea4c779c8d778d5856bff1f",
+  "deterministic": false,
+  "engine": "evolve",
+  "evolve": {
+    "archive": {
+      "elites_per_cell": 3,
+      "empty_cell_fraction": 0.1
+    },
+    "audits": {
+      "min_pairs_for_promotion": 5,
+      "no_memory_fraction": 0.05
+    },
+    "budget": {
+      "audit_fraction": 0.15,
+      "epochs": 30,
+      "refinement_fraction": 0.05,
+      "verifier_calls": 3000
+    },
+    "harnesses": {
+      "active_versions": [
+        "baseline_v1"
+      ],
+      "trial_fraction": 0.05
+    },
+    "learning": {
+      "group_k": 4,
+      "objective": "ordergrad",
+      "top_m": 1
+    },
+    "options": {
+      "branch_budget": 24,
+      "max_horizon": 3
+    },
+    "refinement": {
+      "max_attempts": 3,
+      "max_depth": 2
+    },
+    "reporting": {
+      "plots_every_epochs": 1,
+      "status_every_verifications": 10
+    },
+    "roles": {
+      "enabled": [
+        "scout",
+        "mechanist",
+        "challenger"
+      ],
+      "method_incomplete": false,
+      "test_mode": false
+    },
+    "scheduler": {
+      "global_exploration_fraction": 0.1,
+      "posterior": "zero_inflated_tail"
+    },
+    "workers": {
+      "max_inflight_branches": 12
+    }
+  },
+  "gen_micro_batch": 1,
+  "generation_backend": "vllm",
+  "gpu_ids": [
+    0
+  ],
+  "gpu_type": "H100",
+  "group_size": 4,
+  "kernel_eval_isolation": true,
+  "kernel_gpu_id": 0,
+  "kernel_log_chars": 4000,
+  "kernel_timeout_s": 900.0,
+  "kl_penalty_coef": 0.1,
+  "learning_rate": 4e-05,
+  "lib_dir": "/scratch/mmoslem3/EVOLVE/examples/gpu_mode/lib",
+  "load_in_4bit": true,
+  "lora_alpha": 32,
+  "lora_dropout": 0.0,
+  "lora_rank": 32,
+  "max_new_tokens": 8000,
+  "max_seq_length": 32000,
+  "model_name": "Qwen/Qwen3-8B",
+  "num_gpus": 1,
+  "num_seed_states": 8,
+  "num_steps": 30,
+  "problem": "gpu_mode",
+  "problem_type": "trimul",
+  "reward_workers": 1,
+  "sandbox_timeout_s": 100.0,
+  "schema_version": 1,
+  "seed": 42,
+  "target": null,
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj"
+  ],
+  "task_yaml": "/scratch/mmoslem3/EVOLVE/examples/gpu_mode/lib/bioml/trimul/task.yml",
+  "temperature": 1.0,
+  "thinking": false,
+  "top_p": 1.0,
+  "training_gpu_id": 0,
+  "triton_version": "3.3.1",
+  "vllm_cpu_offload_gb": 0.0,
+  "vllm_enable_prefix_caching": true,
+  "vllm_enforce_eager": true,
+  "vllm_fully_sharded_loras": true,
+  "vllm_gpu_memory_utilization": 0.85,
+  "vllm_max_num_batched_tokens": 8192,
+  "vllm_max_num_seqs": 4,
+  "vllm_quantization": "auto",
+  "vllm_swap_space_gb": 4.0,
+  "vllm_tensor_parallel_size": 1
+}

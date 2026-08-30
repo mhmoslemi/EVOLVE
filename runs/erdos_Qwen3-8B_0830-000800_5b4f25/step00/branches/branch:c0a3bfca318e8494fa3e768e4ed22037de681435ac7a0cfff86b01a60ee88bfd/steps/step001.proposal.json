@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:c0a3bfca318e8494fa3e768e4ed22037de681435ac7a0cfff86b01a60ee88bfd",
+  "created_at": "2026-08-30T04:32:35.433513Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:19898b810f370c72dc5d76bb1016a4e8b5c8a2e42016c5dfca502d2f0011e49f",
+  "record_type": "proposal",
+  "run_id": "run:362631144ddc8fff66c29d554c97d09d0b88c16247de6d859fdd224a2bbcc09f",
+  "schema_version": 1,
+  "source_hash": "4d64b45d03f460c619425d1fa9a71adb17f49591e76ea6b6146b9574a9fd9a8f",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as optimize\nimport functools\nimport time\n\n# Pre-imported functions\nfrom evaluate_erdos_solution import evaluate_erdos_solution\nfrom initial_h_values import initial_h_values\n\ndef run(seed=42, budget_s=100, **kwargs):\n    # Set seed for reproducibility\n    np.random.seed(seed)\n    \n    # Define the number of points\n    n_points = 100  # Choose a smaller number for faster computation\n    dx = 2.0 / n_points\n    \n    # Initial guess from the provided initial_h_values\n    h_values = np.array(initial_h_values[:n_points])\n    h_values = h_values / np.sum(h_values) * (n_points / 2)\n    \n    # Define the objective function to minimize the maximum overlap\n    def objective(x):\n        h = x.copy()\n        h = np.clip(h, 0, 1)\n        # Compute the overlap integral\n        result = np.correlate(h, 1 - h, mode=\"full\") * dx\n        max_overlap = np.max(result)\n        return max_overlap\n    \n    # Define the constraints\n    def constraint_sum(x):\n        return np.sum(x) - (n_points / 2)\n    \n    def constraint_bounds(x):\n        return np.all((0 <= x) & (x <= 1))\n    \n    # Set up the optimization problem\n    bounds = [(0, 1) for _ in range(n_points)]\n    constraints = [\n        {'type': 'eq', 'fun': constraint_sum},\n        {'type': 'ineq', 'fun': constraint_bounds}\n    ]\n    \n    # Use the initial guess to start the optimization\n    result = optimize.minimize(\n        objective,\n        h_values,\n        bounds=bounds,\n        constraints=constraints,\n        method='SLSQP',\n        options={'ftol': 1e-9, 'maxiter': 100}\n    )\n    \n    # Extract the best solution\n    best_h = result.x\n    best_c5 = result.fun\n    \n    # Return the best solution, the C5 bound, and the number of points\n    return best_h, best_c5, n_points\n```"
+}

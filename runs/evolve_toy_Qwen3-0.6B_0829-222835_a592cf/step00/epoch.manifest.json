@@ -1,0 +1,53 @@
+{
+  "allocation_plan_id": "allocation_plan:e9a5aba911a400d3308500688bb124ea0038938aaada401f644fe59875be1926",
+  "archive_snapshot_hash": "8da6c9fed2a94d409f715ef6d08630fbbd739a02a9355157efebc4073fbc02df",
+  "archive_snapshot_id": "archive_snapshot:8da6c9fed2a94d409f715ef6d08630fbbd739a02a9355157efebc4073fbc02df",
+  "budget_ledger_id": "budget:c3ee8066fbd89ed295c067565f892786a2bb7111ddd0b3cc182f08bd4dd88e71",
+  "causal_memory_snapshot_id": "causal_memory_snapshot:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "cell_map_version": "descriptor_exact_v1",
+  "component_schema_versions": {
+    "audits": 1,
+    "causal_memory": 1,
+    "harness_registry": 1,
+    "learning_objective": 1,
+    "options": 1,
+    "refinement_nursery": 1,
+    "scheduler_portfolio": 1,
+    "scheduler_posterior": 1,
+    "scheduler_reservations": 1
+  },
+  "created_at": "",
+  "descriptor_version": "descriptor_exact_v1",
+  "epoch": 0,
+  "extensions": {},
+  "fingerprint_version": "scientific_fingerprint_v1",
+  "frozen": true,
+  "harness_ids": [
+    "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428"
+  ],
+  "manifest_id": "epoch_manifest:21c44e4da65cfd623f392b01a63890ed4be3dbd8afdb96fcd0ff92e35623638b",
+  "method_complete": true,
+  "option_ids": [
+    "option:1b16ffc181a6d534aadecdc96241ded669c99307852b0bf47d24011ade48a1f6",
+    "option:37c1dec8f311347e758ccac9feed43c2a0cb7c12ea430c9364b94688fdf805be",
+    "option:574e356b6a047a5c2c47ab6c6048b05acdfd8469bda249d0910c4318fe081f40",
+    "option:891ea7b12861dc0f82155592d8125872baca94baf5632c3b697d5a30629b17dc",
+    "option:da0840d3495d251863a027151b3330d51c20e92e971a512ab9f6916b9b3a7ca7",
+    "option:f7c399d25915131146afc8782c4efcd1d84079bdf1d66b60869767e181dca14b"
+  ],
+  "record_threshold": 0.16666666666666666,
+  "record_type": "epoch_manifest",
+  "reporting_schema_version": "evolve_reporting_v1",
+  "role_snapshot_ids": {
+    "challenger": "role_snapshot:41463e599d0d0820e223102fa6e635198376f87624ef3db9e1ff8a98f0dbcf4b",
+    "mechanist": "role_snapshot:b26bd339dad0fc251887d69170308763db02907607fed680fccc4a465230ee93",
+    "scout": "role_snapshot:6597fdaaa481ee98b3ac9e7a4c3482b50e6720b17374834cfc0b24e44d4599a6"
+  },
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "scheduler_snapshot_id": "scheduler_snapshot:b1959c88200a04119183c02f889935273c4c2d47f5f9701dddd4e77946377f74",
+  "scheduler_version": "zero_inflated_tail_v1",
+  "schema_version": 1,
+  "seed": 7232944185465144193,
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+  "verifier_version": "answer_schema_v1"
+}

@@ -1,0 +1,42 @@
+{
+  "cells": [
+    {
+      "cell_id": "cell:191d8305d434cf25ef77bcd0b9874518959bc231e676dca76abaa852c29956fe",
+      "champion_evidence_id": "evidence:181c0991407ea88b1cafabaeeb15a409d33ceed38cbd9aa45e28ab42c03aa8f7",
+      "champion_state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22",
+      "descriptor_id": "descriptor:fc26e60656f12035b9b611b94709776ba7ac984e225cada58ad9a9b4583db719",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:534ed651d1c7c6ee10be2d1ec8295ddd4286b5ef1fbb718885f64a9a8f77fb80"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [
+        "state:8c9aa6ceba7b5215e35021b5a640c137f86214682f333a3f1f7f9f58ce59a265"
+      ],
+      "tested_count": 4,
+      "under_tested": false
+    },
+    {
+      "cell_id": "cell:9fa71737936b6545a9f76b5b7183e32c3e8ab6371b40205175d5478480f285f1",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:233a80cf53e9cb5414fd12e4dfd50468ae1d11ecae039fd22b1ee95f1a037a8e",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [
+        "state:5049658131c8e1db18bf12a29c0494d82d5ed05833d02fdc9ad887daf2b1b79b"
+      ],
+      "tested_count": 4,
+      "under_tested": false
+    }
+  ],
+  "epoch": 0,
+  "schema_version": 1
+}

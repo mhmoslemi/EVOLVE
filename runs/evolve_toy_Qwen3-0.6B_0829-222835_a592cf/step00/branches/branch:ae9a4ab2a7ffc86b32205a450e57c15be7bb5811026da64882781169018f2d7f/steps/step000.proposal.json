@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:ae9a4ab2a7ffc86b32205a450e57c15be7bb5811026da64882781169018f2d7f",
+  "created_at": "2026-08-30T02:31:02.855323Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:4e1a85ea3247eacd587f8997e47a8d68593227d720ea8f1f2a157af220e92ec6",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "112e1e90c7ad08e544f8ed463c4cfa389b4690ce07ea851451ea94b31e607461",
+  "source_text": "<think>\nOkay, let's see. The user wants me to create a new program for a deterministic two-dimensional toy search, improved. The existing solution uses a parent point [-4,4] with a specific score. The target is to find a point with a squared distance of 0.0 from (3,-2). \n\nFirst, I need to think about what a deterministic two-dimensional search might do. Since the target is fixed, maybe the algorithm is trying to reach that exact point, but perhaps there's another approach. The existing solution's run_toy() returns [-4,4], which has a distance of 8"
+}

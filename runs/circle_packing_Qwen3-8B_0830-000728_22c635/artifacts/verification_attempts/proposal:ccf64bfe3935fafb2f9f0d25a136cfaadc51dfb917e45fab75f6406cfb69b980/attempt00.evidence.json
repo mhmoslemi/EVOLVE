@@ -1,0 +1,54 @@
+{
+  "admitted": false,
+  "answer_payload": null,
+  "branch_id": "branch:0f4673e0f61ebaf6523bcf2a631c8b24be75b7a2296a6b602cdcda8e47abaa03",
+  "completed_at": "2026-08-30T04:16:10.864390Z",
+  "confirmed": false,
+  "descriptor_id": null,
+  "diagnostics": {
+    "message": "circle answer must be a payload or (centers, radii, claimed_sum)"
+  },
+  "evidence_id": "evidence:9545e95f4532164635db52ecb3281aa71e6221e743780f9475f68d1da3d3215e",
+  "extensions": {},
+  "failure_kind": "constraint",
+  "fingerprint": "",
+  "flags": {
+    "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0830-000728_22c635/artifacts/answers/88c5d46046493b65e4643411aaea39cdb9d93009bf14f8c459e49202b699713e.json",
+    "answer_payload_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "answer_payload_id": "answer_payload:88c5d46046493b65e4643411aaea39cdb9d93009bf14f8c459e49202b699713e",
+    "diagnostic_policy_version": "bounded_diagnostics_v1",
+    "evidence_identity_version": "evidence_packet_schema_v1",
+    "excluded_from_scientific_updates": false,
+    "method_incomplete": false,
+    "payload_only": true,
+    "verification_attempt_index": 0,
+    "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+    "verification_policy_version": "evolve_engine_v1"
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "internal_reward": null,
+  "lineage_ids": [
+    "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99"
+  ],
+  "parent_state_id": "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99",
+  "policy_snapshot_id": "role_snapshot:5406e4edab45f7f864e914cdfd472cbc00a04d6efde29035d7cc390d22dba322",
+  "problem_id": "circle_packing",
+  "proposal_id": "proposal:ccf64bfe3935fafb2f9f0d25a136cfaadc51dfb917e45fab75f6406cfb69b980",
+  "raw_score": null,
+  "record_type": "evidence_packet",
+  "resolved": true,
+  "resources": {
+    "verifier_calls": 1,
+    "verifier_wall_time_s": 0.00015359697863459587
+  },
+  "run_id": "run:3ae060fa295e48ffce0313359d68ad4150d7c16b9df219d7712bed4d3a75eeec",
+  "schema_version": 1,
+  "scientific_state_id": null,
+  "scores": {},
+  "source_hash": "c690f63b73b0374cceb891b85a0feba30407bbbc089c86b3f478d5708e44ee0f",
+  "started_at": "2026-08-30T04:16:10.864229Z",
+  "timeout_is_scientific": true,
+  "uncertainty": null,
+  "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+  "verifier_version": "answer_schema_v1"
+}

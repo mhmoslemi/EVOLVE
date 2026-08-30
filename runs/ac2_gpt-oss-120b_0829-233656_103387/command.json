@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--config",
+    "configs/ac2.yaml",
+    "--training-gpu-id",
+    "0",
+    "--gpu-ids",
+    "0",
+    "--vllm-tensor-parallel-size",
+    "1"
+  ],
+  "schema_version": 1
+}

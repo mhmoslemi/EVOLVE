@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:a828a2febc51021cbd9d9ada6ddbdb91be3c37ee5a974722da827959e6aa5344",
+  "created_at": "2026-08-30T05:08:15.751002Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:40af6f646386cf70ea384e53afe8d048b883a4ac1f84cd56603601c31b06b531",
+  "record_type": "proposal",
+  "run_id": "run:362631144ddc8fff66c29d554c97d09d0b88c16247de6d859fdd224a2bbcc09f",
+  "schema_version": 1,
+  "source_hash": "a41c6dbea3316cb66a10e96f8f86217b05c57a3c9866ee35a9c925087016d7e9",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as optimize\nimport time\nimport random\nfrom scipy.optimize import minimize\n\ndef run(seed=42, budget_s=100, **kwargs):\n    # Set random seed\n    np.random.seed(seed)\n    random.seed(seed)\n    \n    # Initial parameters\n    n_points = 100  # Adjust based on performance; 100 is faster than 500\n    dx = 2.0 / n_points\n    initial_h = np.array(initial_h_values[:n_points])  # Use initial values\n    \n    # Normalize initial_h to meet the constraint sum(h) * dx = 1\n    initial_h = initial_h / np.sum(initial_h) * (n_points / 2)\n    \n    # Define the objective function for minimization\n    def objective(h):\n        # Ensure h is within [0, 1]\n        h = np.clip(h, 0, 1)\n        # Compute the overlap integral C5\n        corr = np.correlate(h, 1 - h, mode=\"full\")\n        c5 = np.max(corr) * dx\n        return c5\n    \n    # Constraints: sum(h) * dx = 1 --> sum(h) = n_points / 2\n    def constraint_sum(h):\n        return np.sum(h) - (n_points / 2)\n    \n    # Setup optimization problem\n    h_bounds = [(0, 1) for _ in range(n_points)]\n    cons = {'type': 'eq', 'fun': constraint_sum}\n    \n    # Initial guess\n    h_initial = initial_h.copy()\n    \n    # Perform optimization with a time budget\n    start_time = time.time()\n    result = minimize(objective, h_initial, method='L-BFGS-B', bounds=h_bounds, constraints=cons, tol=1e-6)\n    \n    # Get the best solution found\n    best_h = result.x\n    best_c5 = result.fun\n    \n    # Track time and return best solution found\n    elapsed_time = time.time() - start_time\n    if elapsed_time >= budget_s:\n        print(\"Time budget exceeded, returning initial solution\")\n        return (initial_h, objective(initial_h), n_points)\n    \n    # Return the best solution found\n    return (best_h, best_c5, n_points)\n```"
+}

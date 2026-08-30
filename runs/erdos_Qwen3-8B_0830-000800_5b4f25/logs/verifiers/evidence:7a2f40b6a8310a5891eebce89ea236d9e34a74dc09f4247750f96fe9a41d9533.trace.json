@@ -1,0 +1,21 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:306ab273280170e5c7fde53afe9553621b72738a54bbb520de8d6f690447c200",
+  "capture_hash": "9db493d6081c0d4c11fddb8d996e31f04ee2e1c9d56f9fb62e0181dfb5e746d0",
+  "completed_at": "",
+  "diagnostics": {
+    "worker_error": {
+      "exception_type": "ArtifactReferenceError",
+      "message": "unknown state_id 'state:b826b2d8db5ede4525c533bdaac1e94e8e3f69a08bbff93e6bc29c12cce34461'",
+      "phase": "generation"
+    }
+  },
+  "evidence_id": "evidence:7a2f40b6a8310a5891eebce89ea236d9e34a74dc09f4247750f96fe9a41d9533",
+  "phase": "generation",
+  "proposal_id": "proposal:c4abc3dbbe08d2e6e430ce66817403a98b1d0d2d5604acbdca293b7c74b0f1af",
+  "resources": {
+    "verifier_calls": 0.0
+  },
+  "schema_version": 1,
+  "started_at": ""
+}

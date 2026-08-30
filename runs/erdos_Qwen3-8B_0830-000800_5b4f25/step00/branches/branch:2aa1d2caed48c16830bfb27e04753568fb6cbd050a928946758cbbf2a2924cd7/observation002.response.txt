@@ -1,0 +1,97 @@
+<strategy>
+To improve the upper bound for the Erdős minimum overlap problem constant $C_5$, we refine the approach by taking a systematic and strategic route:
+
+1. **Initial Construction**: Start from the existing `initial_h_values` with 45 samples. This gives us a good baseline to work from.
+2. **Refinement via Optimization**: We will treat the problem as a black-box optimization, where we aim to minimize the maximum overlap integral $C_5$. 
+3. **Heuristic Search**: Use a gradient-based optimization technique to tweak the function $h(x)$. We will experiment with different sampling schemes, such as uniform, clustering, or random sampling.
+4. **Diversity in Sampling**: Explore different starting points with varied patterns (e.g., low symmetry, high symmetry, asymmetric) to avoid local minima.
+5. **Evaluation**: Use numerical methods like correlation and integral evaluation to check for overlaps, and optimize the function accordingly.
+6. **Parallelization**: Since we have a 40-core budget, we will try to leverage this by splitting the search space among multiple evaluations.
+
+We will use a gradient descent approach to iteratively adjust the function $h(x)$ to reduce $C_5$. Importantly, we will also consider an adaptive optimization technique, where if the current best value stays high, we will explore different sampling or perturbation strategies to escape local minima.
+</strategy>
+
+```python
+import numpy as np
+import scipy.optimize as optimize
+import time
+import copy
+import random
+
+# Pre-imported functions
+initial_h_values = None
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    start_time = time.time()
+    best_h = copy.deepcopy(initial_h_values)
+    best_c5 = compute_c5(best_h)
+    n_points = len(best_h)
+    
+    # Define the objective function
+    def objective(h):
+        return compute_c5(h)
+    
+    # Define the optimization function (gradient descent)
+    def optimize_h(h_initial):
+        h = np.copy(h_initial)
+        learning_rate = 0.01
+        max_iterations = 100
+        for _ in range(max_iterations):
+            c5 = compute_c5(h)
+            if c5 < best_c5:
+                best_c5 = c5
+                best_h = np.copy(h)
+            # Compute the gradient
+            gradient = compute_gradient(h)
+            # Update h
+            h -= learning_rate * gradient
+            # Boundary constraints
+            h = np.clip(h, 0, 1)
+        return best_c5
+    
+    # Vectorized implementation for efficiency
+    def compute_c5(h):
+        N = len(h)
+        dx = 2.0 / N
+        h_correlate = np.correlate(h, 1 - h, mode='full')
+        c5 = np.max(h_correlate) * dx
+        return c5
+    
+    def compute_gradient(h):
+        N = len(h)
+        dx = 2.0 / N
+        h_correlate = np.correlate(h, 1 - h, mode='full')
+        max_index = np.argmax(h_correlate)
+        max_value = h_correlate[max_index]
+        gradient = np.zeros_like(h)
+        for i in range(N):
+            for j in range(N):
+                if i + j == max_index:
+                    gradient[i] += (1 - h[j]) * dx
+        return gradient
+    
+    # Run the optimization
+    best_h = np.copy(initial_h_values)
+    best_c5 = compute_c5(best_h)
+    best_h = optimize_h(best_h)
+    
+    # Additional sweeps or perturbations if time allows
+    elapsed_time = time.time() - start_time
+    if elapsed_time < budget_s - 10:
+        # Perturb the h values slightly
+        perturbation = np.random.normal(0, 0.05, size=len(best_h))
+        best_h = np.clip(best_h + perturbation, 0, 1)
+        best_c5 = compute_c5(best_h)
+    
+    return (best_h, best_c5, len(best_h))
+
+# Small modification to handle edge cases
+def compute_c5(h):
+    h = np.array(h)
+    N = len(h)
+    dx = 2.0 / N
+    h_correlate = np.correlate(h, 1 - h, mode='full')
+    c5 = np.max(h_correlate) * dx
+    return c5
+```

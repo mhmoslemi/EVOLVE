@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:7eb6ade9b0e90def1f214c087cd4005527f0f042ddcc12803837c14f8cd0a8d5",
+  "created_at": "2026-08-30T02:58:46.522774Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": [
+    3,
+    -2
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:f0c2a11c09d0d207a3903094a801695d5d41febfedda220d5fc2bbde60022723",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "040b0e1e00f854f2d00d1bf73114049e8b28bfa54b0f9841b529b8fd68dfc2e7",
+  "source_text": "```python\ndef run_toy():\n    # Goal: Minimize the squared distance to (3, -2)\n    x, y = 3, -2\n    return [x, y]\n```"
+}

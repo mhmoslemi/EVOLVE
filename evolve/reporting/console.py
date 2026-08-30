@@ -16,6 +16,41 @@ from evolve.viz._common import load_status
 from .best import BestRecord, load_best
 
 
+def format_progress(
+    stage: str,
+    *,
+    epoch: int | None = None,
+    total_epochs: int | None = None,
+    completed: int | None = None,
+    total: int | None = None,
+    unit: str = "items",
+    detail: str | None = None,
+    bar_width: int = 24,
+) -> str:
+    """Render one log-friendly progress line without terminal control codes."""
+
+    parts = ["EVOLVE"]
+    if epoch is not None:
+        epoch_text = f"epoch {epoch + 1}"
+        if total_epochs is not None:
+            epoch_text += f"/{total_epochs}"
+        parts.append(epoch_text)
+    parts.append(stage)
+    if completed is not None and total is not None:
+        safe_total = max(0, int(total))
+        safe_completed = min(max(0, int(completed)), safe_total)
+        fraction = safe_completed / safe_total if safe_total else 1.0
+        filled = int(fraction * max(1, bar_width))
+        bar = "█" * filled + "░" * (max(1, bar_width) - filled)
+        parts.append(
+            f"[{bar}] {safe_completed}/{safe_total} {unit} "
+            f"({fraction:.0%}, {safe_total - safe_completed} left)"
+        )
+    if detail:
+        parts.append(detail)
+    return " · ".join(parts)
+
+
 def format_status(status: Mapping[str, Any]) -> str:
     lines = [
         f"EVOLVE run {status.get('run_id', '?')}",
@@ -31,6 +66,26 @@ def format_status(status: Mapping[str, Any]) -> str:
         )
     else:
         lines.append("confirmed record: none yet (provisional observations do not count)")
+    live_epoch = status.get("live_epoch", {}) or {}
+    if live_epoch.get("stage"):
+        completed = int(live_epoch.get("completed_branches", 0))
+        total = int(live_epoch.get("total_branches", 0))
+        lines.append(
+            format_progress(
+                str(live_epoch["stage"]),
+                epoch=int(live_epoch.get("epoch", status.get("epoch", 0))),
+                total_epochs=int(
+                    live_epoch.get("total_epochs", status.get("epoch", 0) + 1)
+                ),
+                completed=completed,
+                total=total,
+                unit="branches",
+                detail=(
+                    f"{int(live_epoch.get('completed_verifications', 0))} "
+                    "verifications completed"
+                ),
+            )
+        )
     note = status.get("note")
     if note:
         lines.append(f"note: {note}")
@@ -46,13 +101,14 @@ def print_status(run_dir: Union[str, Path]) -> None:
 
 
 def format_best_answer(record: BestRecord) -> str:
+    answer_payload = record.state.to_dict()["answer_payload"]
     lines = [
         "=== EVOLVE best confirmed answer ===",
         f"state_id: {record.state.state_id}",
         f"internal_reward: {record.state.internal_reward}",
         f"raw_score: {record.state.raw_score}",
         "answer_payload:",
-        json.dumps(record.state.answer_payload, indent=2, sort_keys=True),
+        json.dumps(answer_payload, indent=2, sort_keys=True),
     ]
     if record.rendered_paths:
         lines.append("rendered files:")
@@ -78,6 +134,7 @@ def should_print_periodically(verifications_done: int, *, every: int) -> bool:
 
 __all__ = [
     "format_best_answer",
+    "format_progress",
     "format_status",
     "print_best_answer",
     "print_status",

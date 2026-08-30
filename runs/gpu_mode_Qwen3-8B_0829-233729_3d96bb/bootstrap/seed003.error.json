@@ -1,0 +1,8 @@
+{
+  "exception_type": "ValueError",
+  "message": "GPU answer must be kernel source, a RewardResult, or a saved payload",
+  "schema_version": 1,
+  "seed_index": 3,
+  "verifier_attempts": 0,
+  "verifier_debited": false
+}

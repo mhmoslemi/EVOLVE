@@ -1,0 +1,62 @@
+{
+  "config_hash": "88a7242b73ea44f15f8c390c1168bb2ab8427f8147d0df4799fbf21c5fbdb3f0",
+  "config_schema_version": 1,
+  "created_at": "2026-08-30T03:45:15.364433Z",
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "68cd1e1687a3ab1e507c4da95d923ab1321d378a",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "auto",
+      "physical_id": 0,
+      "purpose": "barrier_learning_and_tensor_parallel_generation"
+    }
+  ],
+  "host": {
+    "hostname": "kn136",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6338_CPU_@_2.00GHz-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "Qwen/Qwen3-8B",
+    "training_backend": "hf",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+  "run_name": "circle_packing_Qwen3-8B_0829-234515_fbf840",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "88a7242b73ea44f15f8c390c1168bb2ab8427f8147d0df4799fbf21c5fbdb3f0",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "evaluation_is_serialized_with_model_phase": false,
+    "exclusive_evaluation_gpu_id": null,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 20,
+    "runtime_visible_gpu_ids": [
+      0
+    ],
+    "tensor_parallel_size": 1,
+    "training_gpu_id": 0,
+    "vllm_quantization": "auto"
+  }
+}

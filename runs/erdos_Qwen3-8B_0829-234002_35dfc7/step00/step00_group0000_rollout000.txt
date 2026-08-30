@@ -1,0 +1,72 @@
+```python
+import numpy as np
+import scipy.optimize as optimize
+import time
+import copy
+from scipy.signal import correlate
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    n_points = 100
+    h = initial_h_values.copy()
+    h = h[:n_points]
+    dx = 2.0 / n_points
+    sum_h = sum(h) * dx
+    while sum_h != 1.0:
+        if sum_h < 1.0:
+            h[-1] += (1.0 - sum_h) / dx
+        else:
+            h[-1] -= (sum_h - 1.0) / dx
+        sum_h = sum(h) * dx
+    
+    def objective(h_flat):
+        h = h_flat.reshape(n_points)
+        sum_h = sum(h) * dx
+        if abs(sum_h - 1.0) > 1e-6:
+            return float('inf')
+        h = np.clip(h, 0, 1)
+        correlate_result = correlate(h, 1 - h, mode='full')
+        c5 = np.max(correlate_result) * dx
+        return c5
+    
+    def update_h(h_flat):
+        h = h_flat.copy()
+        h = np.clip(h, 0, 1)
+        sum_h = sum(h) * dx
+        if abs(sum_h - 1.0) > 1e-6:
+            h[-1] = 1.0 if sum_h < 1.0 else 0.0
+        return h
+    
+    def evaluate(h_flat):
+        h = h_flat.copy()
+        h = np.clip(h, 0, 1)
+        sum_h = sum(h) * dx
+        if abs(sum_h - 1.0) > 1e-6:
+            return float('inf')
+        correlate_result = correlate(h, 1 - h, mode='full')
+        c5 = np.max(correlate_result) * dx
+        return c5
+    
+    def get_neighbor(h_flat):
+        h = h_flat.copy()
+        idx = np.random.randint(n_points)
+        h[idx] = np.random.uniform(0, 1)
+        return h
+    
+    start_time = time.time()
+    best_h = h.copy()
+    best_c5 = evaluate(best_h)
+    
+    for _ in range(1000):
+        if time.time() - start_time > budget_s:
+            break
+        h_flat = best_h.copy()
+        neighbor = get_neighbor(h_flat)
+        neighbor = update_h(neighbor)
+        neighbor_c5 = evaluate(neighbor)
+        if neighbor_c5 < best_c5:
+            best_h = neighbor
+            best_c5 = neighbor_c5
+    
+    return best_h, best_c5, n_points
+```

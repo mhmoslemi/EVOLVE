@@ -14,6 +14,7 @@ verifier references into branches is the composed engine's job (Phase 9).
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from itertools import product
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from evolve.archive import ScientificArchive
@@ -98,6 +99,129 @@ class AllocationPlan:
     reservation_slots: ReservationSlots
     planned_arms: Tuple[PlannedArm, ...]
     seed: int
+
+
+def _select_role_cover(
+    candidates: Sequence[PlannedArm],
+    *,
+    roles: Sequence[Role],
+    learning_role: Optional[Role],
+    group_k: int,
+    production_capacity: int,
+    resource_limits: Mapping[str, float],
+    required_reservations: Mapping[str, int],
+) -> Tuple[Tuple[PlannedArm, int, Tuple[str, ...]], ...]:
+    """Choose one arm per role while covering mandatory labels when feasible.
+
+    Exactly three roles are used in production, and ``candidates`` is already
+    bounded by the epoch's inflight capacity. Enumerating their small Cartesian
+    product avoids a seed-sensitive greedy choice in which the learning arm
+    consumed all remaining slots while an equally valid role combination could
+    have satisfied both empty-cell and global-exploration reservations.
+    """
+
+    normalized_roles = tuple(dict.fromkeys(roles))
+    pools = []
+    for role in normalized_roles:
+        pool = sorted(
+            (item for item in candidates if item.arm.role == role),
+            key=lambda item: item.arm.arm_id,
+        )
+        if not pool:
+            return ()
+        pools.append(pool)
+
+    labels = tuple(
+        label for label, required in required_reservations.items() if required > 0
+    )
+
+    def best_for_replicas(
+        learning_replicas: int,
+        *,
+        learning_group: bool,
+    ):
+        best = None
+        for combination in product(*pools):
+            replicas = tuple(
+                learning_replicas
+                if learning_role is not None and role == learning_role
+                else 1
+                for role in normalized_roles
+            )
+            if sum(replicas) > production_capacity:
+                continue
+            resource_costs = {
+                resource: sum(
+                    count
+                    * float(
+                        item.arm.hard_cost.get(
+                            resource,
+                            item.arm.expected_cost.get(resource, 0.0),
+                        )
+                    )
+                    for item, count in zip(combination, replicas)
+                )
+                for resource in resource_limits
+            }
+            if any(
+                resource_costs[resource] > float(limit) + 1e-12
+                for resource, limit in resource_limits.items()
+            ):
+                continue
+            realized = {
+                label: sum(
+                    count
+                    for item, count in zip(combination, replicas)
+                    if label in item.reservations
+                )
+                for label in labels
+            }
+            deficit = sum(
+                max(0, int(required_reservations[label]) - realized[label])
+                for label in labels
+            )
+            cost_pressure = sum(
+                resource_costs[resource] / float(limit)
+                for resource, limit in resource_limits.items()
+                if float(limit) > 0.0
+            )
+            score = (
+                deficit,
+                cost_pressure,
+                -sum(float(item.expected_gain) for item in combination),
+                tuple(item.arm.arm_id for item in combination),
+            )
+            if best is None or score < best[0]:
+                selections = []
+                for role, item, count in zip(
+                    normalized_roles, combination, replicas
+                ):
+                    item_labels = ["role"]
+                    if learning_group and role == learning_role:
+                        item_labels.append("learning_group")
+                    item_labels.extend(item.reservations)
+                    selections.append(
+                        (item, count, tuple(dict.fromkeys(item_labels)))
+                    )
+                best = (score, tuple(selections))
+        return best
+
+    learning_replicas = max(1, int(group_k))
+    if (
+        learning_role is not None
+        and learning_replicas + max(0, len(normalized_roles) - 1)
+        <= production_capacity
+    ):
+        grouped = best_for_replicas(
+            learning_replicas, learning_group=True
+        )
+        # Mandatory reservations precede learning. Use the homogeneous group
+        # only when its role combination can cover all single-arm labels.
+        if grouped is not None and grouped[0][0] == 0:
+            return grouped[1]
+
+    fallback = best_for_replicas(1, learning_group=False)
+    return () if fallback is None else fallback[1]
 
 
 def plan_epoch(
@@ -366,21 +490,20 @@ def plan_epoch(
             )
         return True
 
-    if normalized_learning_role is not None:
-        learning_candidates = [
-            item for item in planned if item.arm.role == normalized_learning_role
-        ]
-        learning_candidates.sort(
-            key=lambda item: (
-                0 if "empty_cell" in item.reservations else 1,
-                0 if "global_exploration" in item.reservations else 1,
-                item.arm.arm_id,
-            )
-        )
-        if learning_candidates and group_k + max(0, len(roles) - 1) <= production_capacity:
-            labels = ["role", "learning_group"]
-            labels.extend(learning_candidates[0].reservations)
-            add(learning_candidates[0], replicas=max(1, group_k), labels=labels)
+    role_cover = _select_role_cover(
+        planned,
+        roles=roles,
+        learning_role=normalized_learning_role,
+        group_k=group_k,
+        production_capacity=production_capacity,
+        resource_limits=allocation_resource_limits,
+        required_reservations={
+            "empty_cell": len(resolved.empty_cell_arms),
+            "global_exploration": len(resolved.global_exploration_arms),
+        },
+    )
+    for item, replicas, labels in role_cover:
+        add(item, replicas=replicas, labels=labels)
 
     for role in roles:
         if any(item.arm.role == role for item in selected):

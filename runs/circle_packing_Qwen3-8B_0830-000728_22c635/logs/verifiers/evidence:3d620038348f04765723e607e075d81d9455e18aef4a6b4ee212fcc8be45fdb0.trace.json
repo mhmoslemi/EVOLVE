@@ -1,0 +1,18 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:d566065aee6d902b0d6167af66d5d719ab2e6bbb99d5bedf157de9e2074f534a",
+  "capture_hash": "5cc709557e492a2ca2e63935b013babfe7dd253e20ad9273cd6c411224eda93a",
+  "completed_at": "2026-08-30T04:15:03.017812Z",
+  "diagnostics": {
+    "message": "circle answer must be a payload or (centers, radii, claimed_sum)"
+  },
+  "evidence_id": "evidence:3d620038348f04765723e607e075d81d9455e18aef4a6b4ee212fcc8be45fdb0",
+  "phase": "independent_verification_attempt_0",
+  "proposal_id": "proposal:92d067197e2ca16cdee5d787a056d567e361059e6c7b9c9ddb61be49406d1faa",
+  "resources": {
+    "verifier_calls": 1,
+    "verifier_wall_time_s": 0.00015309592708945274
+  },
+  "schema_version": 1,
+  "started_at": "2026-08-30T04:15:03.017647Z"
+}

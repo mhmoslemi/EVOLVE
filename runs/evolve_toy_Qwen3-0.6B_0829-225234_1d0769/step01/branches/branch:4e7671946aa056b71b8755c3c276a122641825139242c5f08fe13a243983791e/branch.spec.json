@@ -1,0 +1,33 @@
+{
+  "arm_id": "arm:58f66f647bb88da89ccbf571facdd2549b9e0129cde063b6a856caa982069a9a",
+  "branch_id": "branch:4e7671946aa056b71b8755c3c276a122641825139242c5f08fe13a243983791e",
+  "budget": {
+    "verifier_calls": 2.0
+  },
+  "channel": "audit",
+  "epoch": 1,
+  "extensions": {},
+  "frozen": true,
+  "frozen_record_threshold": 1.0,
+  "generation_settings": {
+    "max_new_tokens": 128,
+    "memory_records": [],
+    "role": "mechanist",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913",
+  "harness_version": "diagnostic_v1",
+  "horizon": 1,
+  "memory_view_hash": "0c2c556299eb67f794163fa3a545ad06bb3706d0d7574e69ea942b36ba131f6c",
+  "memory_view_id": null,
+  "option_id": "option:37c1dec8f311347e758ccac9feed43c2a0cb7c12ea430c9364b94688fdf805be",
+  "option_version": "mechanist_develop_v1",
+  "record_type": "branch_spec",
+  "role_snapshot_id": "role_snapshot:c4cb964833a2fb7c74e1cb5ad746bf027b4e454bdfd730b66cfce9fff1849ea7",
+  "schema_version": 1,
+  "seed": 7052723832807947577,
+  "start_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+  "verifier_version": "answer_schema_v1"
+}

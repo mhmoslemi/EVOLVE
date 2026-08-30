@@ -1,0 +1,18 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:a05330e6edc791c8e9a89e7291fdba7b9b2a3d805e0cc9c4ebde1986337b09e4",
+  "capture_hash": "80e037f3fab2390d87692da155bc44071e6e3d24ae4a2479d89dd5458c4e84b6",
+  "completed_at": "2026-08-30T03:36:57.667212Z",
+  "diagnostics": {
+    "message": "verified saved ac2 coefficient sequence"
+  },
+  "evidence_id": "evidence:c472c0d0291e7ced528aac0b94d38d5b913a2ec629e37f50a5804d1a8513a452",
+  "phase": "bootstrap_seed_verification_attempt_0",
+  "proposal_id": "proposal:8b52cd0996158aafda3748010f9d11220c3e567a0538f13dd211a100860f0682",
+  "resources": {
+    "verifier_calls": 1,
+    "verifier_wall_time_s": 0.07334868283942342
+  },
+  "schema_version": 1,
+  "started_at": "2026-08-30T03:36:57.593861Z"
+}

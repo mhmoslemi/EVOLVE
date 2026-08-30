@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:a828a2febc51021cbd9d9ada6ddbdb91be3c37ee5a974722da827959e6aa5344",
+  "created_at": "2026-08-30T05:14:11.312195Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:9389500c3adab448c93462a71eb4650b07eec4ee31b8ec74f267582ba653f9f4",
+  "record_type": "proposal",
+  "run_id": "run:362631144ddc8fff66c29d554c97d09d0b88c16247de6d859fdd224a2bbcc09f",
+  "schema_version": 1,
+  "source_hash": "31f46288c637c945998ef21fd306fdf995aa9db426aa84cebdeeb493757fa997",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as opt\nimport time\n\n# Pre-imported functions\nfrom evaluate_erdos_solution import evaluate_erdos_solution\nfrom initial_h_values import initial_h_values\n\ndef run(seed=42, budget_s=100, **kwargs):\n    np.random.seed(seed)\n    start_time = time.time()\n    \n    # Parameters\n    n_points = 100  # We'll use 100 points for faster computation\n    dx = 2.0 / n_points\n    h = np.copy(initial_h_values[:n_points])\n    h = h[:n_points]\n    \n    # Normalize h to ensure the integral is 1\n    h = h / np.sum(h) * (n_points / 2)\n    \n    # Function to compute the overlap integral\n    def compute_C5(h_vals):\n        h = h_vals.copy()\n        h = h / np.sum(h) * (n_points / 2)\n        conv = np.correlate(h, 1 - h, mode=\"full\")\n        c5 = np.max(conv) * dx\n        return c5\n    \n    # Optimization: Use a gradient-free method for speed\n    def objective(x):\n        h_vals = x\n        return compute_C5(h_vals)\n    \n    # Bounds for the h values\n    bounds = [(0.0, 1.0) for _ in range(n_points)]\n    \n    # Initial guess\n    initial_guess = h\n    \n    # Perform the optimization\n    result = opt.minimize(\n        objective,\n        initial_guess,\n        method='SLSQP',\n        bounds=bounds,\n        constraints=[{'type': 'eq', 'fun': lambda x: np.sum(x) - n_points / 2}]\n    )\n    \n    # Extract the best solution found\n    best_h = result.x\n    best_c5 = compute_C5(best_h)\n    \n    # Stop early if time is up\n    elapsed_time = time.time() - start_time\n    if elapsed_time >= budget_s:\n        print(\"Time budget exceeded, returning best solution found so far.\")\n    \n    return (best_h, best_c5, n_points)\n```"
+}

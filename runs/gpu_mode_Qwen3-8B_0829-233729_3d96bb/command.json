@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--config",
+    "configs/gpu_mode_trimul.yaml",
+    "--training-gpu-id",
+    "0",
+    "--gpu-ids",
+    "0",
+    "--vllm-tensor-parallel-size",
+    "1",
+    "--kernel-gpu-id",
+    "0"
+  ],
+  "schema_version": 1
+}

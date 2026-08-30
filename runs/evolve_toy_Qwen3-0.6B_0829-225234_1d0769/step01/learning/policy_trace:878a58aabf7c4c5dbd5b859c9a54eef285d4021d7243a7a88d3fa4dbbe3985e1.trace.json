@@ -1,0 +1,59 @@
+{
+  "adapter_hash": "3dac8eee926b525273bb251ff2b89b7fce848ef4a3d8d8dfd7fb4427a5cb48ef",
+  "branch_id": "branch:55b85b51f981a191fc5f04265553aa4516616a603d841c273b80c11169859171",
+  "extensions": {},
+  "log_probabilities": [
+    [
+      -0.01233378890901804,
+      -2.1815061700181104e-05,
+      -5.364403477869928e-06,
+      -2.8292179107666016,
+      -6.437280717364047e-06,
+      -8.22540732769994e-06,
+      -0.11066924035549164,
+      -5.9798054695129395,
+      -0.6351893544197083,
+      -0.00011693747364915907
+    ]
+  ],
+  "persisted": true,
+  "prompts": [
+    "<|im_start|>user\nYou are solving a deterministic two-dimensional toy search.\n\nReturn an integer point [x, y] with both coordinates in [-8, 8].  The native\nscore is squared distance to (3, -2), so lower is better.  Define exactly one\ntop-level function `run_toy()` which returns the pair.  Use no filesystem,\nnetwork, GPU, randomness, or long-running computation.\n\nTarget squared distance: 0.0 (lower is better).\nYour previous program achieved squared distance = 53.000000.\nHere is the previous program:\n```python\n[-4, -4]\n```\n\nThe saved parent point is also available as `initial_point = [-4, -4]`.\n\nReturn the complete program in one final ```python block.\n\n\n## Frozen EVOLVE assignment\nRole: mechanist. Develop the mechanism and make one focused, justified improvement.\nOption action: matched_continuation_step_0.\nHarness: Execute the assigned role and option against the frozen verified start. Respect the branch horizon and hard budget. Harness-local diagnostics are guidance only; only the independent common verifier may admit a candidate or change the scientific record.\nHorizon step: 1/1.\nReturn the complete candidate in the problem's required format.\nTarget archive cell descriptor: {\"quadrant\": \"south_west\", \"radial_band\": \"middle\"}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  ],
+  "record_type": "policy_trace",
+  "response_segments": [
+    "```python\nrun_toy() \n```"
+  ],
+  "role": "mechanist",
+  "role_snapshot_id": "role_snapshot:c4cb964833a2fb7c74e1cb5ad746bf027b4e454bdfd730b66cfce9fff1849ea7",
+  "schema_version": 1,
+  "token_ids": [
+    [
+      73594,
+      12669,
+      198,
+      6108,
+      528,
+      2253,
+      368,
+      715,
+      73594,
+      151645
+    ]
+  ],
+  "token_masks": [
+    [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "trace_id": "policy_trace:878a58aabf7c4c5dbd5b859c9a54eef285d4021d7243a7a88d3fa4dbbe3985e1"
+}

@@ -1,0 +1,11 @@
+{
+  "answer_payload_hash": "350a5d9e6609b13d03e7e51c63855a3ae541194d82f8876b5d45790f38d1b020",
+  "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+  "maximum_attempts": 2,
+  "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+  "prior_evidence_id": "evidence:e8f3d19eacdf0d6d7086e732a1be47b8bd5983a866702488b98a1fa83fd64928",
+  "proposal_id": "proposal:a96c41e89cceaa32155f4bf1b3adcdb1807323ba98ee29c2b557338ce714b927",
+  "schema_version": 1,
+  "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+  "verifier_version": "answer_schema_v1"
+}

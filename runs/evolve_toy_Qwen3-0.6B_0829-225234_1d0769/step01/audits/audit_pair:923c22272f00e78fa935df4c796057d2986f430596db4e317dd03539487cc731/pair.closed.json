@@ -1,0 +1,35 @@
+{
+  "assignment_probability": 0.5,
+  "assignment_seed": 1341883492417027546,
+  "audit_id": "audit_pair:923c22272f00e78fa935df4c796057d2986f430596db4e317dd03539487cc731",
+  "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+  "control_branch_id": "branch:55b85b51f981a191fc5f04265553aa4516616a603d841c273b80c11169859171",
+  "control_option_id": "option:574e356b6a047a5c2c47ab6c6048b05acdfd8469bda249d0910c4318fe081f40",
+  "control_outcome_id": "branch_outcome:c22214aabcaf186d91fcbcccd0e4e2cd850d20374126ac873985e01d97ed6bae",
+  "epoch": 1,
+  "extensions": {},
+  "frozen_record_threshold": 1.0,
+  "generation_settings": {
+    "max_new_tokens": 128,
+    "memory_records": [],
+    "role": "mechanist",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "horizon": 1,
+  "intervention_branch_id": "branch:01919bed3858a580cc743750bd8b279cfbf3857ae40ec3ddd755e5664d25e3ed",
+  "intervention_option_id": "option:37c1dec8f311347e758ccac9feed43c2a0cb7c12ea430c9364b94688fdf805be",
+  "intervention_outcome_id": "branch_outcome:d8425bd5a175cf3aaedd18ff014d99ce5a166dce3c07a2327032ce3be8b3f395",
+  "preassigned": true,
+  "record_type": "audit_pair",
+  "resources": {
+    "verifier_calls": 2.0
+  },
+  "role_snapshot_id": "role_snapshot:c4cb964833a2fb7c74e1cb5ad746bf027b4e454bdfd730b66cfce9fff1849ea7",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "start_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "status": "closed",
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97"
+}

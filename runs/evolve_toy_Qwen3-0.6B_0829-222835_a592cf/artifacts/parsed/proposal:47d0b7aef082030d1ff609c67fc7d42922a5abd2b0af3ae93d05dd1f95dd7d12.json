@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:fdabb22d6efaf5272a9078e635e5f3a3f0c47ed0978ff3eb77dbdbcdc740b962",
+  "created_at": "2026-08-30T02:30:53.696921Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:47d0b7aef082030d1ff609c67fc7d42922a5abd2b0af3ae93d05dd1f95dd7d12",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "df047dfccbc65eb8a9c84acc51f2ce65a8d8c36ea68765ace0af25cfd7f0ca07",
+  "source_text": "<think>\nOkay, let's see. The user wants me to fix the existing program to achieve the target squared distance of 0.0. The previous program returned [-4, 4] with a squared distance of 85.0. But I need to find a way to reach 0.0.\n\nFirst, the original function was just a simple point. The target is to minimize the squared distance to (3, -2). Let's calculate the distance from the previous point. The distance squared between [-4, 4] and (3, -2) is (3 - (-4))² + (-2"
+}

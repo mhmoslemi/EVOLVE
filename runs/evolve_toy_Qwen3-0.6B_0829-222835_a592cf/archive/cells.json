@@ -1,0 +1,68 @@
+{
+  "cells": [
+    {
+      "cell_id": "cell:06fbd43aa69633ed416f6a0a560d4f9609f265a2c7ed878017731bf160a5ba49",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:7f7739217a8df41680bb637f65a7b26da55b30e8a8f0b664528939662a5f1e5a",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:5766cc9828d1ddf541b309b3c54b7820cb3375b3381bdc06d12981b6cd3b1efd",
+      "champion_evidence_id": "evidence:128b6bed2cd0294a1065d69c4f8dddf712def7d3c54d9da67346c932c0e59708",
+      "champion_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:fb94e6256c00a369d14c2d4468290b25ff4106bf848ea543cc16dffc2d250e60",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:593f6b5d1ece6ee6e66ba4ac539ac88f04f0b81f007fe74ee5bc019d9f5197d3",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    }
+  ],
+  "epoch": 1,
+  "schema_version": 1
+}

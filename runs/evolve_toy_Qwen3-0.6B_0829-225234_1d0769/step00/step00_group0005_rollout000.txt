@@ -1,0 +1,6 @@
+```python
+def run_toy():
+    initial_point = [4, -4]
+    new_point = [5, -3]
+    return new_point
+```

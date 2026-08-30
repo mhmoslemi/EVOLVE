@@ -1,0 +1,17 @@
+```python
+# Define the target quadrant
+quadrant = "south_east"
+
+# Define the radial band
+radial_band = "middle"
+
+# Define the initial point
+initial_point = [4, -4]
+
+# Define the top-level function to compute the squared distance
+def run_toy():
+    return [2, 5]
+
+# Construct the counterexample
+candidate = [2, 5]
+```

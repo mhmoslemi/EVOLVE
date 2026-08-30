@@ -1,0 +1,103 @@
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.optimize as optimize
+import time
+
+# Pre-imported functions
+from evaluate_erdos_solution import evaluate_erdos_solution
+from initial_h_values import initial_h_values
+
+def run(seed=42, budget_s=100, **kwargs):
+    # Set the seed for reproducibility
+    np.random.seed(seed)
+    
+    # Initial solution from the provided example
+    h_initial = np.array(initial_h_values)
+    n_points_initial = len(h_initial)
+    dx_initial = 2.0 / n_points_initial
+    
+    # Convert initial solution to a function for evaluation
+    def evaluate_solution(h_values):
+        # Ensure the solution meets the constraints
+        if not (np.all(h_values >= 0) and np.all(h_values <= 1)):
+            return np.inf
+        if not np.isclose(np.sum(h_values) * dx_initial, 1):
+            return np.inf
+        
+        # Compute the overlap integral for all possible k
+        c5 = 0.0
+        for k in range(1, n_points_initial - 1):
+            # Compute the overlap for shift k
+            shifted = np.roll(h_values, k)
+            overlap = np.sum(h_values * (1 - shifted)) * dx_initial
+            if overlap > c5:
+                c5 = overlap
+        return c5
+
+    def objective_function(h_values):
+        return evaluate_solution(h_values)
+
+    def constraint_sum(h_values):
+        return np.sum(h_values) - n_points_initial / 2
+
+    def constraint_bounds(h_values):
+        return np.all(h_values >= 0) and np.all(h_values <= 1)
+
+    # Start with the initial solution
+    h = h_initial.copy()
+    best_c5 = evaluate_solution(h)
+    best_h = h.copy()
+
+    # Time tracking
+    start_time = time.time()
+    elapsed_time = 0
+
+    # Define search parameters
+    n_points = n_points_initial
+    dx = 2.0 / n_points
+
+    # Use a local optimization method to refine the solution
+    for _ in range(100):
+        if elapsed_time >= budget_s:
+            break
+        
+        # Create bounds for the optimization problem
+        bounds = [(0.0, 1.0) for _ in range(n_points)]
+
+        # Optimization objective: minimize the maximum overlap
+        def objective(x):
+            h_values = x
+            return evaluate_solution(h_values)
+
+        # Run optimization
+        result = optimize.minimize(objective, h, bounds=bounds, method='L-BFGS-B', tol=1e-4)
+        h = result.x
+        current_c5 = evaluate_solution(h)
+        
+        # Update the best solution
+        if current_c5 < best_c5:
+            best_c5 = current_c5
+            best_h = h.copy()
+        
+        elapsed_time = time.time() - start_time
+
+    # Adjust the number of points if necessary
+    n_points = int(n_points_initial * 1.2)
+    dx = 2.0 / n_points
+    h = np.zeros(n_points)
+    h[:n_points_initial] = best_h
+    h = h[:n_points]
+
+    # Use a more refined optimization method with the updated number of points
+    bounds = [(0.0, 1.0) for _ in range(n_points)]
+    result = optimize.minimize(objective_function, h, bounds=bounds, method='L-BFGS-B', tol=1e-4)
+    h = result.x
+    best_c5 = evaluate_solution(h)
+
+    # Final check for constraint satisfaction
+    if not (np.all(h >= 0) and np.all(h <= 1)):
+        best_c5 = np.inf
+    
+    return best_h, best_c5, n_points
+```

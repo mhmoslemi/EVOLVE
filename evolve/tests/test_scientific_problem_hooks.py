@@ -1,3 +1,4 @@
+import json
 import math
 
 import numpy as np
@@ -101,6 +102,27 @@ def test_circle_payload_rejects_invalid_scientific_construction():
     assert verified.admitted is False
     assert verified.failure_kind == "constraint"
     assert "overlap" in verified.message.lower()
+
+
+def test_circle_seed_constructions_serialize_and_verify_independently():
+    problem = CirclePacking({"num_circles": 26, "num_seed_states": 8})
+    seeds = problem.seed_states()
+    payloads = []
+
+    assert len(seeds) == 8
+    for seed in seeds:
+        payload = problem.serialize_answer(seed.construction)
+        verified = problem.verify_answer_payload(payload)
+
+        assert "def run_packing():" in seed.code
+        assert verified.resolved is True
+        assert verified.admitted is True
+        assert verified.answer_payload == payload
+        assert verified.internal_reward == pytest.approx(seed.value)
+        assert verified.raw_score == pytest.approx(seed.raw_score)
+        payloads.append(json.dumps(payload, sort_keys=True))
+
+    assert len(set(payloads)) == 8
 
 
 def test_scientific_payload_hooks_reject_future_or_boolean_schema_versions():

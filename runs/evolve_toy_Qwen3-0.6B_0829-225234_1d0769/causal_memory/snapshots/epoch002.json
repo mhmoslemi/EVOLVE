@@ -1,0 +1,103 @@
+{
+  "epoch": 2,
+  "records": [
+    {
+      "audit_pair_ids": [
+        "audit_pair:e0c7889b5ac33a008c09274bb2bf83c6821d8c736a9b9bfd786516060b33ea5d"
+      ],
+      "context": {
+        "cell_id": "cell:06fbd43aa69633ed416f6a0a560d4f9609f265a2c7ed878017731bf160a5ba49",
+        "role": "scout"
+      },
+      "contraindications": [],
+      "effect_mean": 0.0,
+      "effects": [
+        0.0
+      ],
+      "extensions": {},
+      "intervention_option_id": "option:891ea7b12861dc0f82155592d8125872baca94baf5632c3b697d5a30629b17dc",
+      "lineage_ids": [
+        "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709"
+      ],
+      "memory_id": "causal_memory:98ea4ef83190141e9b8049ba5ec8896f4c3922b8ba7cb592878a6c9628845e93",
+      "promotion_min_support": 2,
+      "propensities": [
+        0.5
+      ],
+      "recency_epoch": 0,
+      "record_type": "causal_memory_record",
+      "schema_version": 1,
+      "scope": "cell",
+      "status": "quarantined",
+      "support": 1,
+      "uncertainty": 0.0
+    },
+    {
+      "audit_pair_ids": [
+        "audit_pair:923c22272f00e78fa935df4c796057d2986f430596db4e317dd03539487cc731"
+      ],
+      "context": {
+        "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+        "role": "mechanist"
+      },
+      "contraindications": [],
+      "effect_mean": 0.0,
+      "effects": [
+        0.0
+      ],
+      "extensions": {},
+      "intervention_option_id": "option:37c1dec8f311347e758ccac9feed43c2a0cb7c12ea430c9364b94688fdf805be",
+      "lineage_ids": [
+        "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+      ],
+      "memory_id": "causal_memory:c59b8fc1bd8e83b7327d4d45c154c8bfc6e9f2374eaaa1162724af6d530972cd",
+      "promotion_min_support": 2,
+      "propensities": [
+        0.5
+      ],
+      "recency_epoch": 1,
+      "record_type": "causal_memory_record",
+      "schema_version": 1,
+      "scope": "cell",
+      "status": "quarantined",
+      "support": 1,
+      "uncertainty": 0.0
+    },
+    {
+      "audit_pair_ids": [
+        "audit_pair:eb56c652ca81e2867bc6928f74246b81725b760823ee76134af289003f73557e",
+        "audit_pair:e784ae39716e3ff24e6fe5c7e32728743e0a80edd029c997a19ee5bf42ddf2f6"
+      ],
+      "context": {
+        "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+        "channel": "refinement",
+        "role": "challenger"
+      },
+      "contraindications": [],
+      "effect_mean": 0.0,
+      "effects": [
+        0.0,
+        0.0
+      ],
+      "extensions": {},
+      "intervention_option_id": "option:da0840d3495d251863a027151b3330d51c20e92e971a512ab9f6916b9b3a7ca7",
+      "lineage_ids": [
+        "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+      ],
+      "memory_id": "causal_memory:fec39d26ecac8eaabad4c1babf377faabf1eacbffabf3a4a6fcf62a828760fb8",
+      "promotion_min_support": 2,
+      "propensities": [
+        0.5,
+        0.5
+      ],
+      "recency_epoch": 1,
+      "record_type": "causal_memory_record",
+      "schema_version": 1,
+      "scope": "refinement_cell",
+      "status": "quarantined",
+      "support": 2,
+      "uncertainty": 0.0
+    }
+  ],
+  "schema_version": 1
+}

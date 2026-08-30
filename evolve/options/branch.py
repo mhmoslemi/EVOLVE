@@ -27,6 +27,7 @@ from evolve.types import (
     Proposal,
     ProvenanceEdge,
     RoleSnapshot,
+    VerifiedScientificState,
 )
 from evolve.archive.provenance import make_provenance_edge
 from evolve.verifier.evidence import ScientificVerificationResult
@@ -77,6 +78,32 @@ class BranchStepRequest:
     step_index: int
     parent_state_id: str
     cumulative_cost: Mapping[str, float]
+    parent_proposal: Optional[Proposal] = None
+    parent_state: Optional[VerifiedScientificState] = None
+
+    def __post_init__(self) -> None:
+        inline_parent = self.parent_proposal is not None or self.parent_state is not None
+        if inline_parent and (
+            self.parent_proposal is None or self.parent_state is None
+        ):
+            raise BranchExecutionError(
+                "an in-branch parent requires both its proposal and verified state"
+            )
+        if self.parent_state is None:
+            return
+        assert self.parent_proposal is not None
+        if self.parent_state.state_id != self.parent_state_id:
+            raise BranchExecutionError(
+                "in-branch parent state does not match parent_state_id"
+            )
+        if self.parent_proposal.proposal_id != self.parent_state.proposal_id:
+            raise BranchExecutionError(
+                "in-branch parent proposal does not match its verified state"
+            )
+        if self.parent_proposal.branch_id != self.branch.branch_id:
+            raise BranchExecutionError(
+                "in-branch parent proposal belongs to another branch"
+            )
 
 
 @dataclass(frozen=True)
@@ -244,6 +271,8 @@ def execute_branch(
     log_probabilities: List[Tuple[float, ...]] = []
     token_ids: List[Tuple[int, ...]] = []
     parent_state_id = branch.start_state_id
+    parent_proposal: Optional[Proposal] = None
+    parent_state: Optional[VerifiedScientificState] = None
     stop_reason: Optional[str] = None
     step_count = 0
 
@@ -268,6 +297,8 @@ def execute_branch(
             step_index=state.step_index,
             parent_state_id=parent_state_id,
             cumulative_cost=dict(option_cost),
+            parent_proposal=parent_proposal,
+            parent_state=parent_state,
         )
         result = executor(request)
         if not isinstance(result, BranchStepResult):
@@ -317,6 +348,8 @@ def execute_branch(
                 )
             )
             parent_state_id = state_obj.state_id
+            parent_proposal = result.proposal
+            parent_state = state_obj
 
         if bool(evidence.flags.get("excluded_from_scientific_updates", False)):
             stop_reason = "infrastructure_failure"

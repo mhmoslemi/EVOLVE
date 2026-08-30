@@ -1,0 +1,1 @@
+TypeError: Object of type FrozenDict is not JSON serializable

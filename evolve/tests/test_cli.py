@@ -8,7 +8,7 @@ import sys
 import pytest
 
 import evolve.cli as cli_module
-from evolve.cli import build_dry_plan, main
+from evolve.cli import build_dry_plan, format_startup_banner, main
 from evolve.config import load_evolve_config, parse_evolve_args
 
 
@@ -20,6 +20,7 @@ problem: erdos
 model_name: fake/model
 gpu_ids: []
 num_gpus: 0
+num_seed_states: 4
 evolve:
   budget:
     epochs: 2
@@ -82,6 +83,33 @@ def test_num_steps_is_total_epoch_alias_in_dry_plan(tmp_path):
     plan = build_dry_plan(config, metadata["config_hash"])
     assert plan["epochs_total"] == 7
     assert resolved["num_steps"] == 7
+
+
+def test_startup_banner_separates_sections_and_preserves_width(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    _config(config_path)
+    config, _, metadata = load_evolve_config(
+        ["--config", str(config_path)], cwd=tmp_path
+    )
+
+    banner = format_startup_banner(config, metadata, width=100)
+    lines = banner.splitlines()
+    spacer = "│" + " " * 98 + "│"
+
+    assert all(len(line) == 100 for line in lines)
+    assert lines.count(spacer) == 4
+    assert "4 deterministic problem seeds" in banner
+    assert "independently verified" in banner
+    for title in (
+        "MODEL & SAMPLING",
+        "ROLE ADAPTER LEARNING",
+        "RESOURCES",
+        "SEARCH BUDGET",
+    ):
+        section_index = next(
+            index for index, line in enumerate(lines) if f" {title} " in line
+        )
+        assert lines[section_index - 1] == spacer
 
 
 def test_invalid_config_exits_before_runtime_import(tmp_path, capsys):

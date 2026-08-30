@@ -1,0 +1,9 @@
+{
+  "attempt": 0,
+  "branch_id": "branch:306ab273280170e5c7fde53afe9553621b72738a54bbb520de8d6f690447c200",
+  "exception_type": "ArtifactReferenceError",
+  "message": "unknown state_id 'state:b826b2d8db5ede4525c533bdaac1e94e8e3f69a08bbff93e6bc29c12cce34461'",
+  "schema_version": 1,
+  "seed": null,
+  "step_index": 1
+}

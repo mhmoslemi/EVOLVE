@@ -1,0 +1,55 @@
+{
+  "advantages": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "audit_side": null,
+  "branch_ids": [
+    "branch:bd60e00ffeb38aed22a60f8d2287bd9d17a16c70b11da57caa0080d675e442c9",
+    "branch:774c626c6263a352618ae5c13043f265ee1bc13bc0790846466ed0b1803b13e1",
+    "branch:67ce18f9462d24a1ce8c4d8648b838cfbc0d02ad6505d86d934e222e6e0e1417",
+    "branch:e003e2bad97ea9e653e7a91076282a5f139fc6c777abab768cf7207e605981d2"
+  ],
+  "channel": "production",
+  "context_id": "context:7fc0c1b900f985ed726cefedb02f8991d012ade34605884edbb4124b26b65f55",
+  "cost_class": "standard",
+  "extensions": {},
+  "frozen_record_threshold": 0.16666666666666666,
+  "generation_settings": {
+    "max_new_tokens": 128,
+    "memory_records": [],
+    "role": "scout",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "group_id": "learning_group:ce9bccb9e71afe7930acb0206406788fb3db62e57bcefd92cf63280f7e13dcd5",
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "homogeneous": true,
+  "horizon": 1,
+  "objective": "ordergrad",
+  "objective_version": "ordergrad_lr_top_m_k_n_minus_1_v2",
+  "on_policy": true,
+  "option_id": "option:891ea7b12861dc0f82155592d8125872baca94baf5632c3b697d5a30629b17dc",
+  "outcome_ids": [
+    "branch_outcome:c1a52bea463842b61d525aa686d9416fa30944c7ae258cfeabc80f115829e55c",
+    "branch_outcome:cad351ae25431929748f7ab372258fc55f5dbe16875897d0f9c85d26fd07a495",
+    "branch_outcome:492d7c5bdfbcc75f1917d93ef4c24d337d78d1e8a46f15de89297365fea5999a",
+    "branch_outcome:5d8ae411286763a879dc1894645b8cf6d8a9638534c4442e73d42e48cc4229c0"
+  ],
+  "persisted_inputs": true,
+  "policy_snapshot_id": "role_snapshot:6597fdaaa481ee98b3ac9e7a4c3482b50e6720b17374834cfc0b24e44d4599a6",
+  "record_type": "learning_group",
+  "refinement_attempt": null,
+  "role": "scout",
+  "schema_version": 1,
+  "start_cell_id": "cell:fb94e6256c00a369d14c2d4468290b25ff4106bf848ea543cc16dffc2d250e60",
+  "top_m": 1,
+  "trace_ids": [
+    "policy_trace:57cd3f166da8b9cd2dc3f0d2124524b86cd0a59efb7a84e3d9c9233c7aebceb0",
+    "policy_trace:89215a719fdfa91619df05a4b522ed8d70405d929b0904250bed5d3b0dadc067",
+    "policy_trace:9401711efcc9f6dd1c2e3c8ac528a5a7852bf0c5426fc3694320abba89438803",
+    "policy_trace:95663e3a8982110b495cecbbf7ec04c16f68d86b561831e237daf8a044ff14a8"
+  ]
+}

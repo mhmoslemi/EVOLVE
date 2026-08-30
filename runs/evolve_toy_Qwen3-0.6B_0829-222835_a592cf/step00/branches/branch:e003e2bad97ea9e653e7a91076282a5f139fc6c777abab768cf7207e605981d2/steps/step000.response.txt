@@ -1,0 +1,4 @@
+<think>
+Okay, let's tackle this problem. So, I need to create a deterministic two-dimensional toy search program according to the instructions. The target is to find a point [x, y] in [-8, 8] such that the squared distance to (3, -2) is zero. My previous attempt was [-4, 4], which has a squared distance of 85, but I need to come up with another path.
+
+First, I understand that the native score is the squared distance, so my new solution's score should be zero. The problem says to define a top-level function called `run_t

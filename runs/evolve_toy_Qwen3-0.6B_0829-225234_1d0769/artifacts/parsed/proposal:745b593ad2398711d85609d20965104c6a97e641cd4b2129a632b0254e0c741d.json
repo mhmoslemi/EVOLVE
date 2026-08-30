@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:01919bed3858a580cc743750bd8b279cfbf3857ae40ec3ddd755e5664d25e3ed",
+  "created_at": "2026-08-30T02:58:59.487880Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:745b593ad2398711d85609d20965104c6a97e641cd4b2129a632b0254e0c741d",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "4ce46ccbc611c466bbaea901301ccce1fe432a844a6478005551291820f88bde",
+  "source_text": "```python\n# Define the target squared distance (lower is better)\ntarget_squared_distance = 0.0\n\n# Native score function\ndef native_score(x, y):\n    return (x - 3) ** 2 + (y + 2) ** 2\n\n# Define the run_toy function to evolve towards the target\ndef run_toy():\n    # Initialize with the previous parent point\n    initial_point = [-4, -4]\n    \n    # Define the constrained variables (x and y are between -8 and 8)\n    x_min, x_max = -8, 8\n    y"
+}

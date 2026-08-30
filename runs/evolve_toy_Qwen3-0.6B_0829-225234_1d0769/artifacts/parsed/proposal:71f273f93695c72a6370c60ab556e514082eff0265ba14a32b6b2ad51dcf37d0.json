@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:7e686f4b02f4b1de1e0d6de6a01b534017501235772ada096cc246ce9e2aad52",
+  "created_at": "2026-08-30T02:58:51.509020Z",
+  "extensions": {},
+  "parent_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+  "parsed_candidate": [
+    2,
+    5
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:71f273f93695c72a6370c60ab556e514082eff0265ba14a32b6b2ad51dcf37d0",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "a42dff69c25154e48c908ff9410beb91b62d22a506b4e5e9372dca8f3585b4ba",
+  "source_text": "```python\n# Define the target quadrant\nquadrant = \"south_east\"\n\n# Define the radial band\nradial_band = \"middle\"\n\n# Define the initial point\ninitial_point = [4, -4]\n\n# Define the top-level function to compute the squared distance\ndef run_toy():\n    return [2, 5]\n\n# Construct the counterexample\ncandidate = [2, 5]\n```"
+}

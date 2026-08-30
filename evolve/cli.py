@@ -133,7 +133,12 @@ def format_startup_banner(
     lines = ["╭" + "─" * inner + "╮"]
     lines.append("│" + " EVOLVE · VERIFIED SCIENTIFIC SEARCH ".center(inner) + "│")
 
-    def section(title: str) -> None:
+    def spacer() -> None:
+        lines.append("│" + " " * inner + "│")
+
+    def section(title: str, *, separated: bool = True) -> None:
+        if separated:
+            spacer()
         marker = f" {title} "
         left = 2
         right = inner - left - len(marker)
@@ -162,10 +167,14 @@ def format_startup_banner(
     if len(config_hash) > 16:
         config_hash = config_hash[:16] + "…"
 
-    section("RUN")
+    section("RUN", separated=False)
     row("mode", mode)
     row("problem", problem)
     row("config", f"schema {config.schema_version} · {config_hash}")
+    row(
+        "bootstrap",
+        f"{config.num_seed_states} deterministic problem seeds · independently verified",
+    )
 
     section("MODEL & SAMPLING")
     row("backbone", config.model_name)
@@ -237,8 +246,7 @@ def format_startup_banner(
     row(
         "totals",
         f"epochs={config.evolve.budget.epochs} · "
-        f"verifier_calls={config.evolve.budget.verifier_calls:,} · "
-        f"seed_states={config.num_seed_states}",
+        f"verifier_calls={config.evolve.budget.verifier_calls:,}",
     )
     row(
         "branches",

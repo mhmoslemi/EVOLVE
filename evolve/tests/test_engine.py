@@ -7,6 +7,7 @@ import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
@@ -16,15 +17,17 @@ from evolve.engine import (
     EngineError,
     EngineWorkers,
     EvolveEngine,
+    _json_native_answer_payload,
     _latest_completed_checkpoint,
 )
-from evolve.ids import content_hash
+from evolve.ids import content_hash, content_id
 from evolve.learning.trainer import (
     GradientStepRequest,
     GradientStepResult,
 )
 from evolve.runio import create_fresh_run_layout, open_existing_run_layout
-from evolve.types import Channel
+from evolve.reporting.console import format_best_answer, format_progress, format_status
+from evolve.types import Channel, FrozenDict, VerifiedScientificState
 from evolve.viz.run import main as viz_main
 from evolve.verifier import ProblemScientificAdapter, VerificationPolicy
 from evolve.workers.verification import (
@@ -331,7 +334,73 @@ def _assert_machine_readable_artifacts(run_dir: Path) -> None:
     assert not list(run_dir.rglob("*.tmp"))
 
 
-def test_fake_epoch_and_completed_barrier_resume(tmp_path: Path) -> None:
+def test_best_answer_projection_thaws_erdos_payload_for_json() -> None:
+    answer_payload = {
+        "schema_version": 1,
+        "problem": "erdos",
+        "n_points": 4,
+        "h_values": [0.0, 1.0, 1.0, 0.0],
+    }
+    state = VerifiedScientificState(
+        state_id=content_id("state", {"case": "erdos-best"}),
+        proposal_id=content_id("proposal", {"case": "erdos-best"}),
+        evidence_id=content_id("evidence", {"case": "erdos-best"}),
+        problem_id="erdos",
+        answer_payload=answer_payload,
+        resolved=True,
+        admitted=True,
+        confirmed=True,
+        internal_reward=1.0,
+    )
+
+    assert isinstance(state.answer_payload, FrozenDict)
+    projected = _json_native_answer_payload(state)
+    assert projected == answer_payload
+    assert isinstance(projected, dict)
+    assert isinstance(projected["h_values"], list)
+    json.dumps({"answer_payload": projected}, allow_nan=False)
+    rendered = format_best_answer(
+        SimpleNamespace(state=state, rendered_paths=())
+    )
+    assert '"problem": "erdos"' in rendered
+    assert '"h_values": [' in rendered
+
+
+def test_progress_format_and_live_status_expose_stage_and_remaining_work() -> None:
+    rendered = format_progress(
+        "production generation + verification",
+        epoch=1,
+        total_epochs=30,
+        completed=3,
+        total=8,
+        unit="branches",
+        detail="5 verifications completed",
+        bar_width=8,
+    )
+    assert "epoch 2/30" in rendered
+    assert "3/8 branches (38%, 5 left)" in rendered
+    assert "5 verifications completed" in rendered
+
+    status = format_status(
+        {
+            "run_id": "run:test",
+            "epoch": 1,
+            "archive_coverage": 0.5,
+            "live_epoch": {
+                "epoch": 1,
+                "total_epochs": 30,
+                "stage": "production generation + verification",
+                "completed_branches": 3,
+                "total_branches": 8,
+                "completed_verifications": 5,
+            },
+        }
+    )
+    assert "production generation + verification" in status
+    assert "3/8 branches" in status
+
+
+def test_fake_epoch_and_completed_barrier_resume(tmp_path: Path, capsys) -> None:
     config_path = _write_config(tmp_path / "toy.yaml", epochs=1)
     runs_root = tmp_path / "runs"
     config, resolved, metadata = _load_fresh(config_path)
@@ -348,6 +417,11 @@ def test_fake_epoch_and_completed_barrier_resume(tmp_path: Path) -> None:
     ) == 0
     assert first_workers.shutdown_calls == 1
     run_dir = first_workers._run_dir()
+    fresh_output = capsys.readouterr().out
+    assert f"EVOLVE · fresh run directory · {run_dir.resolve()}" in fresh_output
+    assert "EVOLVE · epoch 1/1 · production generation + verification" in fresh_output
+    assert "EVOLVE · epoch 1/1 · role learning" in fresh_output
+    assert "origin=deterministic problem bootstrap seed" in fresh_output
     bootstrap_before = (run_dir / "bootstrap.summary.json").read_bytes()
     epoch_zero_before = (run_dir / "step00/step00.summary.json").read_bytes()
 

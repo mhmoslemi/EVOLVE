@@ -1,0 +1,12 @@
+```python
+def run_toy():
+    # We are to find the pair (x, y) such that the squared distance to (3, -2) is 0.0
+    # and we can Affine-EM add perturbations without significant cost gaps
+    # We will evaluate at [-4, -4] and return it if it satisfies the condition
+    # Otherwise, we try a nearby point with zero cost
+    
+    # Attempt to refine the solution
+    if abs(3 - (-4))**2 == 0.0:
+        return [-4, -4]
+    
+    # Try

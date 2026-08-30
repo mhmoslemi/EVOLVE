@@ -1,0 +1,18 @@
+{
+  "cell_id": "cell:9fa71737936b6545a9f76b5b7183e32c3e8ab6371b40205175d5478480f285f1",
+  "champion_changed": false,
+  "champion_state_id": null,
+  "duplicate": false,
+  "evicted_slot_state_ids": [
+    "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409"
+  ],
+  "evidence_id": "evidence:91dd8346b2553a2355122abc7ecaeb293c4121191ca01ec1b25c8fe7410f2301",
+  "promising_state_ids": [
+    "state:ed32ca6fb7453440f185cf116c6060d1da606634cf49e4df1b57697848fb4d6b"
+  ],
+  "schema_version": 1,
+  "state_id": "state:705efa56d9588b34a76373348544cfa9c74f294fb89ddd9e3695f9c8bb62230c",
+  "stepping_stone_state_ids": [
+    "state:5049658131c8e1db18bf12a29c0494d82d5ed05833d02fdc9ad887daf2b1b79b"
+  ]
+}

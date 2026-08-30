@@ -358,7 +358,7 @@ permission before mutating it. The overlay is
 and `openai>=2.25.0,<3`.
 
 ```sh
-cd /absolute/path/to/TTT-small
+cd /absolute/path/to/EVOLVE
 git status --short
 nvidia-smi
 /absolute/path/to/python -m pip check

@@ -1,0 +1,15 @@
+{
+  "descriptor_id": "descriptor:7f60aeed50e5026f689c0e1a6bc597e72e49ef6594c60929934d4b6d1e4d1696",
+  "dimensions": {
+    "binarity_bin": "low",
+    "resolution_bin": "medium",
+    "symmetry_bin": "mixed",
+    "transition_bin": "medium"
+  },
+  "extensions": {},
+  "function_version": "erdos_output_structure_v1",
+  "method_complete": true,
+  "problem_id": "erdos",
+  "record_type": "descriptor",
+  "schema_version": 1
+}

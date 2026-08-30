@@ -1,0 +1,42 @@
+{
+  "arm": {
+    "arm_id": "arm:7ee86787584d3e985fbf8593cc8dc4de1f7e078c00940018f9cd85bd08ef09fb",
+    "cell_id": "cell:dd60204757cef2324337a195b5214e62331bb982bffec700915cc161a7c6dae9",
+    "channel": "production",
+    "cost_class": "standard",
+    "expected_cost": {
+      "verifier_calls": 4.0
+    },
+    "extensions": {},
+    "hard_cost": {
+      "verifier_calls": 8.0
+    },
+    "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+    "horizon": 4,
+    "option_id": "option:e08d9ca6d319ee3f063540f59f3bab40f3a019770f2673f1ed5d4c2ea16de254",
+    "record_type": "allocation_arm",
+    "role": "scout",
+    "schema_version": 1
+  },
+  "branch_id": "branch:20f46257ad2ba3d9d9b04d26752d626ad0cf722c62379b1b3504fc1cbc6fcf75",
+  "debit_key": "epoch0:allocation0:replica2:verifier_calls",
+  "memory_enabled": true,
+  "ordinal": 2,
+  "role_snapshot": {
+    "adapter_hash": "808e4030a129a7b0b1d1c75b55c302f640dbc363cb8605e6aeb504519f20ae38",
+    "adapter_id": "adapter:bfa43768bd61763fc6c7d8db4b748e3d2de2958e5ad8be66a0d99df15c90c8c6",
+    "adapter_version": "adapter_v000000",
+    "epoch": 0,
+    "extensions": {},
+    "frozen": true,
+    "optimizer_state_id": "optimizer:8386b61ccd98e4b0ef106244266d821f1b85077cc6cdb4f24013fba8f50741c0",
+    "policy_version": "isolated_role_policy_v1",
+    "record_type": "role_snapshot",
+    "rng_seed": 4170853092410763525,
+    "role": "scout",
+    "run_id": "run:3ae060fa295e48ffce0313359d68ad4150d7c16b9df219d7712bed4d3a75eeec",
+    "schema_version": 1,
+    "snapshot_id": "role_snapshot:5406e4edab45f7f864e914cdfd472cbc00a04d6efde29035d7cc390d22dba322"
+  },
+  "schema_version": 1
+}

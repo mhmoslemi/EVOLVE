@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:b466f6350df137fe29a626ab64539180fa754a673cc535042b53ef4be7bbf1b7",
+  "created_at": "2026-08-30T02:55:36.923032Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:1120da20402508516ed19cbf8cb0b0466db03e32aad65b340fa805a773dfecd4",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "9c25be0fbaf42a9e21e2046953308d96de5cbf876989ef7084fa99a2f7cd890a",
+  "source_text": "Scientific invariant: The parent point is [4, 4], and the algorithm should evolve to a point where the squared distance to [3, -2] is 0.0.\n\nCandidate:\n```python\nrun_toy() -> [3, -2]\n```"
+}

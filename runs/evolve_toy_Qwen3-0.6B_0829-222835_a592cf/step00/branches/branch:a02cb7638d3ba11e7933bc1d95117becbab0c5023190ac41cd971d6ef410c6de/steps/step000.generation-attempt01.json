@@ -1,0 +1,9 @@
+{
+  "attempt": 1,
+  "branch_id": "branch:a02cb7638d3ba11e7933bc1d95117becbab0c5023190ac41cd971d6ef410c6de",
+  "exception_type": "TypeError",
+  "message": "Object of type FrozenDict is not JSON serializable",
+  "schema_version": 1,
+  "seed": null,
+  "step_index": 0
+}

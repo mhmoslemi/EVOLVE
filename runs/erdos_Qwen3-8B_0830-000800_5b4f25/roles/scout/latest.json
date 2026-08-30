@@ -1,0 +1,7 @@
+{
+  "adapter": "adapter_epoch000",
+  "artifact_hash": "7766a58eacd3a22ef222932415a9f5f745b5e05847b90bab70e9e4cd2ba53c38",
+  "epoch": 0,
+  "logical_adapter_hash": "d16f917d31a5bab292e996740544bd24d7dc4d6b5e4e3facc5775e8844f30b22",
+  "optimizer": "adapter_epoch000/optimizer_state.pt"
+}

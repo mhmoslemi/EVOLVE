@@ -1,0 +1,62 @@
+{
+  "config_hash": "a2629cd0d88025db9e4cce2a687a33a335ce2b18ead790adf97bf0e1d78837a8",
+  "config_schema_version": 1,
+  "created_at": "2026-08-30T02:28:36.469851Z",
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "8bfa9c0e1b42655f3337d0c6847aba16d1289fca",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "auto",
+      "physical_id": 0,
+      "purpose": "barrier_learning_and_tensor_parallel_generation"
+    }
+  ],
+  "host": {
+    "hostname": "kn174",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6442Y-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "Qwen/Qwen3-0.6B",
+    "training_backend": "hf",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "run_name": "evolve_toy_Qwen3-0.6B_0829-222835_a592cf",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "a2629cd0d88025db9e4cce2a687a33a335ce2b18ead790adf97bf0e1d78837a8",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "evaluation_is_serialized_with_model_phase": false,
+    "exclusive_evaluation_gpu_id": null,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 12,
+    "runtime_visible_gpu_ids": [
+      0
+    ],
+    "tensor_parallel_size": 1,
+    "training_gpu_id": 0,
+    "vllm_quantization": "auto"
+  }
+}

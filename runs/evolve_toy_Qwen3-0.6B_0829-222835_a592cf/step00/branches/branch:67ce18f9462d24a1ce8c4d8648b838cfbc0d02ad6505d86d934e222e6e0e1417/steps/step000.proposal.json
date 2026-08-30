@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:67ce18f9462d24a1ce8c4d8648b838cfbc0d02ad6505d86d934e222e6e0e1417",
+  "created_at": "2026-08-30T02:30:42.576083Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:eb663cbf86cdf8fe076d6c2de19f2f38b2909643a7ad867b535b4e411ab4033b",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "d5ecb7130bd127b540c29a48df163860fa8dda6cafff5b6be77a1695b5355048",
+  "source_text": "<think>\nOkay, let's see. The problem is to solve a deterministic two-dimensional toy search with a specific native score function. The target is to have a squared distance of 0.0. The original solution was [4,4], and it achieved 85.0. The user wants me to come up with a different approach, specifically using the frozen EVOLVE assignment. \n\nFirst, I need to understand what's required here. The program should return a pair [x, y] between -8 and 8, with the same native score function. The frozen EVOLVE assignment suggests exploring structurally different possibilities. The"
+}

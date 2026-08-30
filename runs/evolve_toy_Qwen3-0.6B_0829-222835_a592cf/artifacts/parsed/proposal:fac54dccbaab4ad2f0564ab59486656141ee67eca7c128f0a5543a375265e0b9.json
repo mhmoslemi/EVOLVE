@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:3aa93db76b5c47cdf38e8c58091dea8e1f5f10dc4a684a7cb05d67cba6c7e5bc",
+  "created_at": "2026-08-30T02:32:02.642226Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:fac54dccbaab4ad2f0564ab59486656141ee67eca7c128f0a5543a375265e0b9",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "9843d800ffc445b90709ed28b385fbb78057dd2812264bb66ab4270433e317a1",
+  "source_text": "<think>\nOkay, let's see. The user wants me to create a new candidate for the toy search problem. The original solution was [-4,4], with a squared distance of 85. The target is 0.0. My task is to find another point within [-8,8] that meets the criteria.\n\nFirst, I need to understand what the function run_toy() does. It should compute the squared distance to (3,-2) and return the point. The previous program's optimal point was [-4,4], so I need to find another point where this distance is 0.\n\nLet me check"
+}

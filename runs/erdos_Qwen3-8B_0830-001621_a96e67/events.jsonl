@@ -1,0 +1,1 @@
+{"event_type":"barrier_committed","idempotency_key":"barrier-committed:bootstrap","payload":{"checkpoint":"checkpoint_epoch000.json","checkpoint_hash":"c73f456fac921c6f0820494b2c7771340412f336fcc3f55a230139b1d1d04366","epoch":0,"kind":"bootstrap"},"schema_version":1,"sequence":1,"timestamp":"2026-08-30T04:16:47.038327Z"}

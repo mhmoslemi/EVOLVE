@@ -1,0 +1,16 @@
+```python
+def run_toy():
+    # Define the target point with squared distance to (3, -2)
+    target = [3, -2]
+    
+    # Coordinate search within bounds [-8, 8]
+    for x in range(-8, 9):
+        for y in range(-8, 9):
+            distance_squared = (x - target[0])**2 + (y - target[1])**2
+            if distance_squared < 0.0:
+                return [x, y]
+                
+# Initial point used during training
+initial_point = [-4, -4]
+
+# Execute the run

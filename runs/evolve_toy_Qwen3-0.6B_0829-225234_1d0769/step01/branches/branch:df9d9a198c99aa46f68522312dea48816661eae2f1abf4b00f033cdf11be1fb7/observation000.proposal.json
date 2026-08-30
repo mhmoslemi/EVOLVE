@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:df9d9a198c99aa46f68522312dea48816661eae2f1abf4b00f033cdf11be1fb7",
+  "created_at": "2026-08-30T02:59:08.751198Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:11344c28b6219b943d672f40ceac33e0b5644bc3e2d87537ed1218f51b3f6018",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "c00a083228bb35b4740d5613563cd041dd965b7673edd05b703ef1e082c8643c",
+  "source_text": "```python\ndef run_toy():\n    # We are to find the pair (x, y) such that the squared distance to (3, -2) is 0.0\n    # and we can Affine-EM add perturbations without significant cost gaps\n    # We will evaluate at [-4, -4] and return it if it satisfies the condition\n    # Otherwise, we try a nearby point with zero cost\n    \n    # Attempt to refine the solution\n    if abs(3 - (-4))**2 == 0.0:\n        return [-4, -4]\n    \n    # Try"
+}

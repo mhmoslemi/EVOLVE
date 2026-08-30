@@ -9,15 +9,113 @@ from __future__ import annotations
 
 import gc
 import hashlib
+import json
+import os
+import sys
+import threading
+from contextlib import contextmanager, nullcontext
 from importlib.metadata import PackageNotFoundError, version
+from logging.config import dictConfig
 from pathlib import Path
-from typing import AbstractSet, Any, Dict, Mapping, Optional, Tuple
+from typing import AbstractSet, Any, Dict, Iterator, Mapping, Optional, Tuple
 
 from evolve.types import Role
+from evolve.runio import ImmutableWriteError, write_immutable_json
 
 
 class VLLMRuntimeError(RuntimeError):
     """The vLLM engine or one of its frozen LoRA requests is invalid."""
+
+
+_STANDARD_STREAM_REDIRECT_LOCK = threading.RLock()
+
+
+def _logging_config_document(log_path: Path) -> Dict[str, Any]:
+    """Build vLLM's multiprocess-safe, append-only per-run file config."""
+
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "vllm_file": {
+                "format": (
+                    "%(levelname)s %(asctime)s "
+                    "[pid=%(process)d %(name)s:%(lineno)d] %(message)s"
+                ),
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            }
+        },
+        "handlers": {
+            "vllm_file": {
+                "class": "logging.FileHandler",
+                "filename": str(log_path.resolve()),
+                "mode": "a",
+                "encoding": "utf-8",
+                "formatter": "vllm_file",
+                "level": "INFO",
+            }
+        },
+        "loggers": {
+            "vllm": {
+                "handlers": ["vllm_file"],
+                "level": "INFO",
+                "propagate": False,
+            }
+        },
+    }
+
+
+def _configure_vllm_file_logging(log_path: Path) -> Path:
+    """Persist and activate one run-local logging config before importing vLLM."""
+
+    resolved_log = Path(log_path).resolve()
+    resolved_log.parent.mkdir(parents=True, exist_ok=True)
+    config_path = resolved_log.with_suffix(".logging.json")
+    document = _logging_config_document(resolved_log)
+    try:
+        write_immutable_json(config_path, document)
+    except ImmutableWriteError:
+        if json.loads(config_path.read_text(encoding="utf-8")) != document:
+            raise VLLMRuntimeError(
+                f"vLLM logging configuration conflict: {config_path}"
+            )
+    os.environ["VLLM_CONFIGURE_LOGGING"] = "1"
+    os.environ["VLLM_LOGGING_CONFIG_PATH"] = str(config_path)
+    os.environ["VLLM_LOGGING_COLOR"] = "0"
+    return config_path
+
+
+def _flush_standard_streams() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except (AttributeError, OSError, ValueError):
+            pass
+
+
+@contextmanager
+def _append_standard_streams(log_path: Path, *, phase: str) -> Iterator[None]:
+    """Capture dependency prints/warnings while preserving raised exceptions."""
+
+    resolved = Path(log_path).resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    with _STANDARD_STREAM_REDIRECT_LOCK, resolved.open(
+        "a", encoding="utf-8", buffering=1
+    ) as handle:
+        handle.write(f"\n=== EVOLVE vLLM {phase} ===\n")
+        _flush_standard_streams()
+        saved_stdout = os.dup(1)
+        saved_stderr = os.dup(2)
+        try:
+            os.dup2(handle.fileno(), 1)
+            os.dup2(handle.fileno(), 2)
+            yield
+        finally:
+            _flush_standard_streams()
+            os.dup2(saved_stdout, 1)
+            os.dup2(saved_stderr, 2)
+            os.close(saved_stdout)
+            os.close(saved_stderr)
 
 
 def _positive_lora_id(snapshot_id: str) -> int:
@@ -119,7 +217,13 @@ def _require_vllm_openai_schema() -> None:
 class TensorParallelVLLM:
     """One offline vLLM engine sharded across every configured generation GPU."""
 
-    def __init__(self, *, config: Any, adapter_paths: Mapping[Role, Path]) -> None:
+    def __init__(
+        self,
+        *,
+        config: Any,
+        adapter_paths: Mapping[Role, Path],
+        log_path: Optional[Path] = None,
+    ) -> None:
         if config.vllm_tensor_parallel_size != len(config.gpu_ids):
             raise VLLMRuntimeError(
                 "vLLM tensor parallel size must equal the authoritative "
@@ -136,49 +240,73 @@ class TensorParallelVLLM:
         if len({str(path) for path in paths.values()}) != len(paths):
             raise VLLMRuntimeError("role adapters cannot alias one filesystem path")
 
-        _require_vllm_openai_schema()
-        try:
-            from vllm import LLM
-            from vllm.engine.arg_utils import EngineArgs
-        except ImportError as exc:
-            raise VLLMRuntimeError(
-                "generation_backend=vllm requires the vllm package"
-            ) from exc
-
-        # `load_in_4bit` belongs exclusively to the HF/Unsloth training
-        # loader. Never forward it as vLLM in-flight BitsAndBytes quantization:
-        # doing so changes the inference base and can invalidate role adapters.
-        # A pre-quantized BnB repository is also incompatible with tensor
-        # parallel vLLM, so reject that topology before allocating model memory.
-        try:
-            from transformers import AutoConfig
-
-            hf_config = AutoConfig.from_pretrained(
-                config.model_name, trust_remote_code=True
-            )
-            quantization = getattr(hf_config, "quantization_config", None) or {}
-            quant_method = str(quantization.get("quant_method", "")).lower()
-            if quant_method == "bitsandbytes" and config.vllm_tensor_parallel_size > 1:
-                raise VLLMRuntimeError(
-                    "pre-quantized BitsAndBytes checkpoints cannot use vLLM "
-                    "tensor parallelism; use a native/MXFP4 inference base or "
-                    "one GPU. Training load_in_4bit does not quantize vLLM."
-                )
-        except VLLMRuntimeError:
-            raise
-        except Exception as exc:
-            raise VLLMRuntimeError(
-                "could not inspect the inference model quantization before vLLM startup"
-            ) from exc
-
         self.config = config
         self.adapter_paths = paths
+        self.log_path = Path(log_path).resolve() if log_path is not None else None
+        self.logging_config_path = (
+            _configure_vllm_file_logging(self.log_path)
+            if self.log_path is not None
+            else None
+        )
+        if self.log_path is not None:
+            # Configure the owning process directly as well as exporting the
+            # file for spawned workers. This remains correct if another model
+            # package happened to import vLLM before EVOLVE reached this phase.
+            dictConfig(_logging_config_document(self.log_path))
+        capture = (
+            _append_standard_streams(self.log_path, phase="startup")
+            if self.log_path is not None
+            else nullcontext()
+        )
+        with capture:
+            _require_vllm_openai_schema()
+            try:
+                from vllm import LLM
+                from vllm.engine.arg_utils import EngineArgs
+            except ImportError as exc:
+                raise VLLMRuntimeError(
+                    "generation_backend=vllm requires the vllm package"
+                ) from exc
+
+            # `load_in_4bit` belongs exclusively to the HF/Unsloth training
+            # loader. Never forward it as vLLM in-flight BitsAndBytes
+            # quantization: doing so changes the inference base and can
+            # invalidate role adapters. A pre-quantized BnB repository is also
+            # incompatible with tensor parallel vLLM, so reject that topology
+            # before allocating model memory.
+            try:
+                from transformers import AutoConfig
+
+                hf_config = AutoConfig.from_pretrained(
+                    config.model_name, trust_remote_code=True
+                )
+                quantization = getattr(hf_config, "quantization_config", None) or {}
+                quant_method = str(quantization.get("quant_method", "")).lower()
+                if (
+                    quant_method == "bitsandbytes"
+                    and config.vllm_tensor_parallel_size > 1
+                ):
+                    raise VLLMRuntimeError(
+                        "pre-quantized BitsAndBytes checkpoints cannot use vLLM "
+                        "tensor parallelism; use a native/MXFP4 inference base "
+                        "or one GPU. Training load_in_4bit does not quantize vLLM."
+                    )
+            except VLLMRuntimeError:
+                raise
+            except Exception as exc:
+                raise VLLMRuntimeError(
+                    "could not inspect the inference model quantization before "
+                    "vLLM startup"
+                ) from exc
+
+            engine_options = _build_engine_options(
+                config, supported_engine_args=_engine_arg_names(EngineArgs)
+            )
+            self.engine = LLM(**engine_options)
+
         self._lora_id_owners: Dict[int, str] = {}
         self._request_ids = set()
-        engine_options = _build_engine_options(
-            config, supported_engine_args=_engine_arg_names(EngineArgs)
-        )
-        self.engine = LLM(**engine_options)
+        self._capture_first_generation = self.log_path is not None
 
     def generate(
         self,
@@ -226,19 +354,27 @@ class TensorParallelVLLM:
             seed=int(seed),
             logprobs=1,
         )
+        capture = (
+            _append_standard_streams(self.log_path, phase="first generation")
+            if self._capture_first_generation and self.log_path is not None
+            else nullcontext()
+        )
         try:
-            outputs = self.engine.generate(
-                [prompt],
-                sampling_params=sampling,
-                lora_request=lora_request,
-                use_tqdm=False,
-            )
+            with capture:
+                outputs = self.engine.generate(
+                    [prompt],
+                    sampling_params=sampling,
+                    lora_request=lora_request,
+                    use_tqdm=False,
+                )
         except BaseException:
             # A failed call may be retried by the controller under the same
             # logical sample identity after an engine restart, but never
             # aliased to another live request in this engine instance.
             self._request_ids.discard(request_id)
             raise
+        finally:
+            self._capture_first_generation = False
         if len(outputs) != 1 or len(outputs[0].outputs) != 1:
             raise VLLMRuntimeError("vLLM returned an unexpected output cardinality")
         completion = outputs[0].outputs[0]
@@ -258,12 +394,18 @@ class TensorParallelVLLM:
         return completion.text, token_ids, tuple(token_logprobs)
 
     def shutdown(self) -> None:
-        shutdown = getattr(self.engine, "shutdown", None)
-        if not callable(shutdown):
-            engine = getattr(self.engine, "llm_engine", None)
-            shutdown = getattr(engine, "shutdown", None)
-        if callable(shutdown):
-            shutdown()
+        capture = (
+            _append_standard_streams(self.log_path, phase="shutdown")
+            if self.log_path is not None
+            else nullcontext()
+        )
+        with capture:
+            shutdown = getattr(self.engine, "shutdown", None)
+            if not callable(shutdown):
+                engine = getattr(self.engine, "llm_engine", None)
+                shutdown = getattr(engine, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
         del self.engine
         gc.collect()
         try:
@@ -280,6 +422,8 @@ __all__ = [
     "TensorParallelVLLM",
     "VLLMRuntimeError",
     "_build_engine_options",
+    "_configure_vllm_file_logging",
     "_engine_arg_names",
+    "_logging_config_document",
     "_require_vllm_openai_schema",
 ]

@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:d3c70f4670dace54153bcc26fe01b0d9198afb9bce6a428db990a800ea291874",
+  "created_at": "2026-08-30T02:54:53.980104Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": [
+    4,
+    4
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:4759291a1cb8a32e0e6bd14762501621a31a67618f587c3197d0dd936351c193",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "2a208bf9ca71b7e3373e595699954063e13fef5a60f23d62f1bd71c6c90dbe74",
+  "source_text": "```python\ndef run_toy():\n    # Central point with higher score but lower distance\n    x = 4\n    y = 4\n\n    # This is the frozen verified start point\n    initial_point = x, y\n\n    # Perform a single explore_step_0 with a horizons of 1\n    return [x, y]\n```"
+}

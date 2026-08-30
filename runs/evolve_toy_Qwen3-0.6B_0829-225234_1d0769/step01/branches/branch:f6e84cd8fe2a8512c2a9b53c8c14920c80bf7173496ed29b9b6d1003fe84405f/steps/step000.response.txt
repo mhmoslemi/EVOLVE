@@ -1,0 +1,17 @@
+```python
+def run_toy():
+    # Define the target squared distance to (3, -2)
+    target_squared_distance = 0.0
+    
+    # Define the original parent point
+    parent_point = [-4, -4]
+    
+    # Define the run_toy function
+    def run_toy():
+        # Repeatedly move in a direction to minimize the square distance to the target (3, -2)
+        # Begin at the parent point
+        while True:
+            # Calculate current point
+            current_point = parent_point
+            
+            # Generate a random perturbation in a direction to improve the square

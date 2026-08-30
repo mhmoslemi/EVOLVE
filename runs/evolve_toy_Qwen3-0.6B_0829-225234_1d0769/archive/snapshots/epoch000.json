@@ -1,0 +1,598 @@
+{
+  "cell_map_version": "descriptor_exact_v1",
+  "cells": [
+    {
+      "cell_id": "cell:06fbd43aa69633ed416f6a0a560d4f9609f265a2c7ed878017731bf160a5ba49",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:7f7739217a8df41680bb637f65a7b26da55b30e8a8f0b664528939662a5f1e5a",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:5766cc9828d1ddf541b309b3c54b7820cb3375b3381bdc06d12981b6cd3b1efd",
+      "champion_evidence_id": "evidence:b8625d4a5c43d86dfc96f092dfbc5c58a5e60caf7477652709cc33f284dea02e",
+      "champion_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    },
+    {
+      "cell_id": "cell:fb94e6256c00a369d14c2d4468290b25ff4106bf848ea543cc16dffc2d250e60",
+      "champion_evidence_id": null,
+      "champion_state_id": null,
+      "descriptor_id": "descriptor:593f6b5d1ece6ee6e66ba4ac539ac88f04f0b81f007fe74ee5bc019d9f5197d3",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [],
+      "tested_count": 1,
+      "under_tested": true
+    }
+  ],
+  "descriptors": [
+    {
+      "descriptor_id": "descriptor:593f6b5d1ece6ee6e66ba4ac539ac88f04f0b81f007fe74ee5bc019d9f5197d3",
+      "dimensions": {
+        "quadrant": "north_west",
+        "radial_band": "middle"
+      },
+      "extensions": {},
+      "function_version": "toy_quadrant_radius_v1",
+      "method_complete": true,
+      "problem_id": "evolve_toy",
+      "record_type": "descriptor",
+      "schema_version": 1
+    },
+    {
+      "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+      "dimensions": {
+        "quadrant": "north_east",
+        "radial_band": "middle"
+      },
+      "extensions": {},
+      "function_version": "toy_quadrant_radius_v1",
+      "method_complete": true,
+      "problem_id": "evolve_toy",
+      "record_type": "descriptor",
+      "schema_version": 1
+    },
+    {
+      "descriptor_id": "descriptor:7f7739217a8df41680bb637f65a7b26da55b30e8a8f0b664528939662a5f1e5a",
+      "dimensions": {
+        "quadrant": "south_west",
+        "radial_band": "middle"
+      },
+      "extensions": {},
+      "function_version": "toy_quadrant_radius_v1",
+      "method_complete": true,
+      "problem_id": "evolve_toy",
+      "record_type": "descriptor",
+      "schema_version": 1
+    },
+    {
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "dimensions": {
+        "quadrant": "south_east",
+        "radial_band": "middle"
+      },
+      "extensions": {},
+      "function_version": "toy_quadrant_radius_v1",
+      "method_complete": true,
+      "problem_id": "evolve_toy",
+      "record_type": "descriptor",
+      "schema_version": 1
+    }
+  ],
+  "epoch": 0,
+  "evidence": [
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        4
+      ],
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "completed_at": "2026-08-30T02:52:35.434082Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+      "diagnostics": {
+        "message": "verified saved integer point"
+      },
+      "evidence_id": "evidence:31c34ecb85a8bdcf2bfbc912a73753601f64f926b1500fe6f3944ee60c53a12a",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "015a5eb773a5b39744b9db049a10f4e8d9168a70ed8e2361fefd7a48ddb52c63",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769/artifacts/answers/27999bb05b286db08d3465d74d1f83d0508d7828a8e071e02b4a069fe9345f4c.json",
+        "answer_payload_hash": "3ec779786e88fbc09e425f7d36e674cdb03debc9974473055ba3b521a4349366",
+        "answer_payload_id": "answer_payload:27999bb05b286db08d3465d74d1f83d0508d7828a8e071e02b4a069fe9345f4c",
+        "descriptor_version": "toy_quadrant_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 0.02631578947368421,
+      "lineage_ids": [
+        "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:db6ea7745da6aa37cdb37ef0d84e1360051f5974753480e223d58bc02bf6d560",
+      "raw_score": 37.0,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.00011421926319599152
+      },
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "scientific_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+      "scores": {
+        "internal_reward": 0.02631578947368421,
+        "squared_distance": 37.0
+      },
+      "source_hash": "3ea15a440337761691ea99d286b76aa1a7555df79e7e1e0aecfbd5d174911c8c",
+      "started_at": "2026-08-30T02:52:35.433963Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        -4,
+        -4
+      ],
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "completed_at": "2026-08-30T02:52:35.230972Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:7f7739217a8df41680bb637f65a7b26da55b30e8a8f0b664528939662a5f1e5a",
+      "diagnostics": {
+        "message": "verified saved integer point"
+      },
+      "evidence_id": "evidence:726842481e6bb28487f8a644976d72baf1aba9824a9b64c1c05f56110b27a6e3",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "6b73ee158723425ec47b6d454cddb79dad014c8d476fcbe0b9f43e912ee5f748",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769/artifacts/answers/acd3aca17f147cbb3c86219ee2840cad8d29a1e966b6bac95b6aa309dfed2a82.json",
+        "answer_payload_hash": "bc5186c895dc0c12324940ef6024e85cb5ceed42c1727ae30550c7ebe720d86e",
+        "answer_payload_id": "answer_payload:acd3aca17f147cbb3c86219ee2840cad8d29a1e966b6bac95b6aa309dfed2a82",
+        "descriptor_version": "toy_quadrant_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 0.018518518518518517,
+      "lineage_ids": [
+        "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:47b64305f47eebf82cada2c989f984fa678f7613961b1a0db1ec8df87f642508",
+      "raw_score": 53.0,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.00012625614181160927
+      },
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "scientific_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+      "scores": {
+        "internal_reward": 0.018518518518518517,
+        "squared_distance": 53.0
+      },
+      "source_hash": "9b16b6c55b0aab4a1aba63b4f3bf8e7358b4e427615d4b8eefe6bbf984a8be7c",
+      "started_at": "2026-08-30T02:52:35.230841Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        -4
+      ],
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "completed_at": "2026-08-30T02:52:35.498121Z",
+      "confirmed": true,
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "diagnostics": {
+        "message": "verified saved integer point"
+      },
+      "evidence_id": "evidence:b8625d4a5c43d86dfc96f092dfbc5c58a5e60caf7477652709cc33f284dea02e",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "f31119c88910bbfa6feb1d60352323eedc7b07bb83253f6415e3c4e0f4a1cf6e",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769/artifacts/answers/63677e08dcf11fb4f450a7a670022d17dd0b995366dd7cfc0ecf34fd04392de8.json",
+        "answer_payload_hash": "2a82d2dd4eb4cc17b2badb31552661406676ba229cff724fa3fc45697e23bb7e",
+        "answer_payload_id": "answer_payload:63677e08dcf11fb4f450a7a670022d17dd0b995366dd7cfc0ecf34fd04392de8",
+        "confirmation_of_evidence_id": "evidence:dd6ee92514053fad810e2a1d620cd69225c6954e828bcf6827b415396e915482",
+        "confirmation_target_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+        "descriptor_version": "toy_quadrant_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 0.16666666666666666,
+      "lineage_ids": [
+        "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:e35fa6d7a56cb00366b909ca4a5769648d61cd21492e0cbe58f406413351532f",
+      "raw_score": 5.0,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.00010610697790980339
+      },
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "scientific_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+      "scores": {
+        "internal_reward": 0.16666666666666666,
+        "squared_distance": 5.0
+      },
+      "source_hash": "4fe1e30a807bb7deb8d7fb84947d4775f745295749c1170f75ec5023698a9ba0",
+      "started_at": "2026-08-30T02:52:35.498010Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        -4,
+        4
+      ],
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "completed_at": "2026-08-30T02:52:35.298766Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:593f6b5d1ece6ee6e66ba4ac539ac88f04f0b81f007fe74ee5bc019d9f5197d3",
+      "diagnostics": {
+        "message": "verified saved integer point"
+      },
+      "evidence_id": "evidence:cd4a9e1800d42fd15bc8c6146a6a443f9b70b12ccd224ee3bf6a30ddd236e0e3",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "92ec98cdebc01e8f3236748f15f58111d57aa6329240dc5bc2bda44aa85c7088",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769/artifacts/answers/0c6fff441deff652a7ac8a47d93bc9dd6fdb97651876d0fd662f40d79034baf2.json",
+        "answer_payload_hash": "1f74d86b957e32fc00735b3ac6048c543fd5d27602611c06825f33540b54ee6d",
+        "answer_payload_id": "answer_payload:0c6fff441deff652a7ac8a47d93bc9dd6fdb97651876d0fd662f40d79034baf2",
+        "descriptor_version": "toy_quadrant_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 0.011627906976744186,
+      "lineage_ids": [
+        "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:c3df0ec2c8dd4bf0fff769d7bf37f1a96d7d613701670f3b9bc0a0521f5d3b41",
+      "raw_score": 85.0,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.00011374522000551224
+      },
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "scientific_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+      "scores": {
+        "internal_reward": 0.011627906976744186,
+        "squared_distance": 85.0
+      },
+      "source_hash": "7c453821cac16a2fe930a1781f49856f6a3fe133a2d9a87e58fa9e8212a95e6e",
+      "started_at": "2026-08-30T02:52:35.298647Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        -4
+      ],
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "completed_at": "2026-08-30T02:52:35.364433Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "diagnostics": {
+        "message": "verified saved integer point"
+      },
+      "evidence_id": "evidence:dd6ee92514053fad810e2a1d620cd69225c6954e828bcf6827b415396e915482",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "f31119c88910bbfa6feb1d60352323eedc7b07bb83253f6415e3c4e0f4a1cf6e",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769/artifacts/answers/63677e08dcf11fb4f450a7a670022d17dd0b995366dd7cfc0ecf34fd04392de8.json",
+        "answer_payload_hash": "2a82d2dd4eb4cc17b2badb31552661406676ba229cff724fa3fc45697e23bb7e",
+        "answer_payload_id": "answer_payload:63677e08dcf11fb4f450a7a670022d17dd0b995366dd7cfc0ecf34fd04392de8",
+        "descriptor_version": "toy_quadrant_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 0.16666666666666666,
+      "lineage_ids": [
+        "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:e35fa6d7a56cb00366b909ca4a5769648d61cd21492e0cbe58f406413351532f",
+      "raw_score": 5.0,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.00011526793241500854
+      },
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "scientific_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+      "scores": {
+        "internal_reward": 0.16666666666666666,
+        "squared_distance": 5.0
+      },
+      "source_hash": "4fe1e30a807bb7deb8d7fb84947d4775f745295749c1170f75ec5023698a9ba0",
+      "started_at": "2026-08-30T02:52:35.364313Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+      "verifier_version": "answer_schema_v1"
+    }
+  ],
+  "proposals": [
+    {
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:47b64305f47eebf82cada2c989f984fa678f7613961b1a0db1ec8df87f642508",
+      "record_type": "proposal",
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "source_hash": "9b16b6c55b0aab4a1aba63b4f3bf8e7358b4e427615d4b8eefe6bbf984a8be7c",
+      "source_text": "[-4, -4]"
+    },
+    {
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:c3df0ec2c8dd4bf0fff769d7bf37f1a96d7d613701670f3b9bc0a0521f5d3b41",
+      "record_type": "proposal",
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "source_hash": "7c453821cac16a2fe930a1781f49856f6a3fe133a2d9a87e58fa9e8212a95e6e",
+      "source_text": "[-4, 4]"
+    },
+    {
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:db6ea7745da6aa37cdb37ef0d84e1360051f5974753480e223d58bc02bf6d560",
+      "record_type": "proposal",
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "source_hash": "3ea15a440337761691ea99d286b76aa1a7555df79e7e1e0aecfbd5d174911c8c",
+      "source_text": "[4, 4]"
+    },
+    {
+      "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:e35fa6d7a56cb00366b909ca4a5769648d61cd21492e0cbe58f406413351532f",
+      "record_type": "proposal",
+      "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+      "schema_version": 1,
+      "source_hash": "4fe1e30a807bb7deb8d7fb84947d4775f745295749c1170f75ec5023698a9ba0",
+      "source_text": "[4, -4]"
+    }
+  ],
+  "provenance": [],
+  "schema_version": 1,
+  "states": [
+    {
+      "admitted": true,
+      "answer_payload": [
+        -4,
+        -4
+      ],
+      "confirmed": false,
+      "descriptor_id": "descriptor:7f7739217a8df41680bb637f65a7b26da55b30e8a8f0b664528939662a5f1e5a",
+      "evidence_id": "evidence:726842481e6bb28487f8a644976d72baf1aba9824a9b64c1c05f56110b27a6e3",
+      "extensions": {},
+      "fingerprint": "6b73ee158723425ec47b6d454cddb79dad014c8d476fcbe0b9f43e912ee5f748",
+      "internal_reward": 0.018518518518518517,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:47b64305f47eebf82cada2c989f984fa678f7613961b1a0db1ec8df87f642508",
+      "raw_score": 53.0,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        -4,
+        4
+      ],
+      "confirmed": false,
+      "descriptor_id": "descriptor:593f6b5d1ece6ee6e66ba4ac539ac88f04f0b81f007fe74ee5bc019d9f5197d3",
+      "evidence_id": "evidence:cd4a9e1800d42fd15bc8c6146a6a443f9b70b12ccd224ee3bf6a30ddd236e0e3",
+      "extensions": {},
+      "fingerprint": "92ec98cdebc01e8f3236748f15f58111d57aa6329240dc5bc2bda44aa85c7088",
+      "internal_reward": 0.011627906976744186,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:c3df0ec2c8dd4bf0fff769d7bf37f1a96d7d613701670f3b9bc0a0521f5d3b41",
+      "raw_score": 85.0,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        4
+      ],
+      "confirmed": false,
+      "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+      "evidence_id": "evidence:31c34ecb85a8bdcf2bfbc912a73753601f64f926b1500fe6f3944ee60c53a12a",
+      "extensions": {},
+      "fingerprint": "015a5eb773a5b39744b9db049a10f4e8d9168a70ed8e2361fefd7a48ddb52c63",
+      "internal_reward": 0.02631578947368421,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:db6ea7745da6aa37cdb37ef0d84e1360051f5974753480e223d58bc02bf6d560",
+      "raw_score": 37.0,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        -4
+      ],
+      "confirmed": true,
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "evidence_id": "evidence:b8625d4a5c43d86dfc96f092dfbc5c58a5e60caf7477652709cc33f284dea02e",
+      "extensions": {},
+      "fingerprint": "f31119c88910bbfa6feb1d60352323eedc7b07bb83253f6415e3c4e0f4a1cf6e",
+      "internal_reward": 0.16666666666666666,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:e35fa6d7a56cb00366b909ca4a5769648d61cd21492e0cbe58f406413351532f",
+      "raw_score": 5.0,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd"
+    },
+    {
+      "admitted": true,
+      "answer_payload": [
+        4,
+        -4
+      ],
+      "confirmed": false,
+      "descriptor_id": "descriptor:8d8543eb929c4b58a546be9929b7a6e47990bc8b2e33cfe5a3e161a5d0727425",
+      "evidence_id": "evidence:dd6ee92514053fad810e2a1d620cd69225c6954e828bcf6827b415396e915482",
+      "extensions": {},
+      "fingerprint": "f31119c88910bbfa6feb1d60352323eedc7b07bb83253f6415e3c4e0f4a1cf6e",
+      "internal_reward": 0.16666666666666666,
+      "problem_id": "evolve_toy",
+      "proposal_id": "proposal:e35fa6d7a56cb00366b909ca4a5769648d61cd21492e0cbe58f406413351532f",
+      "raw_score": 5.0,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd"
+    }
+  ]
+}

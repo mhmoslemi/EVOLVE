@@ -1,0 +1,4 @@
+<think>
+Okay, I need to solve this deterministic two-dimensional toy search problem. The goal is to find a point [x, y] within [-8, 8] so that the squared distance to (3, -2) is minimized. The current solution is [x, y] = [-4, 4], which gives a distance squared of 85.0. The target squared distance is 0.0, so I need to find a better point.
+
+The problem says to return an integer point, so both coordinates must be integers. The user mentioned that the previous program's initial_point was [-4,4

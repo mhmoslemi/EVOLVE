@@ -1,0 +1,24 @@
+{
+  "candidate_cost": {
+    "tokens": 57.0,
+    "verifier_calls": 1.0,
+    "verifier_wall_time_s": 0.00016641290858387947
+  },
+  "candidate_failure_kind": "none",
+  "candidate_gain": 0.0,
+  "candidate_harness_id": "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913",
+  "candidate_harness_version": "diagnostic_v1",
+  "candidate_valid": false,
+  "context_id": "harness_audit:18661cf70f5ffd86ba752870b85957912d55b195437239d42e987026d1dfbc39",
+  "epoch": 0,
+  "incumbent_cost": {
+    "tokens": 18.0,
+    "verifier_calls": 1.0,
+    "verifier_wall_time_s": 0.00016246596351265907
+  },
+  "incumbent_failure_kind": "none",
+  "incumbent_gain": 0.0,
+  "incumbent_harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "incumbent_harness_version": "baseline_v1",
+  "incumbent_valid": true
+}

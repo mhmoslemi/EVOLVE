@@ -1,0 +1,146 @@
+{
+  "epoch": 0,
+  "planned_arms": [
+    {
+      "admission_probability": 0.5,
+      "arm": {
+        "arm_id": "arm:795a387e998302c553b71bf68bd0c800eb3cd566ce67590f7023f3f71430622c",
+        "cell_id": "cell:06fbd43aa69633ed416f6a0a560d4f9609f265a2c7ed878017731bf160a5ba49",
+        "channel": "production",
+        "cost_class": "standard",
+        "expected_cost": {
+          "verifier_calls": 1.0
+        },
+        "extensions": {},
+        "hard_cost": {
+          "verifier_calls": 2.0
+        },
+        "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+        "horizon": 1,
+        "option_id": "option:891ea7b12861dc0f82155592d8125872baca94baf5632c3b697d5a30629b17dc",
+        "record_type": "allocation_arm",
+        "role": "scout",
+        "schema_version": 1
+      },
+      "correlation_penalty": 0.0,
+      "expected_gain": 0.0,
+      "improvement_probability_given_admission": 0.5,
+      "marginal_gain": 0.0,
+      "mean_positive_gain": 0.0,
+      "posterior_level": "global",
+      "posterior_support": 0,
+      "predicted_cost_uncertainty": {
+        "verifier_calls": 0.0
+      },
+      "reliability_probability": 0.5,
+      "replicas": 4,
+      "reservation": "role",
+      "reservations": [
+        "role",
+        "learning_group",
+        "global_exploration"
+      ],
+      "rng_seed": 8634150778412488747,
+      "uncertainty": 0.0
+    },
+    {
+      "admission_probability": 0.5,
+      "arm": {
+        "arm_id": "arm:6b9ee4561afea1ee15a17b9e3965bf1b18608e15254bd12ee0093339e77d8ab1",
+        "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+        "channel": "production",
+        "cost_class": "standard",
+        "expected_cost": {
+          "verifier_calls": 1.0
+        },
+        "extensions": {},
+        "hard_cost": {
+          "verifier_calls": 2.0
+        },
+        "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+        "horizon": 1,
+        "option_id": "option:37c1dec8f311347e758ccac9feed43c2a0cb7c12ea430c9364b94688fdf805be",
+        "record_type": "allocation_arm",
+        "role": "mechanist",
+        "schema_version": 1
+      },
+      "correlation_penalty": 0.0,
+      "expected_gain": 0.0,
+      "improvement_probability_given_admission": 0.5,
+      "marginal_gain": 0.0,
+      "mean_positive_gain": 0.0,
+      "posterior_level": "global",
+      "posterior_support": 0,
+      "predicted_cost_uncertainty": {
+        "verifier_calls": 0.0
+      },
+      "reliability_probability": 0.5,
+      "replicas": 1,
+      "reservation": "role",
+      "reservations": [
+        "role",
+        "empty_cell"
+      ],
+      "rng_seed": 6263080610463903032,
+      "uncertainty": 0.0
+    },
+    {
+      "admission_probability": 0.5,
+      "arm": {
+        "arm_id": "arm:03342c88780a51546f9d2d82d36cfe60abcfdd1b3967bbb60fa2ea8f4c5564c8",
+        "cell_id": "cell:5766cc9828d1ddf541b309b3c54b7820cb3375b3381bdc06d12981b6cd3b1efd",
+        "channel": "production",
+        "cost_class": "standard",
+        "expected_cost": {
+          "verifier_calls": 1.0
+        },
+        "extensions": {},
+        "hard_cost": {
+          "verifier_calls": 2.0
+        },
+        "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+        "horizon": 1,
+        "option_id": "option:1b16ffc181a6d534aadecdc96241ded669c99307852b0bf47d24011ade48a1f6",
+        "record_type": "allocation_arm",
+        "role": "challenger",
+        "schema_version": 1
+      },
+      "correlation_penalty": 0.0,
+      "expected_gain": 0.0,
+      "improvement_probability_given_admission": 0.5,
+      "marginal_gain": 0.0,
+      "mean_positive_gain": 0.0,
+      "posterior_level": "global",
+      "posterior_support": 0,
+      "predicted_cost_uncertainty": {
+        "verifier_calls": 0.0
+      },
+      "reliability_probability": 0.5,
+      "replicas": 1,
+      "reservation": "role",
+      "reservations": [
+        "role",
+        "empty_cell",
+        "global_exploration"
+      ],
+      "rng_seed": 6851495243019741612,
+      "uncertainty": 0.0
+    }
+  ],
+  "portfolio_version": "gaussian_copula_joint_max_v1",
+  "posterior_version": "zero_inflated_tail_v1",
+  "reservation_slots": {
+    "audit_branch_slots": 2,
+    "empty_cell_slots": 2,
+    "global_exploration_slots": 2,
+    "harness_trial_slots": 2,
+    "no_memory_audit_slots": 2,
+    "refinement_slots": 2,
+    "remaining_production_slots": 0,
+    "role_guaranteed_slots": 3,
+    "total_inflight": 12
+  },
+  "reservations_version": "epoch_reservations_v1",
+  "schema_version": 1,
+  "seed": 7073456869272736364
+}

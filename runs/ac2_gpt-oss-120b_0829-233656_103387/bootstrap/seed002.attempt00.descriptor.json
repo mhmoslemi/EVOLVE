@@ -1,0 +1,17 @@
+{
+  "descriptor_id": "descriptor:0848c5a2d5f407e062419e00e8548629babfa6b251f8e99fc510c460927f3da6",
+  "dimensions": {
+    "concentration_bin": "low",
+    "length_bin": "long",
+    "problem_type": "ac2",
+    "roughness_bin": "low",
+    "sparsity_bin": "low",
+    "symmetry_bin": "low"
+  },
+  "extensions": {},
+  "function_version": "ac_sequence_structure_v1",
+  "method_complete": true,
+  "problem_id": "ac2",
+  "record_type": "descriptor",
+  "schema_version": 1
+}

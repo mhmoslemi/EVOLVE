@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:e003e2bad97ea9e653e7a91076282a5f139fc6c777abab768cf7207e605981d2",
+  "created_at": "2026-08-30T02:30:46.882612Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:4101e1b6b929167020594ed9c5723095ef537550dba22108cc4c6af3479fec43",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "83a46b854819098db13d21117e5d6704cbb995e07d5cdd303cb0abe219edc9ac",
+  "source_text": "<think>\nOkay, let's tackle this problem. So, I need to create a deterministic two-dimensional toy search program according to the instructions. The target is to find a point [x, y] in [-8, 8] such that the squared distance to (3, -2) is zero. My previous attempt was [-4, 4], which has a squared distance of 85, but I need to come up with another path.\n\nFirst, I understand that the native score is the squared distance, so my new solution's score should be zero. The problem says to define a top-level function called `run_t"
+}

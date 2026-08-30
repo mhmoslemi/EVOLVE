@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:31a112215569278a1ea07404c1c814b4d4fe8a29a21621c307bb291fc786adbf",
+  "created_at": "2026-08-30T04:16:20.542068Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:0847ad7c51df9be5160813d66f100e7835ee665132ff907f376f39b18b7b868f",
+  "record_type": "proposal",
+  "run_id": "run:362631144ddc8fff66c29d554c97d09d0b88c16247de6d859fdd224a2bbcc09f",
+  "schema_version": 1,
+  "source_hash": "98a02582dc775af06e26d0fe2dd1e0e395c44b058969615ea3bae625daeb3410",
+  "source_text": "```python\nimport numpy as np\nimport scipy.signal\nimport time\nimport random\nfrom scipy.optimize import minimize\n\ndef run(seed=42, budget_s=100, **kwargs):\n    start_time = time.time()\n    np.random.seed(seed)\n    \n    # Initial guess\n    initial_h = initial_h_values.copy()\n    n_points = len(initial_h)\n    dx = 2.0 / n_points\n    \n    def compute_c5(h):\n        h = np.array(h)\n        corr = scipy.signal.correlate(h, 1 - h, mode=\"full\")\n        c5 = np.max(corr) * dx\n        return c5\n\n    def objective(h_flat):\n        h = h_flat.copy()\n        h /= np.sum(h) * dx\n        h = np.clip(h, 0, 1)\n        return compute_c5(h)\n\n    def constraint_sum(h_flat):\n        return np.sum(h_flat) - n_points / 2\n\n    # Initial optimization\n    bounds = [(0, 1) for _ in range(n_points)]\n    constraints = [{'type': 'eq', 'fun': constraint_sum}]\n    result = minimize(objective, initial_h, method='SLSQP', bounds=bounds, constraints=constraints, tol=1e-6)\n    best_h = result.x\n    best_c5 = compute_c5(best_h)\n    \n    # Local search\n    for _ in range(5):\n        if time.time() - start_time > budget_s - 1:\n            break\n        perturb = np.random.normal(0, 0.05, n_points)\n        perturb = np.clip(perturb, -0.1, 0.1)\n        new_h = best_h + perturb\n        new_h = np.clip(new_h, 0, 1)\n        new_h /= np.sum(new_h) * dx\n        new_c5 = compute_c5(new_h)\n        if new_c5 < best_c5:\n            best_h = new_h\n            best_c5 = new_c5\n    \n    # Random restarts\n    for _ in range(2):\n        if time.time() - start_time > budget_s - 1:\n            break\n        random_indices = np.random.choice(n_points, 10, replace=False)\n        random_values = np.random.uniform(0, 1, 10)\n        new_h = best_h.copy()\n        new_h[random_indices] = random_values\n        new_h = np.clip(new_h, 0, 1)\n        new_h /= np.sum(new_h) * dx\n        new_c5 = compute_c5(new_h)\n        if new_c5 < best_c5:\n            best_h = new_h\n            best_c5 = new_c5\n    \n    # Final check\n    best_h = np.clip(best_h, 0, 1)\n    best_h /= np.sum(best_h) * dx\n    best_c5 = compute_c5(best_h)\n    \n    return (best_h.tolist(), best_c5, n_points)\n```"
+}

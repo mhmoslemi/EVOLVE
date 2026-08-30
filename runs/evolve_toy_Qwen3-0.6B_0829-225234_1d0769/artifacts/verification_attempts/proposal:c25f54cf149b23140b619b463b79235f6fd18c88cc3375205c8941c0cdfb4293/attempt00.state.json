@@ -1,0 +1,20 @@
+{
+  "admitted": true,
+  "answer_payload": [
+    5,
+    5
+  ],
+  "confirmed": false,
+  "descriptor_id": "descriptor:684f3c41e707f087d14f12945b76e2bd852094d2709f929885c8270d8b67065a",
+  "evidence_id": "evidence:48c6a961fe8747ccf3764f18b1923049b9e4e5d15dd2bb99dc72f1134a3ca9b8",
+  "extensions": {},
+  "fingerprint": "05ff82562e50e1e941d3f7b53ff025bbabdf5a28bae9122035ee743da69bbc78",
+  "internal_reward": 0.018518518518518517,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:c25f54cf149b23140b619b463b79235f6fd18c88cc3375205c8941c0cdfb4293",
+  "raw_score": 53.0,
+  "record_type": "verified_scientific_state",
+  "resolved": true,
+  "schema_version": 1,
+  "state_id": "state:1d1356e9f194285590133e30a5df4a0b71b30c857f0ccb20ec9d6ac51d4e49a1"
+}

@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:a9d0c8076e7271c4f5f2b4898c6e57d675394675d9c4f98c79e73fb1b2bb5e70",
+  "created_at": "2026-08-30T02:30:58.066032Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:c93ece04af5dbd58a3b834af711fc6aa33b2b3e95223bfc9280be7d1e94a7622",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "7dd83a0541155db538ffe9565933f3c14cccd64e60b54b35f7df3ca74317f16e",
+  "source_text": "<think>\nOkay, let's see. The user wants me to develop a deterministic two-dimensional toy search that solves a problem where the goal is to find a point [x, y] with a squared distance to (3, -2) equal to zero. The previous solution was [4, 4], which has a squared distance of 37, but we need to refine the mechanism to get the target (which is 0.0).\n\nHmm, the problem says to use only compressed space, no filesystem, no network, no GPU, no randomness. So we need to find a straightforward way to find the point that's"
+}

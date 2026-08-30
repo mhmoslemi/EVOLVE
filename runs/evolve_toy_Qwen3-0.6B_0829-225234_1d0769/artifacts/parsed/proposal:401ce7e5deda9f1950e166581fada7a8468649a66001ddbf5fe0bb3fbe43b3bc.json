@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:292173fc5c72ec46236a7652aff197fb4dda3d4d4a2cb8018b4ceff62112c693",
+  "created_at": "2026-08-30T02:55:13.912369Z",
+  "extensions": {},
+  "parent_state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd",
+  "parsed_candidate": [
+    5,
+    -3
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:401ce7e5deda9f1950e166581fada7a8468649a66001ddbf5fe0bb3fbe43b3bc",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "827ed131a3c9c280fb1a7bada38da2f704a2304260640ed76b7ccd08a86b2564",
+  "source_text": "```python\ndef run_toy():\n    initial_point = [4, -4]\n    new_point = [5, -3]\n    return new_point\n```"
+}

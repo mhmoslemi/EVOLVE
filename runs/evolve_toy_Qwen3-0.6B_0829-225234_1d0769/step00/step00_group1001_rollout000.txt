@@ -1,0 +1,15 @@
+```python
+def run_toy():
+    """Return the optimal point based on toy search with frozen EVOLVE."""
+    start_point = [4, 4]
+    initial_point = start_point
+
+    # Step 0: Explore_step_0 to seek diversified territory
+    for x in range(-8, 9):
+        for y in range(-8, 9):
+            if x == 5 and y == 5:
+                return [5, 5]
+
+    # Step 1: Return the first found position with valid coordinates (but no decision point)
+    return [4, 4]
+```

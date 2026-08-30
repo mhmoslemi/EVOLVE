@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:69fe109a9a2116723ffb1c7414fc40a7fa967ecd154d537c1b2cdab1ca512dd7",
+  "created_at": "2026-08-30T02:31:07.191434Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:29b69948340c1658e2c11628da2a70ce47aca6c9ff3bfd044b7340a5bf8b09eb",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "f86e3ecc50245e3624754d57aab4cf856daf59b236f893192b98a03adca74879",
+  "source_text": "<think>\nOkay, I need to create a deterministic two-dimensional toy search problem where I have to find a point with a squared distance of zero to (3,-2). The previous solution was at [-4,4], which had a distance of 85. So the goal is to generate a new solution using the frozen EVOLVE assignment and the given options. \n\nFirst, let's understand the problem. The target is to find a point (x, y) such that the squared distance to (3, -2) is zero. That means (x, y) should exactly lie at (3,-2), right? So"
+}

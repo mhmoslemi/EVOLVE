@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:447dcd3425c3bface6f31685cafc93aba895360b46ce37d3f39d889016459209",
+  "created_at": "2026-08-30T02:59:16.279469Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:d3d0c2a4362f160934ca6029baf97811439cf7e6d5f94a95c5680a19e2e19c70",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "d1aaf4761bec957d0b33347acbcec867506bdafcb59bfe40078b345d157b6d62",
+  "source_text": "```python\ndef run_toy():\n    # Define the target point (x, y) that has targeted squared distance 0.0\n    target = (3, -2)\n    \n    # We start from the initial point: [-4, -4]\n    initial_point = [-4, -4]\n    \n    # Compute the difference between target and initial point\n    x_diff = abs(3 - initial_point[0])\n    y_diff = abs(-2 - initial_point[1])\n    \n    # Refine the point based on the difference\n    if x_diff < y_diff:\n        return [initial_point["
+}

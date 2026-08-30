@@ -1,0 +1,62 @@
+{
+  "adapter_hash": "df9b269f6a5d5e6432cf634cb725d2819e05ef5300e0359c5fb86d128eed4b62",
+  "branch_id": "branch:22a2a2c40c722bae07a71ddceedc4636046df9330bde91f3f85bf52b9dd72ec9",
+  "extensions": {},
+  "log_probabilities": [
+    [
+      -0.007505314890295267,
+      -1.3351351299206726e-05,
+      -1.1444026313256472e-05,
+      -2.5933520793914795,
+      -0.7382891178131104,
+      -0.0019421778852120042,
+      -0.002845288719981909,
+      -3.916938304901123,
+      -0.03051627241075039,
+      -0.005306207574903965,
+      -3.135155202471651e-05
+    ]
+  ],
+  "persisted": true,
+  "prompts": [
+    "<|im_start|>user\nYou are solving a deterministic two-dimensional toy search.\n\nReturn an integer point [x, y] with both coordinates in [-8, 8].  The native\nscore is squared distance to (3, -2), so lower is better.  Define exactly one\ntop-level function `run_toy()` which returns the pair.  Use no filesystem,\nnetwork, GPU, randomness, or long-running computation.\n\nTarget squared distance: 0.0 (lower is better).\nYour previous program achieved squared distance = 37.000000.\nHere is the previous program:\n```python\n[4, 4]\n```\n\nThe saved parent point is also available as `initial_point = [4, 4]`.\n\nReturn the complete program in one final ```python block.\n\n\n## Frozen EVOLVE assignment\nRole: scout. Search broadly and propose a structurally different approach.\nOption action: explore_step_0.\nHarness: Execute the assigned role and option against the frozen verified start. Respect the branch horizon and hard budget. Harness-local diagnostics are guidance only; only the independent common verifier may admit a candidate or change the scientific record.\nHorizon step: 1/1.\nReturn the complete candidate in the problem's required format.\nTarget archive cell descriptor: {\"quadrant\": \"north_east\", \"radial_band\": \"middle\"}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  ],
+  "record_type": "policy_trace",
+  "response_segments": [
+    "```python\n[4, 6]\n```"
+  ],
+  "role": "scout",
+  "role_snapshot_id": "role_snapshot:b2f0c2493ad8bd58dbd3757b3fde8275050ac38914998646b4058e23f0ae53ec",
+  "schema_version": 1,
+  "token_ids": [
+    [
+      73594,
+      12669,
+      198,
+      58,
+      19,
+      11,
+      220,
+      21,
+      921,
+      73594,
+      151645
+    ]
+  ],
+  "token_masks": [
+    [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "trace_id": "policy_trace:c391ae1714698a086aab018a27c8bbfb7de79626306ab85fef46145a5e05dbe7"
+}

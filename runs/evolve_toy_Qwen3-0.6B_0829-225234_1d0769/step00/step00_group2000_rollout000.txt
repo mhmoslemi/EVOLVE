@@ -1,0 +1,4 @@
+```python
+def run_toy():
+    return [4, 5]
+```

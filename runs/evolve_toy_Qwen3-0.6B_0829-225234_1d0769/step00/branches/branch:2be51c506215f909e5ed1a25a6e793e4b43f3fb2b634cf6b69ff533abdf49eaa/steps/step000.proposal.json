@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:2be51c506215f909e5ed1a25a6e793e4b43f3fb2b634cf6b69ff533abdf49eaa",
+  "created_at": "2026-08-30T02:54:57.196924Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": [
+    5,
+    6
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:17bb24e9bea36fbd5e47d26c0a3e6250e465ee0847e6dbb60c908635be3adc8d",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "815fe69fb3a88cccceb207e42e90cf5ad6411c9e8760fdd1005c915ca9eca827",
+  "source_text": "```python\ndef run_toy():\n    x, y = 5, 6\n    return [5, 6]\n```"
+}

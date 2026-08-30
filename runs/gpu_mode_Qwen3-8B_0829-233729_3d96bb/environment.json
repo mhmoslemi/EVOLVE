@@ -1,0 +1,27 @@
+{
+  "gpus": [
+    {
+      "gpu_type": "H100",
+      "physical_id": 0,
+      "purpose": "barrier_learning_and_tensor_parallel_generation_and_serialized_evaluation"
+    }
+  ],
+  "host": {
+    "hostname": "kn008",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6338_CPU_@_2.00GHz-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "schema_version": 1,
+  "variables": {
+    "CUDA_VISIBLE_DEVICES": "0",
+    "VLLM_USE_FLASHINFER_SAMPLER": "0"
+  }
+}

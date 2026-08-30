@@ -1,0 +1,2 @@
+point: [4, -4]
+squared distance to (3, -2): 5

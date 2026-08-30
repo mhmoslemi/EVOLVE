@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:3b00cd5eece80f459140cffa6ab2627845605d53d5102562461282d83f63a611",
+  "created_at": "2026-08-30T04:38:18.522306Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:e06065a0fa9b8c3dd2cf2ef960e7a9b8e174211e0f53ea6736635c6af67e67ce",
+  "record_type": "proposal",
+  "run_id": "run:362631144ddc8fff66c29d554c97d09d0b88c16247de6d859fdd224a2bbcc09f",
+  "schema_version": 1,
+  "source_hash": "716bb700c4aa1d538a6147dae4ac8aa38aacffa6e81f9196b8138673a071ecfe",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as optimize\nimport time\nimport random\n\n# Pre-imported functions\nfrom evaluate_erdos_solution import evaluate_erdos_solution\nfrom initial_h_values import initial_h_values\n\ndef run(seed=42, budget_s=100, **kwargs):\n    np.random.seed(seed)\n    start_time = time.time()\n    \n    n_points = 100  # Reduce number of points for faster optimization\n    dx = 2.0 / n_points\n    h = np.array(initial_h_values[:n_points])  # Start from initial solution\n    h = h[:n_points]  # Ensure we have exactly n_points samples\n    h = np.clip(h, 0, 1)  # Ensure values are within [0, 1]\n    h = h * (n_points / 2) / np.sum(h)  # Ensure integral is 1\n    \n    # Function to compute C5\n    def compute_c5(h):\n        h = np.clip(h, 0, 1)\n        _h = np.pad(h, (0, n_points), mode='constant', constant_values=0)\n        corr = np.correlate(_h, 1 - _h, mode='full')\n        max_corr = np.max(corr)\n        return max_corr * dx\n    \n    # Function to evaluate the solution\n    def evaluate_solution(h):\n        return compute_c5(h)\n    \n    # Define bounds and initial guess\n    bounds = [(0.0, 1.0) for _ in range(n_points)]\n    \n    # Use differential evolution for optimization\n    result = optimize.differential_evolution(\n        evaluate_solution,\n        bounds,\n        strategy='best1bin',\n        maxiter=100,\n        popsize=15,\n        mutation=(0.5, 1.0),\n        recombination=0.8,\n        tol=1e-6,\n        polish=True,\n        disp=False,\n        vectorized=True\n    )\n    \n    # Get the best solution\n    best_h = result.x\n    best_c5 = evaluate_solution(best_h)\n    \n    # Check time budget\n    elapsed_time = time.time() - start_time\n    if elapsed_time > budget_s - 1:\n        # If we're over the budget, return the initial solution\n        best_h = initial_h_values[:n_points]\n        best_h = np.array(best_h)\n        best_h = np.clip(best_h, 0, 1)\n        best_h = best_h * (n_points / 2) / np.sum(best_h)\n        best_c5 = compute_c5(best_h)\n    \n    return (best_h, best_c5, n_points)\n```"
+}

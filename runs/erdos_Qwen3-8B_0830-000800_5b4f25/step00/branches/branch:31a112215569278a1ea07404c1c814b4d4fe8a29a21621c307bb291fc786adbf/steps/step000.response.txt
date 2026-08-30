@@ -1,0 +1,74 @@
+```python
+import numpy as np
+import scipy.signal
+import time
+import random
+from scipy.optimize import minimize
+
+def run(seed=42, budget_s=100, **kwargs):
+    start_time = time.time()
+    np.random.seed(seed)
+    
+    # Initial guess
+    initial_h = initial_h_values.copy()
+    n_points = len(initial_h)
+    dx = 2.0 / n_points
+    
+    def compute_c5(h):
+        h = np.array(h)
+        corr = scipy.signal.correlate(h, 1 - h, mode="full")
+        c5 = np.max(corr) * dx
+        return c5
+
+    def objective(h_flat):
+        h = h_flat.copy()
+        h /= np.sum(h) * dx
+        h = np.clip(h, 0, 1)
+        return compute_c5(h)
+
+    def constraint_sum(h_flat):
+        return np.sum(h_flat) - n_points / 2
+
+    # Initial optimization
+    bounds = [(0, 1) for _ in range(n_points)]
+    constraints = [{'type': 'eq', 'fun': constraint_sum}]
+    result = minimize(objective, initial_h, method='SLSQP', bounds=bounds, constraints=constraints, tol=1e-6)
+    best_h = result.x
+    best_c5 = compute_c5(best_h)
+    
+    # Local search
+    for _ in range(5):
+        if time.time() - start_time > budget_s - 1:
+            break
+        perturb = np.random.normal(0, 0.05, n_points)
+        perturb = np.clip(perturb, -0.1, 0.1)
+        new_h = best_h + perturb
+        new_h = np.clip(new_h, 0, 1)
+        new_h /= np.sum(new_h) * dx
+        new_c5 = compute_c5(new_h)
+        if new_c5 < best_c5:
+            best_h = new_h
+            best_c5 = new_c5
+    
+    # Random restarts
+    for _ in range(2):
+        if time.time() - start_time > budget_s - 1:
+            break
+        random_indices = np.random.choice(n_points, 10, replace=False)
+        random_values = np.random.uniform(0, 1, 10)
+        new_h = best_h.copy()
+        new_h[random_indices] = random_values
+        new_h = np.clip(new_h, 0, 1)
+        new_h /= np.sum(new_h) * dx
+        new_c5 = compute_c5(new_h)
+        if new_c5 < best_c5:
+            best_h = new_h
+            best_c5 = new_c5
+    
+    # Final check
+    best_h = np.clip(best_h, 0, 1)
+    best_h /= np.sum(best_h) * dx
+    best_c5 = compute_c5(best_h)
+    
+    return (best_h.tolist(), best_c5, n_points)
+```

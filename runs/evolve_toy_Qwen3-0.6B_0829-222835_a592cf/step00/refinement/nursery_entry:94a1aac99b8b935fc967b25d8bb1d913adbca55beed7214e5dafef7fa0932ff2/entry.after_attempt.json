@@ -1,0 +1,16 @@
+{
+  "admitted_evidence_id": null,
+  "attempts_used": 0,
+  "branch_id": "branch:774c626c6263a352618ae5c13043f265ee1bc13bc0790846466ed0b1803b13e1",
+  "closed": false,
+  "depth": 0,
+  "entry_id": "nursery_entry:94a1aac99b8b935fc967b25d8bb1d913adbca55beed7214e5dafef7fa0932ff2",
+  "latest_evidence_id": null,
+  "latest_proposal_id": null,
+  "max_attempts": 2,
+  "max_depth": 2,
+  "opened_epoch": 0,
+  "source_evidence_id": "evidence:4901fc3c3c857707a87d8232702afd347742336534bfbc768d67e40119937138",
+  "source_proposal_id": "proposal:9c8840bcb328febb13ce7f2e2bbb47b88d7e6c11816708ac98a12876903a1b90",
+  "ttl_epochs": 2
+}

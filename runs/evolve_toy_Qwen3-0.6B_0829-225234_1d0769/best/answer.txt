@@ -1,0 +1,2 @@
+point: [3, -2]
+squared distance to (3, -2): 0

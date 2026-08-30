@@ -1,0 +1,75 @@
+```python
+import numpy as np
+import numpy.random as npr
+import scipy.optimize as opt
+import time
+import copy
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    initial_h_values = np.array([0.18463107836353193, 0.3409054485290476, 0.6203300295910438, 0.8700723704256288, 0.19080707334515862, 0.6262334571765071, 0.7433070409735469, 0.5320044534767051, 0.7216558187241402, 0.8272428258791049, 0.5221669572588927, 0.7587737367565517, 0.1669874751571035, 0.7071369895059625, 0.7411718298101755, 0.17602559194193396, 0.20689697302085464, 0.43492537257696057, 0.38372059581690526, 0.32419774586298217, 0.7971915035227723, 0.12850681338277214, 0.26773169716155504, 0.633484465697802, 0.5058525103424685, 0.5237621128636435, 0.6676059101179728, 0.16728198516241194, 0.7099110744861223, 0.6454977381300697, 0.8428511110541352, 0.6204112730627964, 0.9161287747314493, 0.5206644547861512, 0.6993059988228139, 0.1573260492059893, 0.33038023294168106, 0.2612644616004159, 0.5590106170254208, 0.4814006621790201, 0.2770893017132045, 0.4937777804714631, 0.22840152535856967, 0.4838534765842302, 0.8882480271862889, 0.5315789084504143, 0.4823592091619433, 0.5101024954639957, 0.3207933561708651, 0.5841349247847331, 0.24937417345258767, 0.20271989872105023, 0.515732196702088, 0.2296044807169076, 0.6650001822991272, 0.6155348920298767, 0.4954794856311117, 0.2839893421829861, 0.4440398957498207, 0.8782629119704282, 0.6726091834552566, 0.7713483009303264, 0.2437587655505743, 0.898352134416883, 0.4124840624025352, 0.4231817003538969, 0.42561542199982016, 0.20243829252813417, 0.7182178276907307, 0.3371555353999507])
+    n_points = len(initial_h_values)
+    dx = 2.0 / n_points
+    total_integral = sum(initial_h_values) * dx
+    h_values = initial_h_values.copy()
+    best_c5 = compute_c5(h_values)
+    best_h_values = h_values.copy()
+    time_remaining = budget_s
+    start_time = time.time()
+
+    # Define objective function
+    def objective(h):
+        nonlocal best_c5, best_h_values
+        h_array = np.array(h)
+        h_array = np.clip(h_array, 0, 1)
+        corr = np.correlate(h_array, 1 - h_array, mode="full")
+        c5 = np.max(corr) * dx
+        if c5 < best_c5:
+            best_c5 = c5
+            best_h_values = h_array.copy()
+        return c5
+
+    # Define constraints
+    def constraint_sum(h):
+        return sum(h) - n_points / 2
+
+    # Set up optimization
+    bounds = [(0, 1) for _ in range(n_points)]
+    initial_guess = h_values.copy()
+    result = opt.minimize(
+        objective,
+        initial_guess,
+        method='SLSQP',
+        constraints=[{'type': 'eq', 'fun': constraint_sum}],
+        bounds=bounds,
+        options={'ftol': 1e-6, 'maxiter': 100}
+    )
+
+    # Update best solution
+    if result.success:
+        h_values = result.x
+        best_c5 = compute_c5(h_values)
+        best_h_values = h_values.copy()
+
+    # Perform additional steps if time remains
+    while time_remaining > 0.1 and len(h_values) < 1000:
+        time_remaining -= 0.1
+        n_points = len(h_values)
+        dx = 2.0 / n_points
+        h_values = np.random.rand(n_points)
+        h_values = np.clip(h_values, 0, 1)
+        h_values = h_values * (n_points / 2) / np.sum(h_values)
+        current_c5 = compute_c5(h_values)
+        if current_c5 < best_c5:
+            best_c5 = current_c5
+            best_h_values = h_values.copy()
+
+    return (best_h_values, best_c5, len(best_h_values))
+
+def compute_c5(h_values):
+    n_points = len(h_values)
+    dx = 2.0 / n_points
+    corr = np.correlate(h_values, 1 - h_values, mode="full")
+    c5 = np.max(corr) * dx
+    return c5
+```

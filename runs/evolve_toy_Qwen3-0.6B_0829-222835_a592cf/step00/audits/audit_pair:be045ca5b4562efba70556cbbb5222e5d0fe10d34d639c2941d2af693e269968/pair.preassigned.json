@@ -1,0 +1,35 @@
+{
+  "assignment_probability": 0.5,
+  "assignment_seed": 5131083781487114809,
+  "audit_id": "audit_pair:be045ca5b4562efba70556cbbb5222e5d0fe10d34d639c2941d2af693e269968",
+  "cell_id": "cell:fb94e6256c00a369d14c2d4468290b25ff4106bf848ea543cc16dffc2d250e60",
+  "control_branch_id": "branch:69fe109a9a2116723ffb1c7414fc40a7fa967ecd154d537c1b2cdab1ca512dd7",
+  "control_option_id": "option:574e356b6a047a5c2c47ab6c6048b05acdfd8469bda249d0910c4318fe081f40",
+  "control_outcome_id": null,
+  "epoch": 0,
+  "extensions": {},
+  "frozen_record_threshold": 0.16666666666666666,
+  "generation_settings": {
+    "max_new_tokens": 128,
+    "memory_records": [],
+    "role": "scout",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "horizon": 1,
+  "intervention_branch_id": "branch:ae9a4ab2a7ffc86b32205a450e57c15be7bb5811026da64882781169018f2d7f",
+  "intervention_option_id": "option:891ea7b12861dc0f82155592d8125872baca94baf5632c3b697d5a30629b17dc",
+  "intervention_outcome_id": null,
+  "preassigned": true,
+  "record_type": "audit_pair",
+  "resources": {
+    "verifier_calls": 2.0
+  },
+  "role_snapshot_id": "role_snapshot:6597fdaaa481ee98b3ac9e7a4c3482b50e6720b17374834cfc0b24e44d4599a6",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "start_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "status": "preassigned",
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97"
+}

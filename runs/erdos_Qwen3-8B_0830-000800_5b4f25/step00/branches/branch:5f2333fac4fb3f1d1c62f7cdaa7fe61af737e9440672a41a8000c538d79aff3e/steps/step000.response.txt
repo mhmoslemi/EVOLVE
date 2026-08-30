@@ -1,0 +1,86 @@
+<strategy>
+To improve the upper bound for the Erdős minimum overlap problem constant $ C_5 $, we will take a different approach than the previous construction. The previous method was based on a random initialization and optimization, but we will focus on a more structured search.
+
+The key idea is to use a greedy hill-climbing approach combined with a structured search of the solution space. Instead of random sampling, we will use a gradient-based optimization method with a custom-defined loss function to minimize the maximum overlap integral.
+
+We will:
+1. Use a structured initialization based on periodic patterns.
+2. Implement a greedy optimization that iteratively updates the step function to reduce the overlap integral.
+3. Use early stopping and budget tracking to prevent exceeding the time limit.
+
+This strategy aims to systematically improve the solution by focusing on promising regions of the solution space, rather than relying on random search.
+</strategy>
+
+```python
+import numpy as np
+import scipy.optimize
+import time
+
+# Pre-imported functions
+from evaluate_erdos_solution import evaluate_erdos_solution
+from initial_h_values import initial_h_values
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    
+    # Use initial construction
+    n_points = len(initial_h_values)
+    h_values = np.array(initial_h_values, dtype=np.float64)
+    
+    # Precompute the dx
+    dx = 2.0 / n_points
+    
+    # Define the overlap integral function
+    def compute_c5(h):
+        # Ensure the constraint sum(h) == n_points / 2
+        assert np.isclose(np.sum(h), n_points / 2), "Constraint violated"
+        
+        # Compute correlation
+        corr = np.correlate(h, 1 - h, mode="full")
+        # Convert to integral by multiplying by dx
+        c5 = np.max(corr) * dx
+        return c5
+    
+    # Define the optimization function
+    def objective_function(h_values):
+        return compute_c5(h_values)
+    
+    # Optimization parameters
+    max_iterations = 100
+    step_size = 0.05
+    tolerance = 1e-5
+    best_h = h_values.copy()
+    best_c5 = compute_c5(best_h)
+    start_time = time.time()
+    
+    for _ in range(max_iterations):
+        # Generate a random perturbation
+        perturbation = np.random.normal(0, step_size, size=n_points)
+        perturbation = np.clip(perturbation, -0.2, 0.2)
+        
+        # Apply the perturbation and clip values to [0, 1]
+        new_h = np.clip(h_values + perturbation, 0, 1)
+        
+        # Enforce the constraint sum(h) == n_points / 2
+        diff = np.sum(new_h) - n_points / 2
+        if diff != 0:
+            # Distribute the difference evenly
+            new_h += diff / n_points
+        
+        # Evaluate the objective function
+        new_c5 = compute_c5(new_h)
+        
+        # Check if the new solution is better
+        if new_c5 < best_c5:
+            best_h = new_h.copy()
+            best_c5 = new_c5
+        
+        # Early stopping
+        if time.time() - start_time > budget_s - 1:
+            break
+    
+    # Final evaluation
+    final_c5 = compute_c5(best_h)
+    
+    return best_h.tolist(), final_c5, n_points
+```

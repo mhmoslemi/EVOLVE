@@ -1,0 +1,3366 @@
+{
+  "cell_map_version": "descriptor_exact_v1",
+  "cells": [
+    {
+      "cell_id": "cell:dd60204757cef2324337a195b5214e62331bb982bffec700915cc161a7c6dae9",
+      "champion_evidence_id": "evidence:3defd8d68804af17139eeb896125446734ee9a377381691cf58e8325c86f1852",
+      "champion_state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b",
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "extensions": {},
+      "force_empty_sampling": false,
+      "promising_state_ids": [
+        "state:1f466ae3d840b2cd227a1c9d50b158c5f9bf5df93098ea48dee5bff3a1397d80"
+      ],
+      "record_type": "archive_cell",
+      "schema_version": 1,
+      "stepping_stone_state_ids": [
+        "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99"
+      ],
+      "tested_count": 8,
+      "under_tested": false
+    }
+  ],
+  "descriptors": [
+    {
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "dimensions": {
+        "boundary_contact_bin": "low",
+        "pair_contact_bin": "low",
+        "radius_dispersion_bin": "uniform"
+      },
+      "extensions": {},
+      "function_version": "circle_contact_radius_v1",
+      "method_complete": true,
+      "problem_id": "circle_packing",
+      "record_type": "descriptor",
+      "schema_version": 1
+    }
+  ],
+  "epoch": 0,
+  "evidence": [
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.08333333333333333
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.543187Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:0ce59990c6f7945907700dd5db1baa8e688839d1790b713e1f79c0da779f76ee",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/f87d809f293b62668dbf8a3d2a5fada0e55a2264804727ee4d597c095b0f6055.json",
+        "answer_payload_hash": "6b72fc93fb3f6d70e58082851849026227cbac3f5cef7048315ad2ba2a9ce1bc",
+        "answer_payload_id": "answer_payload:f87d809f293b62668dbf8a3d2a5fada0e55a2264804727ee4d597c095b0f6055",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:2dbe447af7638dfc3d6476afcd4061b9b6c237ad4840c998be9bb39efc625f7a"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:a71c70e8f03399ade9685e82a6000f45ae886629370fa6d6a1ac1af77f69af54",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004006099421530962
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:2dbe447af7638dfc3d6476afcd4061b9b6c237ad4840c998be9bb39efc625f7a",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "7ac8d67dd1a012689e65bd40c1f426c78c4137bcbbf217527bc6a8541aaf2443",
+      "started_at": "2026-08-30T03:45:15.539175Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.08333333333333333
+          ],
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.08333333333333333
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.447773Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:19db635b86618f141ef1ab1bba1349579478949b12241e00b18be152f75118f7",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/7924af4471f6bdbaf3d36259fd9780d7c77a8c053dca52fdf9cffaf9812a8513.json",
+        "answer_payload_hash": "350a5d9e6609b13d03e7e51c63855a3ae541194d82f8876b5d45790f38d1b020",
+        "answer_payload_id": "answer_payload:7924af4471f6bdbaf3d36259fd9780d7c77a8c053dca52fdf9cffaf9812a8513",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:1b5067da4cd6bf804a4e793c860eb371a62cb86cd1bc82c8286fde3ffcb00c5d",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.006994902156293392
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "0b4f5993d1f375e1a689d410a62be602aa752997f4e13355319fe7015c28c530",
+      "started_at": "2026-08-30T03:45:15.440776Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.25,
+            0.9166666666666666
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:16.109778Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:1db11b7f5b686f0ddf170ee166aa28c825772aa5ef4cc045a34b3dd1899985be",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/62796040911d3377fe13bde793389c393652564eff6db19df02eb8b21d90599b.json",
+        "answer_payload_hash": "f7861d8e5245ab974d541e13094b753d057d5faa589070733a8f397000111ec9",
+        "answer_payload_id": "answer_payload:62796040911d3377fe13bde793389c393652564eff6db19df02eb8b21d90599b",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:f79cfec01c63f00b9982b32af73f5076646010964b3ce93bf912a0cbf5927f34"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:01c8b99a2d9ac306dee4eb17d6237787dfc8ad5ed4a41f045fc6336748186d88",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004965981002897024
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:f79cfec01c63f00b9982b32af73f5076646010964b3ce93bf912a0cbf5927f34",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "8f57fecd8e254680659e340ef2f7ebb5a81b549aeee100f92978be9f84df1a5c",
+      "started_at": "2026-08-30T03:45:16.104809Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:16.351618Z",
+      "confirmed": true,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:3defd8d68804af17139eeb896125446734ee9a377381691cf58e8325c86f1852",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/e880c22c52a9da0893d64c3acb3bba5936aac6e9e4a391c67c002ee3e4307003.json",
+        "answer_payload_hash": "5bbd5328dc0348dd36973fd54ff0da0c1c2636d52f73729b5b5f3f1ff82268af",
+        "answer_payload_id": "answer_payload:e880c22c52a9da0893d64c3acb3bba5936aac6e9e4a391c67c002ee3e4307003",
+        "confirmation_of_evidence_id": "evidence:faae411ca282188351480bc0607588075a63885575aa2299add9c1c3d2abd6d1",
+        "confirmation_target_state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:43791384f66abff6762ce5d851c31b33f68d6c984b61223be479a0e2ffd56ac7",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004332315176725388
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "495c05f1018f01b44dc143449303d6a57f5374df04e6d20efac62e6774bbc68f",
+      "started_at": "2026-08-30T03:45:16.347284Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.645274Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:504c54a53577974dbc7cd28a03ba83cf112fdfd83f06934e74e86df2abf66a33",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/c99c5e5834e1502e9e1f39e027daad2287a2043d8561f91601d1fba136097cf4.json",
+        "answer_payload_hash": "a0a6d37cbd30718778096dd081d2768ae50c58ef10cdaf64def41b34049bc622",
+        "answer_payload_id": "answer_payload:c99c5e5834e1502e9e1f39e027daad2287a2043d8561f91601d1fba136097cf4",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:5dc9d67a2f38192d43c6254164caa427095da5e9ca35c394127ea1ed90df0278"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:2d1dc2bd36874b74512e736c6584b1a5cbc6436c8a3de5a41a73e4e259745dc5",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004842670168727636
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:5dc9d67a2f38192d43c6254164caa427095da5e9ca35c394127ea1ed90df0278",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "ddc777839f1430d952afed0fe597d472f44ed193aeab73d7af0b0a9a0b1fd7c6",
+      "started_at": "2026-08-30T03:45:15.640425Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.988197Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:77049573935afaf96f65165ca3b0892ee8d8c5bdee2891417ab4a2b633aa523e",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "c0dc0b7d1fbf2030590f5da67fa3b4b72a801b1ca3b1a6c0d011ae0b9dba8b03",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/61e5e7d223a659edd986b4345d4443befe6b1360b3b7cdec21783429c797c852.json",
+        "answer_payload_hash": "35eddfb4a7565f788f4d091d25178c224c405d417447eea74c0232e72e153bf3",
+        "answer_payload_id": "answer_payload:61e5e7d223a659edd986b4345d4443befe6b1360b3b7cdec21783429c797c852",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:1f466ae3d840b2cd227a1c9d50b158c5f9bf5df93098ea48dee5bff3a1397d80"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:49222012f109b9ea41d4dd2fac8fda32fb42fc6a89aac3df7bdd2f80622f3f2c",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.005156646016985178
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:1f466ae3d840b2cd227a1c9d50b158c5f9bf5df93098ea48dee5bff3a1397d80",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "eba12e2ce728ff024b8306f034b6e4e69e676cca4535ac7d2b0d1795b6267c64",
+      "started_at": "2026-08-30T03:45:15.983034Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.25,
+            0.9166666666666666
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.9166666666666666
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:16.231927Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:8b9bebeec4f6e9cf698f469298228e7826add8a1871c5df54633fd25e6a680aa",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/c215ed2ee39fc61e1fb2cab277da8ec5025d06f35c6fb9b1abde2b6eae9e08e6.json",
+        "answer_payload_hash": "88bff826b189fd6108223bbac3a16908b4214e40eeb62b381c10958efacd622e",
+        "answer_payload_id": "answer_payload:c215ed2ee39fc61e1fb2cab277da8ec5025d06f35c6fb9b1abde2b6eae9e08e6",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:d3f211ade11e9af038c86cc0e67b79ecf96ba9a54834e15f3c7f1d9567ad0136"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:d502d57f412db69114a6b904717559009accff6b1ea52371a32d7de0802ef1e2",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004555857740342617
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:d3f211ade11e9af038c86cc0e67b79ecf96ba9a54834e15f3c7f1d9567ad0136",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "dd0b07b396f5fb424fbf09afa04944619611e8d563bcb50c58b40ae24deb2595",
+      "started_at": "2026-08-30T03:45:16.227369Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.756175Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:b2e1ddda550dc53e71c8734679b3f1149a724ac4f55a65b2cc9207929c1f5a4b",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/46659c4f9f8e7641b9e8b50964beb01dc7194677893c2066bba79985589bafab.json",
+        "answer_payload_hash": "3452be172c1852cd79bac75f77c47f81a7a8c30ecf8afeafb051f594e0171480",
+        "answer_payload_id": "answer_payload:46659c4f9f8e7641b9e8b50964beb01dc7194677893c2066bba79985589bafab",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:a652ee23df4d32c32723cc845c467f0a89344e91ba9ffbf92c82f733b2665b2c"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:5bd4c853d4de01aa68e9428ea697ea3a705dac14133def36bd5a892b8b371f28",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.004762473050504923
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:a652ee23df4d32c32723cc845c467f0a89344e91ba9ffbf92c82f733b2665b2c",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "c339db765817184d5d7a1292ffdc2d0e7134ca65e1ad2ffd0a85e2406fd001e3",
+      "started_at": "2026-08-30T03:45:15.751408Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "completed_at": "2026-08-30T03:45:15.870014Z",
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "diagnostics": {
+        "message": "verified saved circle packing"
+      },
+      "evidence_id": "evidence:faae411ca282188351480bc0607588075a63885575aa2299add9c1c3d2abd6d1",
+      "extensions": {},
+      "failure_kind": "none",
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "flags": {
+        "answer_artifact_uri": "/scratch/mmoslem3/EVOLVE/runs/circle_packing_Qwen3-8B_0829-234515_fbf840/artifacts/answers/e880c22c52a9da0893d64c3acb3bba5936aac6e9e4a391c67c002ee3e4307003.json",
+        "answer_payload_hash": "5bbd5328dc0348dd36973fd54ff0da0c1c2636d52f73729b5b5f3f1ff82268af",
+        "answer_payload_id": "answer_payload:e880c22c52a9da0893d64c3acb3bba5936aac6e9e4a391c67c002ee3e4307003",
+        "descriptor_version": "circle_contact_radius_v1",
+        "deterministic": true,
+        "diagnostic_policy_version": "bounded_diagnostics_v1",
+        "evidence_identity_version": "evidence_packet_schema_v1",
+        "excluded_from_scientific_updates": false,
+        "method_incomplete": false,
+        "payload_only": true,
+        "verification_attempt_index": 0,
+        "verification_policy_id": "verification_policy:1f0147bb5246318ef997e8f920836366b8d0337e797106150f23e43f6dcdb65e",
+        "verification_policy_version": "evolve_engine_v1"
+      },
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "internal_reward": 2.123333333333333,
+      "lineage_ids": [
+        "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b"
+      ],
+      "parent_state_id": null,
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:43791384f66abff6762ce5d851c31b33f68d6c984b61223be479a0e2ffd56ac7",
+      "raw_score": 2.123333333333333,
+      "record_type": "evidence_packet",
+      "resolved": true,
+      "resources": {
+        "verifier_calls": 1,
+        "verifier_wall_time_s": 0.0057908231392502785
+      },
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "scientific_state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b",
+      "scores": {
+        "boundary_fraction": 0.0,
+        "contact_density": 0.0,
+        "mean_radius": 0.08166666666666665,
+        "pair_contacts": 0,
+        "radius_cv": 1.6993209560589135e-16,
+        "sum_radii": 2.123333333333333
+      },
+      "source_hash": "495c05f1018f01b44dc143449303d6a57f5374df04e6d20efac62e6774bbc68f",
+      "started_at": "2026-08-30T03:45:15.864219Z",
+      "timeout_is_scientific": true,
+      "uncertainty": 0.0,
+      "verifier_id": "verifier:11dc3f503460131ba94e7ebdc8846601212b36f8cbb91d5066bb0d5f5d889bdb",
+      "verifier_version": "answer_schema_v1"
+    }
+  ],
+  "proposals": [
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:01c8b99a2d9ac306dee4eb17d6237787dfc8ad5ed4a41f045fc6336748186d88",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "8f57fecd8e254680659e340ef2f7ebb5a81b549aeee100f92978be9f84df1a5c",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75], [0.75, 0.75], [0.9166666666666666, 0.75], [0.08333333333333333, 0.9166666666666666], [0.25, 0.9166666666666666]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:1b5067da4cd6bf804a4e793c860eb371a62cb86cd1bc82c8286fde3ffcb00c5d",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "0b4f5993d1f375e1a689d410a62be602aa752997f4e13355319fe7015c28c530",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.08333333333333333, 0.08333333333333333], [0.25, 0.08333333333333333], [0.4166666666666667, 0.08333333333333333], [0.5833333333333334, 0.08333333333333333], [0.75, 0.08333333333333333], [0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:2d1dc2bd36874b74512e736c6584b1a5cbc6436c8a3de5a41a73e4e259745dc5",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "ddc777839f1430d952afed0fe597d472f44ed193aeab73d7af0b0a9a0b1fd7c6",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.4166666666666667, 0.08333333333333333], [0.5833333333333334, 0.08333333333333333], [0.75, 0.08333333333333333], [0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:43791384f66abff6762ce5d851c31b33f68d6c984b61223be479a0e2ffd56ac7",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "495c05f1018f01b44dc143449303d6a57f5374df04e6d20efac62e6774bbc68f",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.75, 0.08333333333333333], [0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75], [0.75, 0.75], [0.9166666666666666, 0.75]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:49222012f109b9ea41d4dd2fac8fda32fb42fc6a89aac3df7bdd2f80622f3f2c",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "eba12e2ce728ff024b8306f034b6e4e69e676cca4535ac7d2b0d1795b6267c64",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75], [0.75, 0.75], [0.9166666666666666, 0.75], [0.08333333333333333, 0.9166666666666666]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:5bd4c853d4de01aa68e9428ea697ea3a705dac14133def36bd5a892b8b371f28",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "c339db765817184d5d7a1292ffdc2d0e7134ca65e1ad2ffd0a85e2406fd001e3",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.5833333333333334, 0.08333333333333333], [0.75, 0.08333333333333333], [0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75], [0.75, 0.75]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:a71c70e8f03399ade9685e82a6000f45ae886629370fa6d6a1ac1af77f69af54",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "7ac8d67dd1a012689e65bd40c1f426c78c4137bcbbf217527bc6a8541aaf2443",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.25, 0.08333333333333333], [0.4166666666666667, 0.08333333333333333], [0.5833333333333334, 0.08333333333333333], [0.75, 0.08333333333333333], [0.9166666666666666, 0.08333333333333333], [0.08333333333333333, 0.25], [0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    },
+    {
+      "branch_id": "branch:070b188082b7334d0230cb92ba2f2c36accf4cb6ae5d8c6c23c90f7289b3cc5b",
+      "created_at": "",
+      "extensions": {},
+      "parent_state_id": null,
+      "parsed_candidate": null,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:d502d57f412db69114a6b904717559009accff6b1ea52371a32d7de0802ef1e2",
+      "record_type": "proposal",
+      "run_id": "run:f0eb8d50914dd0adceaf3ec24ef526361e73bf82b71f44005b0c1756513fb587",
+      "schema_version": 1,
+      "source_hash": "dd0b07b396f5fb424fbf09afa04944619611e8d563bcb50c58b40ae24deb2595",
+      "source_text": "def run_packing():\n    centers = np.asarray([[0.25, 0.25], [0.4166666666666667, 0.25], [0.5833333333333334, 0.25], [0.75, 0.25], [0.9166666666666666, 0.25], [0.08333333333333333, 0.4166666666666667], [0.25, 0.4166666666666667], [0.4166666666666667, 0.4166666666666667], [0.5833333333333334, 0.4166666666666667], [0.75, 0.4166666666666667], [0.9166666666666666, 0.4166666666666667], [0.08333333333333333, 0.5833333333333334], [0.25, 0.5833333333333334], [0.4166666666666667, 0.5833333333333334], [0.5833333333333334, 0.5833333333333334], [0.75, 0.5833333333333334], [0.9166666666666666, 0.5833333333333334], [0.08333333333333333, 0.75], [0.25, 0.75], [0.4166666666666667, 0.75], [0.5833333333333334, 0.75], [0.75, 0.75], [0.9166666666666666, 0.75], [0.08333333333333333, 0.9166666666666666], [0.25, 0.9166666666666666], [0.4166666666666667, 0.9166666666666666]], dtype=float)\n    radii = np.asarray([0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667, 0.08166666666666667], dtype=float)\n    return centers, radii, float(np.sum(radii))\n"
+    }
+  ],
+  "provenance": [],
+  "schema_version": 1,
+  "states": [
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:77049573935afaf96f65165ca3b0892ee8d8c5bdee2891417ab4a2b633aa523e",
+      "extensions": {},
+      "fingerprint": "c0dc0b7d1fbf2030590f5da67fa3b4b72a801b1ca3b1a6c0d011ae0b9dba8b03",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:49222012f109b9ea41d4dd2fac8fda32fb42fc6a89aac3df7bdd2f80622f3f2c",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:1f466ae3d840b2cd227a1c9d50b158c5f9bf5df93098ea48dee5bff3a1397d80"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.08333333333333333
+          ],
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.08333333333333333
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:19db635b86618f141ef1ab1bba1349579478949b12241e00b18be152f75118f7",
+      "extensions": {},
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:1b5067da4cd6bf804a4e793c860eb371a62cb86cd1bc82c8286fde3ffcb00c5d",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:1fe59abcb1045197c1b402e7141ef737f198d0be4ff7b3a053e20d68be764a99"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.08333333333333333
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:0ce59990c6f7945907700dd5db1baa8e688839d1790b713e1f79c0da779f76ee",
+      "extensions": {},
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:a71c70e8f03399ade9685e82a6000f45ae886629370fa6d6a1ac1af77f69af54",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:2dbe447af7638dfc3d6476afcd4061b9b6c237ad4840c998be9bb39efc625f7a"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": true,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:3defd8d68804af17139eeb896125446734ee9a377381691cf58e8325c86f1852",
+      "extensions": {},
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:43791384f66abff6762ce5d851c31b33f68d6c984b61223be479a0e2ffd56ac7",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:faae411ca282188351480bc0607588075a63885575aa2299add9c1c3d2abd6d1",
+      "extensions": {},
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:43791384f66abff6762ce5d851c31b33f68d6c984b61223be479a0e2ffd56ac7",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:543e6c1e9154c25c746c49e2b5de5b101ed25257140d3669dae6ff8473ac428b"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.08333333333333333
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:504c54a53577974dbc7cd28a03ba83cf112fdfd83f06934e74e86df2abf66a33",
+      "extensions": {},
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:2d1dc2bd36874b74512e736c6584b1a5cbc6436c8a3de5a41a73e4e259745dc5",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:5dc9d67a2f38192d43c6254164caa427095da5e9ca35c394127ea1ed90df0278"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.08333333333333333
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.08333333333333333
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.08333333333333333
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:b2e1ddda550dc53e71c8734679b3f1149a724ac4f55a65b2cc9207929c1f5a4b",
+      "extensions": {},
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:5bd4c853d4de01aa68e9428ea697ea3a705dac14133def36bd5a892b8b371f28",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:a652ee23df4d32c32723cc845c467f0a89344e91ba9ffbf92c82f733b2665b2c"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.25,
+            0.9166666666666666
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.4166666666666667,
+            0.9166666666666666
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:8b9bebeec4f6e9cf698f469298228e7826add8a1871c5df54633fd25e6a680aa",
+      "extensions": {},
+      "fingerprint": "26689fa4e26aaf147816f00ffb337b765c76cf0f0d53b1e01221785045175811",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:d502d57f412db69114a6b904717559009accff6b1ea52371a32d7de0802ef1e2",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:d3f211ade11e9af038c86cc0e67b79ecf96ba9a54834e15f3c7f1d9567ad0136"
+    },
+    {
+      "admitted": true,
+      "answer_payload": {
+        "centers": [
+          [
+            0.08333333333333333,
+            0.25
+          ],
+          [
+            0.08333333333333333,
+            0.4166666666666667
+          ],
+          [
+            0.08333333333333333,
+            0.5833333333333334
+          ],
+          [
+            0.08333333333333333,
+            0.75
+          ],
+          [
+            0.08333333333333333,
+            0.9166666666666666
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.4166666666666667
+          ],
+          [
+            0.25,
+            0.5833333333333334
+          ],
+          [
+            0.25,
+            0.75
+          ],
+          [
+            0.25,
+            0.9166666666666666
+          ],
+          [
+            0.4166666666666667,
+            0.25
+          ],
+          [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          [
+            0.4166666666666667,
+            0.5833333333333334
+          ],
+          [
+            0.4166666666666667,
+            0.75
+          ],
+          [
+            0.5833333333333334,
+            0.25
+          ],
+          [
+            0.5833333333333334,
+            0.4166666666666667
+          ],
+          [
+            0.5833333333333334,
+            0.5833333333333334
+          ],
+          [
+            0.5833333333333334,
+            0.75
+          ],
+          [
+            0.75,
+            0.25
+          ],
+          [
+            0.75,
+            0.4166666666666667
+          ],
+          [
+            0.75,
+            0.5833333333333334
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            0.9166666666666666,
+            0.25
+          ],
+          [
+            0.9166666666666666,
+            0.4166666666666667
+          ],
+          [
+            0.9166666666666666,
+            0.5833333333333334
+          ],
+          [
+            0.9166666666666666,
+            0.75
+          ]
+        ],
+        "num_circles": 26,
+        "problem": "circle_packing",
+        "radii": [
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667,
+          0.08166666666666667
+        ],
+        "schema_version": 1
+      },
+      "confirmed": false,
+      "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+      "evidence_id": "evidence:1db11b7f5b686f0ddf170ee166aa28c825772aa5ef4cc045a34b3dd1899985be",
+      "extensions": {},
+      "fingerprint": "503c7af0b17524ada7b130442eaf063e99969b957a45447434101c2080aab0f4",
+      "internal_reward": 2.123333333333333,
+      "problem_id": "circle_packing",
+      "proposal_id": "proposal:01c8b99a2d9ac306dee4eb17d6237787dfc8ad5ed4a41f045fc6336748186d88",
+      "raw_score": 2.123333333333333,
+      "record_type": "verified_scientific_state",
+      "resolved": true,
+      "schema_version": 1,
+      "state_id": "state:f79cfec01c63f00b9982b32af73f5076646010964b3ce93bf912a0cbf5927f34"
+    }
+  ]
+}

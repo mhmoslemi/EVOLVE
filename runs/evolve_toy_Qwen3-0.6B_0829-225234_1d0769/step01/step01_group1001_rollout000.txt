@@ -1,0 +1,16 @@
+```python
+# Define the target squared distance (lower is better)
+target_squared_distance = 0.0
+
+# Native score function
+def native_score(x, y):
+    return (x - 3) ** 2 + (y + 2) ** 2
+
+# Define the run_toy function to evolve towards the target
+def run_toy():
+    # Initialize with the previous parent point
+    initial_point = [-4, -4]
+    
+    # Define the constrained variables (x and y are between -8 and 8)
+    x_min, x_max = -8, 8
+    y

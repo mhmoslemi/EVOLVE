@@ -1,0 +1,68 @@
+{
+  "checkpoint_hash": "038e7a952fd83bfdab50b350b1b88394a07adee8e4b19aa096b2d968d42c3c1b",
+  "config_hash": "4792672cad4e6311d9ccfd8fa64051405d5acf31c2983095753cb0be52379a31",
+  "config_schema_version": 1,
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "8bfa9c0e1b42655f3337d0c6847aba16d1289fca",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "auto",
+      "physical_id": 0,
+      "purpose": "barrier_learning_and_tensor_parallel_generation"
+    }
+  ],
+  "host": {
+    "hostname": "kn104",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6338_CPU_@_2.00GHz-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "initial_config_hash": "a2629cd0d88025db9e4cce2a687a33a335ce2b18ead790adf97bf0e1d78837a8",
+  "initial_manifest": "manifest.json",
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "Qwen/Qwen3-0.6B",
+    "training_backend": "hf",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "previous_config_hash": "a2629cd0d88025db9e4cce2a687a33a335ce2b18ead790adf97bf0e1d78837a8",
+  "previous_manifest": "manifest.json",
+  "resume_index": 1,
+  "resumed_at": "2026-08-30T02:57:02.612288Z",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "run_name": "evolve_toy_Qwen3-0.6B_0829-225234_1d0769",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "4792672cad4e6311d9ccfd8fa64051405d5acf31c2983095753cb0be52379a31",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "evaluation_is_serialized_with_model_phase": false,
+    "exclusive_evaluation_gpu_id": null,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 12,
+    "runtime_visible_gpu_ids": [
+      0
+    ],
+    "tensor_parallel_size": 1,
+    "training_gpu_id": 0,
+    "vllm_quantization": "auto"
+  }
+}

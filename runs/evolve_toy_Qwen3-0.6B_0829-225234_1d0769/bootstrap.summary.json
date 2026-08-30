@@ -1,0 +1,9 @@
+{
+  "checkpoint": "checkpoint_epoch000.json",
+  "checkpoint_hash": "805b92cb12d8949e4ad9e81defae2959133d20b95e9b9dc3c3bf148954bcf2e4",
+  "committed_epoch": 0,
+  "epoch": 0,
+  "schema_version": 1,
+  "training_state": "checkpoint_epoch000.pt",
+  "training_state_hash": "1c519346321aa1588efbb74ccfe946ad0d7b674c7fc7d7a4f95c14c7a56826f3"
+}

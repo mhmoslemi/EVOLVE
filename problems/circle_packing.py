@@ -234,8 +234,37 @@ Make sure to /think step by step, first give your strategy between <strategy> an
 
     # ------------------------------------------------------------------
     def seed_states(self) -> List[SeedState]:
-        return [SeedState(code="", value=0.0, raw_score=0.0)
-                for _ in range(self.num_seed_states)]
+        grid_side = max(1, int(np.ceil(np.sqrt(self.num_circles))))
+        radius = 0.49 / grid_side
+        grid = [
+            [(column + 0.5) / grid_side, (row + 0.5) / grid_side]
+            for row in range(grid_side)
+            for column in range(grid_side)
+        ]
+        seeds = []
+        for index in range(self.num_seed_states):
+            offset = index % len(grid)
+            centers = [
+                list(grid[(offset + item) % len(grid)])
+                for item in range(self.num_circles)
+            ]
+            radii = [radius] * self.num_circles
+            total = float(sum(radii))
+            code = (
+                "def run_packing():\n"
+                f"    centers = np.asarray({centers!r}, dtype=float)\n"
+                f"    radii = np.asarray({radii!r}, dtype=float)\n"
+                "    return centers, radii, float(np.sum(radii))\n"
+            )
+            seeds.append(
+                SeedState(
+                    code=code,
+                    value=total,
+                    raw_score=total,
+                    construction=[centers, radii, total],
+                )
+            )
+        return seeds
 
     # ------------------------------------------------------------------
     # EVOLVE saved-answer hooks used by the independent common verifier.

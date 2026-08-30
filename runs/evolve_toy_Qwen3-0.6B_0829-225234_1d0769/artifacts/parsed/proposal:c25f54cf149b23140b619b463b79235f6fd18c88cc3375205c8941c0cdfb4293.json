@@ -1,0 +1,17 @@
+{
+  "branch_id": "branch:d2da71e8b1aba609c189d9714e72c6e468999ae88eb839835a7e51084193254f",
+  "created_at": "2026-08-30T02:55:21.738084Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": [
+    5,
+    5
+  ],
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:c25f54cf149b23140b619b463b79235f6fd18c88cc3375205c8941c0cdfb4293",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "acac4fe40cf5900d50043f8739ab6cb5db6e7185ad74f1bbe9caed12db51a5ef",
+  "source_text": "```python\ndef run_toy():\n    \"\"\"Return the optimal point based on toy search with frozen EVOLVE.\"\"\"\n    start_point = [4, 4]\n    initial_point = start_point\n\n    # Step 0: Explore_step_0 to seek diversified territory\n    for x in range(-8, 9):\n        for y in range(-8, 9):\n            if x == 5 and y == 5:\n                return [5, 5]\n\n    # Step 1: Return the first found position with valid coordinates (but no decision point)\n    return [4, 4]\n```"
+}

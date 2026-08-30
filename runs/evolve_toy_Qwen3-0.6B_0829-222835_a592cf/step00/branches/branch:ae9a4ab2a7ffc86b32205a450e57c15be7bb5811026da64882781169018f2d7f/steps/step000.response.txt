@@ -1,0 +1,4 @@
+<think>
+Okay, let's see. The user wants me to create a new program for a deterministic two-dimensional toy search, improved. The existing solution uses a parent point [-4,4] with a specific score. The target is to find a point with a squared distance of 0.0 from (3,-2). 
+
+First, I need to think about what a deterministic two-dimensional search might do. Since the target is fixed, maybe the algorithm is trying to reach that exact point, but perhaps there's another approach. The existing solution's run_toy() returns [-4,4], which has a distance of 8

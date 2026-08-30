@@ -1,0 +1,4 @@
+<think>
+Okay, let's see. The user wants me to fix the existing program to achieve the target squared distance of 0.0. The previous program returned [-4, 4] with a squared distance of 85.0. But I need to find a way to reach 0.0.
+
+First, the original function was just a simple point. The target is to minimize the squared distance to (3, -2). Let's calculate the distance from the previous point. The distance squared between [-4, 4] and (3, -2) is (3 - (-4))² + (-2

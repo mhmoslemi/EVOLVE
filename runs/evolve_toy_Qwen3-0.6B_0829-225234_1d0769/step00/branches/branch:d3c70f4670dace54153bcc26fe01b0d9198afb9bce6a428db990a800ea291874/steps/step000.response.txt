@@ -1,0 +1,12 @@
+```python
+def run_toy():
+    # Central point with higher score but lower distance
+    x = 4
+    y = 4
+
+    # This is the frozen verified start point
+    initial_point = x, y
+
+    # Perform a single explore_step_0 with a horizons of 1
+    return [x, y]
+```

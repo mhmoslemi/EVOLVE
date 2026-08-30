@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:4e7671946aa056b71b8755c3c276a122641825139242c5f08fe13a243983791e",
+  "created_at": "2026-08-30T02:59:19.377355Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:6ec35a1d41eef2cc8a661f52ea8e21307d43dfad398940d1edc5d664be52bd37",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "f47ac8e2d48881c542a73222cd337ea4d4bb8424839c5c7bd9fc8f039a1b7584",
+  "source_text": "State: The current response has a divided mechanism, targeted at producing a more stable and reliable path at the `south_west` quadrant having a radial band of 0.0 in squared distance.  \n\nCandidate:\n```python\n[-5, -5]\n```"
+}

@@ -1,0 +1,15 @@
+```python
+def run_toy():
+    # Define the target point (x, y) that has targeted squared distance 0.0
+    target = (3, -2)
+    
+    # We start from the initial point: [-4, -4]
+    initial_point = [-4, -4]
+    
+    # Compute the difference between target and initial point
+    x_diff = abs(3 - initial_point[0])
+    y_diff = abs(-2 - initial_point[1])
+    
+    # Refine the point based on the difference
+    if x_diff < y_diff:
+        return [initial_point[

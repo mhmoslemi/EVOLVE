@@ -1,0 +1,14 @@
+{
+  "descriptor_id": "descriptor:2092a611cd40c5aa8d4f8c08216d3da83769d5b06682806ab4a39397b2b8030d",
+  "dimensions": {
+    "boundary_contact_bin": "low",
+    "pair_contact_bin": "low",
+    "radius_dispersion_bin": "uniform"
+  },
+  "extensions": {},
+  "function_version": "circle_contact_radius_v1",
+  "method_complete": true,
+  "problem_id": "circle_packing",
+  "record_type": "descriptor",
+  "schema_version": 1
+}

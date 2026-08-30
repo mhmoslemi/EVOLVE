@@ -1,0 +1,62 @@
+```python
+import numpy as np
+import scipy.optimize as optimize
+import functools
+import time
+
+# Pre-imported functions
+from evaluate_erdos_solution import evaluate_erdos_solution
+from initial_h_values import initial_h_values
+
+def run(seed=42, budget_s=100, **kwargs):
+    # Set seed for reproducibility
+    np.random.seed(seed)
+    
+    # Define the number of points
+    n_points = 100  # Choose a smaller number for faster computation
+    dx = 2.0 / n_points
+    
+    # Initial guess from the provided initial_h_values
+    h_values = np.array(initial_h_values[:n_points])
+    h_values = h_values / np.sum(h_values) * (n_points / 2)
+    
+    # Define the objective function to minimize the maximum overlap
+    def objective(x):
+        h = x.copy()
+        h = np.clip(h, 0, 1)
+        # Compute the overlap integral
+        result = np.correlate(h, 1 - h, mode="full") * dx
+        max_overlap = np.max(result)
+        return max_overlap
+    
+    # Define the constraints
+    def constraint_sum(x):
+        return np.sum(x) - (n_points / 2)
+    
+    def constraint_bounds(x):
+        return np.all((0 <= x) & (x <= 1))
+    
+    # Set up the optimization problem
+    bounds = [(0, 1) for _ in range(n_points)]
+    constraints = [
+        {'type': 'eq', 'fun': constraint_sum},
+        {'type': 'ineq', 'fun': constraint_bounds}
+    ]
+    
+    # Use the initial guess to start the optimization
+    result = optimize.minimize(
+        objective,
+        h_values,
+        bounds=bounds,
+        constraints=constraints,
+        method='SLSQP',
+        options={'ftol': 1e-9, 'maxiter': 100}
+    )
+    
+    # Extract the best solution
+    best_h = result.x
+    best_c5 = result.fun
+    
+    # Return the best solution, the C5 bound, and the number of points
+    return best_h, best_c5, n_points
+```

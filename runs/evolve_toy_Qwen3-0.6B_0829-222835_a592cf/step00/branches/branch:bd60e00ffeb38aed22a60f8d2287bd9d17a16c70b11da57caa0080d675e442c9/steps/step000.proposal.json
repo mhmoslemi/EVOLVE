@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:bd60e00ffeb38aed22a60f8d2287bd9d17a16c70b11da57caa0080d675e442c9",
+  "created_at": "2026-08-30T02:30:33.172993Z",
+  "extensions": {},
+  "parent_state_id": "state:9ef44ee6c908b9f83d4ac29779df7b9b20e262a75fdc4326fe468a484ab216cd",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:d0a9e5edaace63f7f969f15dd79e493085631574a00c4049188bd75eb19c095e",
+  "record_type": "proposal",
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1,
+  "source_hash": "64d6e8213bb99650d8f0c4eb2a573ecd14da85fc8e04b09d68df95df5e3d2e28",
+  "source_text": "<think>\nOkay, let's see. The user wants me to solve this deterministic two-dimensional toy search problem. The target squared distance is 0, so I need to find a path to (-4, -4) based on existing code.\n\nThe previous attempt was at [-4, 4], which had a squared distance of 85.0. I need to explore a different point. The frozen EVOLVE action suggests trying a different approach. Perhaps exploring a point in the northwest quadrant with a middle radial band could work.\n\nWait, what are the constraints? The coordinates must be in [-8, 8], and the function"
+}

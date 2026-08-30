@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "train_evolve.py",
+    "--resume",
+    "/scratch/mmoslem3/EVOLVE/runs/evolve_toy_Qwen3-0.6B_0829-225234_1d0769",
+    "--num-steps",
+    "2"
+  ],
+  "schema_version": 1
+}

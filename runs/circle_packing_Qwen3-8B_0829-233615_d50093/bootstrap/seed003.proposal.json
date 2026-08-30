@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:0d64202caa5d92d33f4df886732d6298a9d3f22b3d4fafd187fad2191b47cfb1",
+  "created_at": "",
+  "extensions": {},
+  "parent_state_id": null,
+  "parsed_candidate": null,
+  "problem_id": "circle_packing",
+  "proposal_id": "proposal:2d3ada08ba45c524903fa319edca783553971a389c79a88fad4dac3b49467d7a",
+  "record_type": "proposal",
+  "run_id": "run:5a650cbc594b10d8918153f7289b6dd9a2d991be193e4f22c6e1af7f4c9c54cf",
+  "schema_version": 1,
+  "source_hash": "8bacbf15a33959ee066af7a77e9ef87e393725f4d28307d3f1496fb2c47b0d36",
+  "source_text": "\"\""
+}

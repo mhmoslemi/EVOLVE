@@ -1,0 +1,89 @@
+{
+  "allocations": {
+    "by_channel": {},
+    "by_harness": {},
+    "by_option": {},
+    "by_role": {}
+  },
+  "archive_cells": 2,
+  "archive_coverage": 1.0,
+  "budget": {
+    "verifier_calls": {
+      "consumed": 9.0,
+      "limit": 4000.0,
+      "remaining": 3991.0
+    }
+  },
+  "causal_memory": {
+    "promoted": 0,
+    "quarantined": 0,
+    "records": 0,
+    "rejected": 0
+  },
+  "confirmed_record": {
+    "age_epochs": null,
+    "cell_id": "cell:191d8305d434cf25ef77bcd0b9874518959bc231e676dca76abaa852c29956fe",
+    "holder": {
+      "branch_id": "branch:7d291deed2e5a2a13cd033043a5477369a204eaca8e3d865383511a8a636232d",
+      "confirmed_at": "2026-08-30T03:40:03.782274Z",
+      "evidence_id": "evidence:93fa08a0d999f4572a1178e462ee6ff014d61924118dce0b3229e128fe607b06",
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "proposal_id": "proposal:f46d3f4efb5dba4d95d7e02582513f0dec0718fe6f209e5f290d004032ab7a31"
+    },
+    "internal_reward": 2.0423631823626796,
+    "raw_score": 0.48962887120768206,
+    "state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22"
+  },
+  "epoch": 0,
+  "latest_epoch": {
+    "aborted_audit_pairs": 0,
+    "admission_rate": 0.0,
+    "admitted": 0,
+    "audit_pairs": 0,
+    "branches": 0,
+    "closed_audit_pairs": 0,
+    "infrastructure_aborted": 0,
+    "infrastructure_rate": 0.0
+  },
+  "latest_learning": {
+    "challenger": {
+      "adapter_hash": "f00676e105dbead49143ab6d584ffd7527a38bf81fdf2e5247ac8b30ec67be4d",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "mechanist": {
+      "adapter_hash": "21eac1caf3e4a87f03d0c522c1994d3e6bf057700fd96cfbc84b709e39b3cb65",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "scout": {
+      "adapter_hash": "9becf5ce1b0bd4842969fd4a1332c53acfe7af3f80a3c32b5ca275107627e461",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    }
+  },
+  "note": "interrupted; last committed epoch preserved",
+  "roles": {
+    "challenger": {
+      "adapter_hash": "f00676e105dbead49143ab6d584ffd7527a38bf81fdf2e5247ac8b30ec67be4d",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "mechanist": {
+      "adapter_hash": "21eac1caf3e4a87f03d0c522c1994d3e6bf057700fd96cfbc84b709e39b3cb65",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "scout": {
+      "adapter_hash": "9becf5ce1b0bd4842969fd4a1332c53acfe7af3f80a3c32b5ca275107627e461",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    }
+  },
+  "run_id": "run:491dd30aa50c3a4629e16633c9fa7f239a2afd1622bd7b9dde7bca82dce62c5d",
+  "schema_version": 1
+}

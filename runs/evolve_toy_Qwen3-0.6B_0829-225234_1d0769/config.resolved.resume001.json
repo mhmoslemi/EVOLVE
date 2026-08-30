@@ -1,0 +1,111 @@
+{
+  "backend": "hf",
+  "checkpoint_path": null,
+  "config_hash": "4792672cad4e6311d9ccfd8fa64051405d5acf31c2983095753cb0be52379a31",
+  "deterministic": true,
+  "engine": "evolve",
+  "evolve": {
+    "archive": {
+      "elites_per_cell": 3,
+      "empty_cell_fraction": 0.1
+    },
+    "audits": {
+      "min_pairs_for_promotion": 2,
+      "no_memory_fraction": 0.05
+    },
+    "budget": {
+      "audit_fraction": 0.15,
+      "epochs": 2,
+      "refinement_fraction": 0.05,
+      "verifier_calls": 4096
+    },
+    "harnesses": {
+      "active_versions": [
+        "baseline_v1"
+      ],
+      "trial_fraction": 0.05
+    },
+    "learning": {
+      "group_k": 4,
+      "objective": "ordergrad",
+      "top_m": 1
+    },
+    "options": {
+      "branch_budget": 8,
+      "max_horizon": 1
+    },
+    "refinement": {
+      "max_attempts": 2,
+      "max_depth": 2
+    },
+    "reporting": {
+      "plots_every_epochs": 1,
+      "status_every_verifications": 4
+    },
+    "roles": {
+      "enabled": [
+        "scout",
+        "mechanist",
+        "challenger"
+      ],
+      "method_incomplete": false,
+      "test_mode": false
+    },
+    "scheduler": {
+      "global_exploration_fraction": 0.1,
+      "posterior": "zero_inflated_tail"
+    },
+    "workers": {
+      "max_inflight_branches": 12
+    }
+  },
+  "gen_micro_batch": 1,
+  "generation_backend": "vllm",
+  "gpu_ids": [
+    0
+  ],
+  "gpu_type": "auto",
+  "group_size": 4,
+  "kernel_eval_isolation": true,
+  "kernel_gpu_id": null,
+  "kernel_timeout_s": null,
+  "kl_penalty_coef": 0.1,
+  "learning_rate": 4e-05,
+  "load_in_4bit": true,
+  "lora_alpha": 8,
+  "lora_dropout": 0.0,
+  "lora_rank": 8,
+  "max_new_tokens": 128,
+  "max_seq_length": 2048,
+  "model_name": "Qwen/Qwen3-0.6B",
+  "num_gpus": 1,
+  "num_seed_states": 4,
+  "num_steps": 2,
+  "problem": "evolve_toy",
+  "problem_type": "",
+  "reward_workers": 2,
+  "sandbox_timeout_s": 2.0,
+  "schema_version": 1,
+  "seed": 42,
+  "target": 0.0,
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj"
+  ],
+  "temperature": 1.0,
+  "thinking": false,
+  "top_p": 1.0,
+  "training_gpu_id": 0,
+  "vllm_cpu_offload_gb": 0.0,
+  "vllm_enable_prefix_caching": true,
+  "vllm_enforce_eager": true,
+  "vllm_fully_sharded_loras": true,
+  "vllm_gpu_memory_utilization": 0.85,
+  "vllm_max_num_batched_tokens": 2048,
+  "vllm_max_num_seqs": 4,
+  "vllm_quantization": "auto",
+  "vllm_swap_space_gb": 0.0,
+  "vllm_tensor_parallel_size": 1
+}

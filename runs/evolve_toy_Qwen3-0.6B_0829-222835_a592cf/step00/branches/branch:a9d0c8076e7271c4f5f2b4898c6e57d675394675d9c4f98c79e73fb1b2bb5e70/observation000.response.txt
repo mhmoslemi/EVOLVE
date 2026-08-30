@@ -1,0 +1,4 @@
+<think>
+Okay, let's see. The user wants me to develop a deterministic two-dimensional toy search that solves a problem where the goal is to find a point [x, y] with a squared distance to (3, -2) equal to zero. The previous solution was [4, 4], which has a squared distance of 37, but we need to refine the mechanism to get the target (which is 0.0).
+
+Hmm, the problem says to use only compressed space, no filesystem, no network, no GPU, no randomness. So we need to find a straightforward way to find the point that's

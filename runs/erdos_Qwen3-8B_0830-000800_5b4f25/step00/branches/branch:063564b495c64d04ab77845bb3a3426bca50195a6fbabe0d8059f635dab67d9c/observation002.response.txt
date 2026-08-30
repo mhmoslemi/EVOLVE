@@ -1,0 +1,117 @@
+```python
+import numpy as np
+import scipy.signal
+import time
+import cvxpy as cp
+
+def run(seed=42, budget_s=100, **kwargs):
+    np.random.seed(seed)
+    n_points = 100  # Start with 100 samples for efficiency
+    dx = 2.0 / n_points
+    initial_h_values = np.array([0.5] * n_points)  # Start with a flat function
+    
+    # Evaluate the initial solution
+    def evaluate_erdos_solution(h_values):
+        h = h_values
+        h = np.concatenate([h, h[:1]])  # Duplicate to handle wrap-around
+        corr = scipy.signal.correlate(h, 1 - h, mode="full")
+        c5 = np.max(corr) * dx
+        return c5
+    
+    def update_h(h_values, max_overlap, alpha=0.5):
+        # Adjust the function to reduce max overlap
+        # Identify indices with high overlap and adjust h_values
+        h = h_values
+        h = np.concatenate([h, h[:1]])  # Duplicate to handle wrap-around
+        corr = scipy.signal.correlate(h, 1 - h, mode="full")
+        max_overlap_index = np.argmax(corr)
+        overlap = corr[max_overlap_index] * dx
+        if overlap <= max_overlap:
+            return h_values
+        
+        # Find indices contributing to the overlap
+        kernel = 1 - h
+        overlap_kernel = kernel[max_overlap_index - len(h) + 1:max_overlap_index + 1]
+        indices = np.arange(len(h_values))
+        weights = np.abs(overlap_kernel)
+        weights /= np.sum(weights)
+        
+        # Adjust the function to reduce the overlap
+        adjustment = 0.05
+        h_values[indices] = np.clip(h_values[indices] - adjustment * weights, 0, 1)
+        return h_values
+    
+    # Initial guess
+    h_values = initial_h_values
+    best_c5 = evaluate_erdos_solution(h_values)
+    best_h = h_values.copy()
+    
+    # Optimization loop
+    start_time = time.time()
+    while time.time() - start_time < budget_s:
+        # Try different strategies
+        for _ in range(10):
+            h_values = update_h(h_values, best_c5)
+            h_values = np.clip(h_values, 0, 1)
+            # Ensure the integral constraint is satisfied
+            total_integral = np.sum(h_values) * dx
+            if abs(total_integral - 1) > 1e-6:
+                # Rescale to satisfy the constraint
+                h_values = h_values * (1 / total_integral)
+            
+            # Evaluate the new solution
+            new_c5 = evaluate_erdos_solution(h_values)
+            if new_c5 < best_c5:
+                best_c5 = new_c5
+                best_h = h_values.copy()
+        
+        # Try a more aggressive adjustment
+        for _ in range(5):
+            h_values = update_h(h_values, best_c5, alpha=0.8)
+            h_values = np.clip(h_values, 0, 1)
+            # Ensure the integral constraint is satisfied
+            total_integral = np.sum(h_values) * dx
+            if abs(total_integral - 1) > 1e-6:
+                # Rescale to satisfy the constraint
+                h_values = h_values * (1 / total_integral)
+            
+            # Evaluate the new solution
+            new_c5 = evaluate_erdos_solution(h_values)
+            if new_c5 < best_c5:
+                best_c5 = new_c5
+                best_h = h_values.copy()
+        
+        # Try a gradient descent-like update
+        for _ in range(10):
+            h = best_h.copy()
+            h = np.concatenate([h, h[:1]])  # Duplicate to handle wrap-around
+            corr = scipy.signal.correlate(h, 1 - h, mode="full")
+            max_index = np.argmax(corr)
+            overlap = corr[max_index] * dx
+            if overlap <= best_c5:
+                break
+            
+            # Determine which indices contribute to the overlap
+            kernel = 1 - h
+            overlap_kernel = kernel[max_index - len(h) + 1:max_index + 1]
+            indices = np.arange(len(h_values))
+            weights = np.abs(overlap_kernel)
+            weights /= np.sum(weights)
+            
+            # Adjust the function to reduce the overlap
+            adjustment = 0.05
+            h_values[indices] = np.clip(h_values[indices] - adjustment * weights, 0, 1)
+            
+            # Ensure the integral constraint is satisfied
+            total_integral = np.sum(h_values) * dx
+            if abs(total_integral - 1) > 1e-6:
+                h_values = h_values * (1 / total_integral)
+            
+            # Evaluate the new solution
+            new_c5 = evaluate_erdos_solution(h_values)
+            if new_c5 < best_c5:
+                best_c5 = new_c5
+                best_h = h_values.copy()
+    
+    return best_h, best_c5, n_points
+```

@@ -1,0 +1,39 @@
+{
+  "arm_id": "arm:b272126542d6d6ce7944508906734e5f928fc6b7d0ef8bde963af168243566f0",
+  "branch_id": "branch:55b85b51f981a191fc5f04265553aa4516616a603d841c273b80c11169859171",
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "log_probabilities": [
+    -0.01233378890901804,
+    -2.1815061700181104e-05,
+    -5.364403477869928e-06,
+    -2.8292179107666016,
+    -6.437280717364047e-06,
+    -8.22540732769994e-06,
+    -0.11066924035549164,
+    -5.9798054695129395,
+    -0.6351893544197083,
+    -0.00011693747364915907
+  ],
+  "option_id": "option:574e356b6a047a5c2c47ab6c6048b05acdfd8469bda249d0910c4318fe081f40",
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "prompt_hash": "e32e679d8ceab9199f0dbc9b751e07ee90f5d2d5741efc571a9e47ccd9ecb8fe",
+  "response_hash": "268dd2a30f3a1763e9b8edad13b006e40d3e932a7168befbb68d5ed91c2502ce",
+  "role": "mechanist",
+  "role_snapshot_id": "role_snapshot:c4cb964833a2fb7c74e1cb5ad746bf027b4e454bdfd730b66cfce9fff1849ea7",
+  "schema_version": 1,
+  "seed": 5055151614380199695,
+  "step_index": 0,
+  "token_ids": [
+    73594,
+    12669,
+    198,
+    6108,
+    528,
+    2253,
+    368,
+    715,
+    73594,
+    151645
+  ],
+  "token_mask": null
+}

@@ -1,0 +1,4 @@
+<think>
+Okay, let's tackle this problem. The user wants me to create a deterministic two-dimensional toy search with a specific native score function. The target is to minimize the squared distance to (3, -2). The previous solution was (-4,4), but the target is 0.0. The frozen EVOLVE assignment is to explore a different approach in the north-west quadrant, radial band middle.
+
+First, I need to think about how to approach the problem. The original code used a basic strategy, but maybe there's a more sophisticated way. Since it's deterministic, no exploration is needed. The main task is to

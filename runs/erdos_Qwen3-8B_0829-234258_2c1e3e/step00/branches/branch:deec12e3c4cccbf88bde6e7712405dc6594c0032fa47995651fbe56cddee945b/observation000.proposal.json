@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:deec12e3c4cccbf88bde6e7712405dc6594c0032fa47995651fbe56cddee945b",
+  "created_at": "2026-08-30T03:51:26.200677Z",
+  "extensions": {},
+  "parent_state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:b4750d4128c88f7009164a97fe9344ad157c7e0b2e765a4d621372d6be21599c",
+  "record_type": "proposal",
+  "run_id": "run:f503526a2be01c0cb134076d0341a897b4d2dd37305f1a190d3e6f1e40b295de",
+  "schema_version": 1,
+  "source_hash": "ad40b3daad9530c1f45c66d3edd68c4e389ddad4947fdbf449d0ab68f312fdaf",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as optimize\nimport time\nimport copy\nimport random\nfrom scipy.optimize import minimize\n\ndef run(seed=42, budget_s=100, **kwargs):\n    # Seed\n    np.random.seed(seed)\n    \n    # Initial solution\n    initial_h_values = evaluate_erdos_solution()\n    n_points = len(initial_h_values)\n    \n    # Initial solution value\n    def compute_c5(h_values):\n        n_points = len(h_values)\n        dx = 2.0 / n_points\n        h = np.array(h_values)\n        shifted = np.zeros_like(h)\n        for k in range(1, n_points):\n            shifted[k:] = h[:-k]\n        overlap = np.correlate(h, 1 - h, mode=\"full\") * dx\n        return np.max(overlap)\n    \n    c5_initial = compute_c5(initial_h_values)\n    print(f\"Initial C5: {c5_initial}\")\n    \n    # Parameters\n    max_iterations = 100\n    learning_rate = 0.01\n    epsilon = 1e-6\n    \n    best_h_values = copy.deepcopy(initial_h_values)\n    best_c5 = c5_initial\n    \n    start_time = time.time()\n    \n    for iteration in range(max_iterations):\n        # Random perturbation\n        perturbation = np.random.uniform(-0.1, 0.1, n_points)\n        perturbed_h = initial_h_values + perturbation\n        perturbed_h = np.clip(perturbed_h, 0, 1)\n        \n        # Ensure integral constraint\n        total_integral = np.sum(perturbed_h) * (2.0 / n_points)\n        scaling_factor = 1.0 / total_integral if total_integral != 0 else 1.0\n        perturbed_h *= scaling_factor\n        \n        # Compute C5 for perturbed solution\n        current_c5 = compute_c5(perturbed_h)\n        \n        # Update best solution\n        if current_c5 < best_c5:\n            best_c5 = current_c5\n            best_h_values = perturbed_h.copy()\n        \n        # Track progress\n        elapsed = time.time() - start_time\n        if elapsed > budget_s:\n            break\n        \n        # Adjust initial solution for next iteration\n        initial_h_values = perturbed_h.copy()\n    \n    print(f\"Best C5: {best_c5}\")\n    return best_h_values, best_c5, n_points\n```"
+}

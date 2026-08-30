@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:7b60f716421d686867daca75ff5b09ca6cf9f2b5d0d91f856df9f1246dc27cc7",
+  "created_at": "2026-08-30T02:55:28.513085Z",
+  "extensions": {},
+  "parent_state_id": "state:d9494dc96e80167489bdf5c653f69df5f43ac49d209ffc9d5f6e10007fa0a709",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:647f4cd10185335854d968d06002389abe7e8354194d861120b4674c974db3fe",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "68be93a3f772ede07d43f3b27a21c587687a8e5ddbf7cca9e2c222924e9e8612",
+  "source_text": "```python\ndef run_toy():\n    target = [4, 4]\n    initial_point = [4, 4]\n\n    while len(visited) < 25:  # Step count limit\n        # Identify the next state and proceed\n        operand = [...]  # Dummy replacement\n        current_point = [x, y]\n        next_point = operand(current_point)\n        visited.append(next_point)\n        print(current_point, next_point)\n    return current_point\n```"
+}

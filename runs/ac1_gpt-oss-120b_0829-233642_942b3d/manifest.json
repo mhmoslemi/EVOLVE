@@ -1,0 +1,62 @@
+{
+  "config_hash": "c95ab3dfc6cf9190091adb2924613b367a21abfc184f970cca83ed8884ade5c4",
+  "config_schema_version": 1,
+  "created_at": "2026-08-30T03:36:42.285807Z",
+  "engine": "evolve",
+  "git": {
+    "branch": "master",
+    "commit": "68cd1e1687a3ab1e507c4da95d923ab1321d378a",
+    "dirty": true
+  },
+  "gpus": [
+    {
+      "gpu_type": "auto",
+      "physical_id": 0,
+      "purpose": "barrier_learning_and_tensor_parallel_generation"
+    }
+  ],
+  "host": {
+    "hostname": "kn008",
+    "platform": "Linux-6.8.0-136-generic-x86_64-Intel-R-_Xeon-R-_Gold_6338_CPU_@_2.00GHz-with-glibc2.37",
+    "python_implementation": "CPython"
+  },
+  "model": {
+    "generation_backend": "vllm",
+    "model_name": "unsloth/gpt-oss-120b",
+    "training_backend": "unsloth",
+    "training_load_in_4bit": true
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "peft": "0.20.0",
+    "python": "3.11.4",
+    "pyyaml": "6.0.3",
+    "torch": "2.13.0",
+    "transformers": "5.16.1"
+  },
+  "run_id": "run:7129ddc9476b1110b6f358ec900ae32735b349e77a083fb37552a2d0f82cd06b",
+  "run_name": "ac1_gpt-oss-120b_0829-233642_942b3d",
+  "schema_version": 1,
+  "seeds": {
+    "base_seed": 42
+  },
+  "versions": {
+    "config_hash": "c95ab3dfc6cf9190091adb2924613b367a21abfc184f970cca83ed8884ade5c4",
+    "schema_version": 1
+  },
+  "worker_topology": {
+    "evaluation_is_serialized_with_model_phase": false,
+    "exclusive_evaluation_gpu_id": null,
+    "generation_backend": "vllm",
+    "generation_gpu_ids": [
+      0
+    ],
+    "max_inflight_branches": 20,
+    "runtime_visible_gpu_ids": [
+      0
+    ],
+    "tensor_parallel_size": 1,
+    "training_gpu_id": 0,
+    "vllm_quantization": "auto"
+  }
+}

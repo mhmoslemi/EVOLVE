@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:68cff888a00cccc8f470ff0adfe35faec61c7b2b6240eb308ad95b077b8ca69a",
+  "created_at": "",
+  "extensions": {},
+  "parent_state_id": null,
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:db6ea7745da6aa37cdb37ef0d84e1360051f5974753480e223d58bc02bf6d560",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "3ea15a440337761691ea99d286b76aa1a7555df79e7e1e0aecfbd5d174911c8c",
+  "source_text": "[4, 4]"
+}

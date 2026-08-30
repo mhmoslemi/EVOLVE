@@ -1,0 +1,9 @@
+{
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "maximum_attempts": 2,
+  "policy_snapshot_id": "role_snapshot:774862b33354cafa187c030d2807c399c18ce7e855c465b3ef84b160043f91a0",
+  "proposal_id": "proposal:11344c28b6219b943d672f40ceac33e0b5644bc3e2d87537ed1218f51b3f6018",
+  "schema_version": 1,
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97",
+  "verifier_version": "answer_schema_v1"
+}

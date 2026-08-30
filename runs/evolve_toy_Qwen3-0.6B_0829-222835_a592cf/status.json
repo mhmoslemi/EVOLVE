@@ -1,0 +1,89 @@
+{
+  "allocations": {
+    "by_channel": {},
+    "by_harness": {},
+    "by_option": {},
+    "by_role": {}
+  },
+  "archive_cells": 4,
+  "archive_coverage": 1.0,
+  "budget": {
+    "verifier_calls": {
+      "consumed": 16.0,
+      "limit": 4096.0,
+      "remaining": 4080.0
+    }
+  },
+  "causal_memory": {
+    "promoted": 0,
+    "quarantined": 1,
+    "records": 1,
+    "rejected": 0
+  },
+  "confirmed_record": {
+    "age_epochs": null,
+    "cell_id": "cell:5766cc9828d1ddf541b309b3c54b7820cb3375b3381bdc06d12981b6cd3b1efd",
+    "holder": {
+      "branch_id": "branch:695561a02a5126a1bf27670a4e101608396c1e14ba3fe5bca1ef057cb60cb013",
+      "confirmed_at": "2026-08-30T02:28:36.903173Z",
+      "evidence_id": "evidence:128b6bed2cd0294a1065d69c4f8dddf712def7d3c54d9da67346c932c0e59708",
+      "harness_id": "harness:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "policy_snapshot_id": "role_snapshot:0d70c702271a8a4dc5d635b195e9e8565b0947b04d2d3fa62e90cffdc13823ad",
+      "proposal_id": "proposal:56567267786e8f1bcba15349dadd68815ed46a5ddd17bdc9b0282daa0f0bb770"
+    },
+    "internal_reward": 0.16666666666666666,
+    "raw_score": 5.0,
+    "state_id": "state:f8deb7c5f39cdacb06c7859cf2b7245bcc4a3f718457ea94a98e43f4237734dd"
+  },
+  "epoch": 1,
+  "latest_epoch": {
+    "aborted_audit_pairs": 0,
+    "admission_rate": 0.0,
+    "admitted": 0,
+    "audit_pairs": 0,
+    "branches": 0,
+    "closed_audit_pairs": 0,
+    "infrastructure_aborted": 0,
+    "infrastructure_rate": 0.0
+  },
+  "latest_learning": {
+    "challenger": {
+      "adapter_hash": "5ff93abb85c8627fa0110a50d85be9d9f0ba244fddffc84e0565bc128aee5fe4",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "mechanist": {
+      "adapter_hash": "0c6ffea997e1fc21c6ed2d4e5eea46b55acf703666d905c39e7993e786642950",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "scout": {
+      "adapter_hash": "7904c0d921a743d4ec14aa2aa5a83fcd999259518b67ddc46e0c10704bb2baf1",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    }
+  },
+  "note": "run complete: target epochs reached",
+  "roles": {
+    "challenger": {
+      "adapter_hash": "5ff93abb85c8627fa0110a50d85be9d9f0ba244fddffc84e0565bc128aee5fe4",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "mechanist": {
+      "adapter_hash": "0c6ffea997e1fc21c6ed2d4e5eea46b55acf703666d905c39e7993e786642950",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "scout": {
+      "adapter_hash": "7904c0d921a743d4ec14aa2aa5a83fcd999259518b67ddc46e0c10704bb2baf1",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    }
+  },
+  "run_id": "run:c7a3f53e47fba9149f5273733d16cc62fc30adbf954277173f9833ada95db6e6",
+  "schema_version": 1
+}

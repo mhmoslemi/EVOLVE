@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:23e2b585acc07106903f2c914d848cf5634cd4ca2c143fb3731deddad1c191c8",
+  "created_at": "2026-08-30T02:55:30.714298Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:8d9d923299169e76a1b063a658eeecddb8d2b2c8bedef18b77cca21c0145f21d",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "62b2b9a77d2003097337dabc516d551aa9c0b01226057aff9eba3a02f2675d69",
+  "source_text": "```python\n[-4, -4]\n```"
+}

@@ -1,0 +1,32 @@
+<|im_start|>user
+You are solving a deterministic two-dimensional toy search.
+
+Return an integer point [x, y] with both coordinates in [-8, 8].  The native
+score is squared distance to (3, -2), so lower is better.  Define exactly one
+top-level function `run_toy()` which returns the pair.  Use no filesystem,
+network, GPU, randomness, or long-running computation.
+
+Target squared distance: 0.0 (lower is better).
+Your previous program achieved squared distance = 37.000000.
+Here is the previous program:
+```python
+[4, 4]
+```
+
+The saved parent point is also available as `initial_point = [4, 4]`.
+
+Return the complete program in one final ```python block.
+
+
+## Frozen EVOLVE assignment
+Role: scout. Search broadly and propose a structurally different approach.
+Option action: explore_step_0.
+Harness: Execute the frozen role and option in two explicit stages: first state the single scientific invariant or failure mode being targeted; then produce one complete candidate that changes only what that diagnosis requires. Local reasoning is guidance only. The independent common verifier alone controls admission and the record.
+Horizon step: 1/1.
+Return the complete candidate in the problem's required format.
+Target archive cell descriptor: {"quadrant": "north_east", "radial_band": "middle"}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

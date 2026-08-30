@@ -1,0 +1,6 @@
+```python
+def run_toy():
+    # Goal: Minimize the squared distance to (3, -2)
+    x, y = 3, -2
+    return [x, y]
+```

@@ -1,0 +1,6 @@
+Scientific invariant: The parent point is [4, 4], and the algorithm should evolve to a point where the squared distance to [3, -2] is 0.0.
+
+Candidate:
+```python
+run_toy() -> [3, -2]
+```

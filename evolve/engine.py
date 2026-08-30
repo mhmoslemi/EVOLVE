@@ -160,6 +160,12 @@ def _write_json_once(path: Path, value: Any) -> None:
             raise EngineError(f"immutable JSON artifact conflict: {path}")
 
 
+def _json_native_answer_payload(state: VerifiedScientificState) -> Any:
+    """Project a frozen scientific answer through its durable schema."""
+
+    return state.to_dict()["answer_payload"]
+
+
 def _write_text_once(path: Path, value: str) -> None:
     try:
         write_immutable_text(path, value)
@@ -963,6 +969,42 @@ class EvolveEngine:
         self._adapter = adapter
         self._runs_root = Path(runs_root) if runs_root is not None else Path.cwd() / "runs"
 
+    def _print_progress(
+        self,
+        stage: str,
+        *,
+        epoch: Optional[int] = None,
+        completed: Optional[int] = None,
+        total: Optional[int] = None,
+        unit: str = "items",
+        detail: Optional[str] = None,
+    ) -> None:
+        from evolve.reporting.console import format_progress
+
+        print(
+            format_progress(
+                stage,
+                epoch=epoch,
+                total_epochs=(
+                    self.config.evolve.budget.epochs
+                    if epoch is not None
+                    else None
+                ),
+                completed=completed,
+                total=total,
+                unit=unit,
+                detail=detail,
+            ),
+            flush=True,
+        )
+
+    @staticmethod
+    def _announce_run_directory(layout: RunLayout, *, mode: str) -> None:
+        print(
+            f"\nEVOLVE · {mode} run directory · {layout.run_dir}\n",
+            flush=True,
+        )
+
     # -- run lifecycle -----------------------------------------------------
 
     def run(self) -> int:
@@ -971,9 +1013,14 @@ class EvolveEngine:
             version="evolve_engine_v1", production=not self.config.method_incomplete
         )
         layout, state = self._attach(adapter=adapter, verification_policy=verification_policy)
+        self._print_progress(
+            "model runtime",
+            detail="initializing backbone, role adapters, and generation workers",
+        )
         workers = self._workers or build_production_workers(
             self.config, adapter=adapter, layout=layout, state=state
         )
+        self._print_progress("model runtime", detail="workers ready")
         target_epochs = self.config.evolve.budget.epochs
         completion_reason = "target epochs reached"
         try:
@@ -984,6 +1031,13 @@ class EvolveEngine:
                 has_completed_barrier = False
             needs_bootstrap_commit = not has_completed_barrier
             if needs_bootstrap_commit:
+                self._print_progress(
+                    "bootstrap barrier",
+                    completed=0,
+                    total=1,
+                    unit="barrier",
+                    detail="persisting role adapters and checkpoint",
+                )
                 role_artifacts = (
                     workers.persist_roles(state)
                     if workers.persist_roles is not None
@@ -997,6 +1051,13 @@ class EvolveEngine:
                     adapter=adapter,
                 )
                 self._write_status(layout, state, note="bootstrap committed")
+                self._print_progress(
+                    "bootstrap barrier",
+                    completed=1,
+                    total=1,
+                    unit="barrier",
+                    detail="committed",
+                )
             else:
                 # A checkpoint summary is the completed-barrier authority. Repair
                 # non-critical mirrors that may have been interrupted after that
@@ -1028,6 +1089,11 @@ class EvolveEngine:
                     break
                 if workers.begin_epoch is not None:
                     workers.begin_epoch(state)
+                self._print_progress(
+                    "planning",
+                    epoch=state.epoch,
+                    detail="freezing archive, roles, scheduler, and allocation plan",
+                )
                 try:
                     state, report = self.run_epoch(
                         layout,
@@ -1043,8 +1109,24 @@ class EvolveEngine:
                         raise
                     completion_reason = f"verifier budget exhausted: {exc}"
                     break
+                self._print_progress(
+                    "barrier commit",
+                    epoch=report.epoch,
+                    completed=0,
+                    total=1,
+                    unit="barrier",
+                    detail="checkpointing adapters, optimizer, RNG, and artifacts",
+                )
                 self._commit_barrier(
                     layout, state, report, adapter=adapter, workers=workers
+                )
+                self._print_progress(
+                    "barrier commit",
+                    epoch=report.epoch,
+                    completed=1,
+                    total=1,
+                    unit="barrier",
+                    detail="epoch committed",
                 )
         except KeyboardInterrupt:
             self._write_status(layout, state, note="interrupted; last committed epoch preserved")
@@ -1112,6 +1194,7 @@ class EvolveEngine:
         layout = create_fresh_run_layout(
             runs_root, problem=self.config.problem, model_name=self.config.model_name
         )
+        self._announce_run_directory(layout, mode="fresh")
         run_id = content_id("run", {"run_dir": str(layout.run_dir)})
         requested_path = Path(str(self.metadata.get("config_path", "")))
         requested_yaml = (
@@ -1205,6 +1288,7 @@ class EvolveEngine:
     ) -> Tuple[RunLayout, EpochState]:
         resume_dir = Path(self.metadata["resume_dir"])
         layout = open_existing_run_layout(resume_dir, resume=True)
+        self._announce_run_directory(layout, mode="resume")
         checkpoint = None
         try:
             checkpoint_path = _latest_completed_checkpoint(layout)
@@ -1370,6 +1454,13 @@ class EvolveEngine:
         )
         archive = state.archive
         seeds = tuple(problem.seed_states())
+        self._print_progress(
+            "bootstrap verification",
+            completed=0,
+            total=len(seeds),
+            unit="seeds",
+            detail="validating problem-provided baselines",
+        )
         admitted_count = 0
         admitted_results = []
         failures: List[str] = []
@@ -1382,6 +1473,13 @@ class EvolveEngine:
             return base if attempt_index == 0 else f"{base}:retry:{attempt_index}"
 
         for index, seed in enumerate(seeds):
+            self._print_progress(
+                "bootstrap verification",
+                completed=index,
+                total=len(seeds),
+                unit="seeds",
+                detail=f"verifying seed {index + 1}/{len(seeds)}",
+            )
             candidate = seed.construction if seed.construction is not None else seed.code
             source_text = seed.code or json.dumps(candidate, sort_keys=True, default=str)
             source_hash = content_hash(source_text)
@@ -1694,6 +1792,13 @@ class EvolveEngine:
             _write_json_once(
                 archive_path, {"schema_version": 1, **vars(seed_decision)}
             )
+        self._print_progress(
+            "bootstrap verification",
+            completed=len(seeds),
+            total=len(seeds),
+            unit="seeds",
+            detail=f"{admitted_count} admitted",
+        )
         if admitted_count == 0:
             detail = "; ".join(failures[:3]) or "problem returned no seed states"
             raise EngineError(
@@ -1711,6 +1816,13 @@ class EvolveEngine:
                 float(item[1].internal_reward),
                 item[1].evidence_id,
             ),
+        )
+        self._print_progress(
+            "bootstrap confirmation",
+            completed=0,
+            total=1,
+            unit="record",
+            detail="reverifying the best saved seed payload",
         )
         confirmation_key = "bootstrap:record-confirmation"
         try:
@@ -1869,6 +1981,13 @@ class EvolveEngine:
                 confirmation_evidence,
                 archive=archive,
             )
+            self._print_progress(
+                "bootstrap confirmation",
+                completed=1,
+                total=1,
+                unit="record",
+                detail="confirmed",
+            )
             return replace(
                 state,
                 archive=archive,
@@ -1941,6 +2060,13 @@ class EvolveEngine:
             confirmation.state,
             confirmation.evidence,
             archive=archive,
+        )
+        self._print_progress(
+            "bootstrap confirmation",
+            completed=1,
+            total=1,
+            unit="record",
+            detail="confirmed",
         )
         return replace(
             state,
@@ -2273,6 +2399,7 @@ class EvolveEngine:
             adapter=adapter,
             verification_policy=verification_policy,
             layout=layout,
+            stage="production generation + verification",
         ):
             arm = pending.arm
             branch = pending.branch
@@ -2483,6 +2610,7 @@ class EvolveEngine:
                 adapter=adapter,
                 verification_policy=verification_policy,
                 layout=layout,
+                stage=f"randomized audit {pair_index + 1}/{pairs_to_run}",
             )
             audit_execution_by_branch = {
                 pending.branch.branch_id: execution
@@ -2844,6 +2972,10 @@ class EvolveEngine:
                 adapter=adapter,
                 verification_policy=verification_policy,
                 layout=layout,
+                stage=(
+                    f"refinement audit {pair_index + 1}/"
+                    f"{refinement_pairs_to_run}"
+                ),
             )
             refinement_execution_by_branch = {
                 pending.branch.branch_id: execution
@@ -3144,6 +3276,10 @@ class EvolveEngine:
                 adapter=adapter,
                 verification_policy=verification_policy,
                 layout=layout,
+                stage=(
+                    f"harness calibration {pair_index + 1}/"
+                    f"{harness_pairs_to_run}"
+                ),
             )
             harness_execution_by_branch = {
                 pending.branch.branch_id: execution
@@ -3264,6 +3400,11 @@ class EvolveEngine:
         # branch has closed. This makes the committed record independent of
         # worker completion order and verifies the saved answer payload rather
         # than rerunning proposal code.
+        self._print_progress(
+            "record confirmation",
+            epoch=epoch,
+            detail="checking the best saved provisional payload",
+        )
         archive, record, budget_ledger = self._confirm_epoch_record(
             layout=layout,
             epoch=epoch,
@@ -3296,6 +3437,14 @@ class EvolveEngine:
             _write_json_once(learning_dir / f"{group.group_id}.inputs.json", group.to_dict())
         for trace in traces_by_id.values():
             _write_json_once(learning_dir / f"{trace.trace_id}.trace.json", trace.to_dict())
+        self._print_progress(
+            "role learning",
+            epoch=epoch,
+            completed=0,
+            total=len(groups),
+            unit="groups",
+            detail="running homogeneous on-policy updates",
+        )
         updates, role_registry = train_barrier(
             groups, traces_by_id=traces_by_id, registry=role_registry, epoch=epoch,
             gradient_step=workers.gradient_step, kl_penalty_coef=self.config.kl_penalty_coef,
@@ -3333,6 +3482,14 @@ class EvolveEngine:
                     "optimizer_state": dict(update.result.optimizer_state),
                 },
             )
+        self._print_progress(
+            "role learning",
+            epoch=epoch,
+            completed=len(groups),
+            total=len(groups),
+            unit="groups",
+            detail=f"{len(updates)} role updates persisted",
+        )
 
         record_improved = (
             record.state_id is not None
@@ -3627,26 +3784,73 @@ class EvolveEngine:
         adapter: ProblemScientificAdapter,
         verification_policy: VerificationPolicy,
         layout: RunLayout,
+        stage: str,
     ) -> List[Tuple[_PendingBranch, BranchExecution]]:
         """Run a bounded phase and yield completed branches in arrival order."""
 
+        if not pending:
+            return []
         for item in pending:
             self._persist_branch_assignment(layout, item)
+        epoch = pending[0].branch.epoch
+        self._print_progress(
+            stage,
+            epoch=epoch,
+            completed=0,
+            total=len(pending),
+            unit="branches",
+            detail="generation and verification active",
+        )
+        self._write_live_progress_status(
+            layout,
+            state,
+            epoch=epoch,
+            stage=stage,
+            completed_branches=0,
+            total_branches=len(pending),
+            completed_verifications=0,
+            executions=(),
+        )
+        completed: List[Tuple[_PendingBranch, BranchExecution]] = []
+        completed_verifications = 0
+
+        def record_completion(
+            item: _PendingBranch, execution: BranchExecution
+        ) -> None:
+            nonlocal completed_verifications
+            completed.append((item, execution))
+            completed_verifications += len(execution.observations)
+            self._print_progress(
+                stage,
+                epoch=epoch,
+                completed=len(completed),
+                total=len(pending),
+                unit="branches",
+                detail=f"{completed_verifications} verifications completed",
+            )
+            self._write_live_progress_status(
+                layout,
+                state,
+                epoch=epoch,
+                stage=stage,
+                completed_branches=len(completed),
+                total_branches=len(pending),
+                completed_verifications=completed_verifications,
+                executions=tuple(result for _, result in completed),
+            )
+
         if workers.submit_branch is None:
-            return [
-                (
+            for item in pending:
+                execution = self._execute_pending_branch(
                     item,
-                    self._execute_pending_branch(
-                        item,
-                        state=state,
-                        workers=workers,
-                        adapter=adapter,
-                        verification_policy=verification_policy,
-                        layout=layout,
-                    ),
+                    state=state,
+                    workers=workers,
+                    adapter=adapter,
+                    verification_policy=verification_policy,
+                    layout=layout,
                 )
-                for item in pending
-            ]
+                record_completion(item, execution)
+            return completed
 
         by_future = {}
         for item in pending:
@@ -3661,9 +3865,6 @@ class EvolveEngine:
                 )
             )
             by_future[future] = item
-        completed = []
-        completed_verifications = 0
-        next_status = self.config.evolve.reporting.status_every_verifications
         for future in as_completed(tuple(by_future)):
             item = by_future[future]
             execution = future.result()
@@ -3673,20 +3874,7 @@ class EvolveEngine:
                 execution=execution,
                 ordinal=item.ordinal,
             )
-            completed.append((item, execution))
-            completed_verifications += len(execution.observations)
-            if completed_verifications >= next_status:
-                self._write_live_progress_status(
-                    layout,
-                    state,
-                    epoch=item.branch.epoch,
-                    completed_branches=len(completed),
-                    total_branches=len(pending),
-                    completed_verifications=completed_verifications,
-                    executions=tuple(result for _, result in completed),
-                )
-                while completed_verifications >= next_status:
-                    next_status += self.config.evolve.reporting.status_every_verifications
+            record_completion(item, execution)
         return completed
 
     def _fold_execution(
@@ -4425,6 +4613,9 @@ class EvolveEngine:
             raise EngineError(
                 "confirmed record cannot be resolved from the committed archive"
             ) from exc
+        state_document = verified_state.to_dict()
+        evidence_document = evidence.to_dict()
+        answer_payload = _json_native_answer_payload(verified_state)
         best_dir = layout.path("best")
         best_dir.mkdir(parents=True, exist_ok=True)
         snapshots_dir = best_dir / "snapshots"
@@ -4436,23 +4627,23 @@ class EvolveEngine:
                 shutil.rmtree(staging)
             staging.mkdir(parents=True, exist_ok=False)
             try:
-                atomic_write_json(staging / "state.json", verified_state.to_dict())
-                atomic_write_json(staging / "evidence.json", evidence.to_dict())
+                atomic_write_json(staging / "state.json", state_document)
+                atomic_write_json(staging / "evidence.json", evidence_document)
                 atomic_write_json(
                     staging / "candidate.json",
                     {
                         "state_id": verified_state.state_id,
                         "proposal_id": verified_state.proposal_id,
-                        "answer_payload": verified_state.answer_payload,
+                        "answer_payload": answer_payload,
                     },
                 )
                 try:
                     adapter.problem.render_best(
-                        verified_state.answer_payload, evidence, staging
+                        answer_payload, evidence_document, staging
                     )
                 except Exception as exc:
                     atomic_write_json(
-                        staging / "answer.json", verified_state.answer_payload
+                        staging / "answer.json", answer_payload
                     )
                     atomic_write_text(
                         staging / "renderer.error.txt",
@@ -4464,7 +4655,7 @@ class EvolveEngine:
                     atomic_write_text(
                         staging / "answer.txt",
                         json.dumps(
-                            evidence.answer_payload,
+                            answer_payload,
                             ensure_ascii=False,
                             sort_keys=True,
                             indent=2,
@@ -4529,17 +4720,22 @@ class EvolveEngine:
         atomic_write_text(layout.run_dir / "best_code.py", proposal.source_text)
         atomic_write_json(
             layout.run_dir / "best_construction.json",
-            {"answer_payload": evidence.answer_payload, "internal_reward": evidence.internal_reward},
+            {
+                "answer_payload": answer_payload,
+                "internal_reward": evidence.internal_reward,
+            },
+        )
+        origin = (
+            "deterministic problem bootstrap seed"
+            if proposal.parent_state_id is None
+            else "generated branch proposal"
         )
         print(
-            "\n=== EVOLVE confirmed record ===\n"
-            + json.dumps(
-                evidence.answer_payload,
-                ensure_ascii=False,
-                sort_keys=True,
-                indent=2,
-            )
-            + "\n=== end confirmed record ===\n",
+            "\nEVOLVE · confirmed record"
+            f" · origin={origin}"
+            f" · raw_score={verified_state.raw_score}"
+            f" · internal_reward={verified_state.internal_reward}\n"
+            f"EVOLVE · confirmed record artifacts · {best_dir}\n",
             flush=True,
         )
 
@@ -4549,6 +4745,7 @@ class EvolveEngine:
         state: EpochState,
         *,
         epoch: int,
+        stage: str,
         completed_branches: int,
         total_branches: int,
         completed_verifications: int,
@@ -4572,6 +4769,7 @@ class EvolveEngine:
             {
                 "schema_version": 1,
                 "run_id": state.run_id,
+                "run_directory": str(layout.run_dir),
                 "epoch": state.epoch,
                 "confirmed_record": {
                     "state_id": state.record.state_id,
@@ -4581,8 +4779,18 @@ class EvolveEngine:
                 },
                 "live_epoch": {
                     "epoch": epoch,
+                    "stage": stage,
+                    "total_epochs": self.config.evolve.budget.epochs,
                     "completed_branches": completed_branches,
                     "total_branches": total_branches,
+                    "remaining_branches": max(
+                        0, total_branches - completed_branches
+                    ),
+                    "branch_progress": (
+                        completed_branches / total_branches
+                        if total_branches
+                        else 1.0
+                    ),
                     "completed_verifications": completed_verifications,
                     "infrastructure_aborted": sum(
                         1 for item in executions if item.outcome.infrastructure_aborted
@@ -4688,6 +4896,7 @@ class EvolveEngine:
         status = {
             "schema_version": 1,
             "run_id": state.run_id,
+            "run_directory": str(layout.run_dir),
             "epoch": state.epoch,
             "confirmed_record": {
                 "state_id": state.record.state_id,

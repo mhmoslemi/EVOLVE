@@ -1,0 +1,83 @@
+```python
+import numpy as np
+import scipy.optimize as optimize
+import time
+import copy
+
+def run(seed=42, budget_s=100, **kwargs):
+    # Initialize the solution with the given initial_h_values
+    initial_h = initial_h_values
+    n_points = len(initial_h)
+    dx = 2.0 / n_points
+    initial_h = np.array(initial_h)
+    
+    # Evaluate the initial C5 value
+    def evaluate_c5(h):
+        h = np.array(h)
+        h = np.pad(h, (0, n_points), mode='constant', constant_values=0)
+        conv = np.correlate(h, 1 - h, mode='full')
+        max_overlap = np.max(conv)
+        return max_overlap * dx
+    
+    c5_initial = evaluate_c5(initial_h)
+    
+    # Define the optimization parameters
+    max_iter = 100  # Maximum number of iterations
+    tolerance = 1e-5  # Stopping tolerance
+    learning_rate = 0.1  # Learning rate for gradient descent
+    
+    # Optimization loop
+    start_time = time.time()
+    best_h = copy.deepcopy(initial_h)
+    best_c5 = c5_initial
+    
+    for iteration in range(max_iter):
+        # Evaluate the current C5 value
+        current_c5 = evaluate_c5(best_h)
+        
+        # Check if we have exceeded the budget
+        if time.time() - start_time > budget_s:
+            break
+        
+        # Compute the gradient of the overlap integral with respect to h
+        # We approximate the gradient using finite differences
+        grad = np.zeros_like(best_h)
+        for i in range(len(best_h)):
+            # Perturb h[i]
+            h_plus = best_h.copy()
+            h_plus[i] += 1e-5
+            c5_plus = evaluate_c5(h_plus)
+            
+            h_minus = best_h.copy()
+            h_minus[i] -= 1e-5
+            c5_minus = evaluate_c5(h_minus)
+            
+            grad[i] = (c5_plus - c5_minus) / (2 * 1e-5)
+        
+        # Update the solution using gradient descent
+        best_h -= learning_rate * grad
+        
+        # Ensure the solution remains within [0, 1] and maintains the integral constraint
+        best_h = np.clip(best_h, 0, 1)
+        # Adjust to meet the integral constraint
+        integral = np.sum(best_h) * dx
+        if integral != 1:
+            # Normalize to maintain the integral constraint
+            factor = 1 / integral
+            best_h *= factor
+        
+        # Check if we have improved the C5 value
+        current_c5 = evaluate_c5(best_h)
+        if current_c5 < best_c5:
+            best_c5 = current_c5
+        else:
+            # If no improvement, reduce the learning rate
+            learning_rate *= 0.9
+        
+        # Print progress
+        if iteration % 10 == 0:
+            print(f"Iteration {iteration}, C5: {best_c5}")
+    
+    # Return the best solution found
+    return (best_h.tolist(), best_c5, n_points)
+```

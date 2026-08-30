@@ -1,0 +1,13 @@
+{
+  "descriptor_id": "descriptor:9af109d21501dff4bda2b35cef390912d8ef87e88222badc408c50c971b56a60",
+  "dimensions": {
+    "quadrant": "south_east",
+    "radial_band": "inner"
+  },
+  "extensions": {},
+  "function_version": "toy_quadrant_radius_v1",
+  "method_complete": true,
+  "problem_id": "evolve_toy",
+  "record_type": "descriptor",
+  "schema_version": 1
+}

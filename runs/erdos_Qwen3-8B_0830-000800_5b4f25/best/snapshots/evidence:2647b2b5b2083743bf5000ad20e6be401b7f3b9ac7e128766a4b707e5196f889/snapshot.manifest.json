@@ -1,0 +1,11 @@
+{
+  "compatibility_files": [
+    "answer.txt",
+    "candidate.json",
+    "evidence.json",
+    "state.json"
+  ],
+  "evidence_id": "evidence:2647b2b5b2083743bf5000ad20e6be401b7f3b9ac7e128766a4b707e5196f889",
+  "schema_version": 1,
+  "state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22"
+}

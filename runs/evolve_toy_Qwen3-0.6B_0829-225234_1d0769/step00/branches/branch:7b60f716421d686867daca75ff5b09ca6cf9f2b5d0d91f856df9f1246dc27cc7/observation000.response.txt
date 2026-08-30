@@ -1,0 +1,14 @@
+```python
+def run_toy():
+    target = [4, 4]
+    initial_point = [4, 4]
+
+    while len(visited) < 25:  # Step count limit
+        # Identify the next state and proceed
+        operand = [...]  # Dummy replacement
+        current_point = [x, y]
+        next_point = operand(current_point)
+        visited.append(next_point)
+        print(current_point, next_point)
+    return current_point
+```

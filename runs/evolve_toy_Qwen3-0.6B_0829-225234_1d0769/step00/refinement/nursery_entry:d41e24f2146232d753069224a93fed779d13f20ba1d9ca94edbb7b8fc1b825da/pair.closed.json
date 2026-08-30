@@ -1,0 +1,40 @@
+{
+  "assignment_probability": 0.5,
+  "assignment_seed": 2536499236628687116,
+  "audit_id": "audit_pair:eb56c652ca81e2867bc6928f74246b81725b760823ee76134af289003f73557e",
+  "cell_id": "cell:359393dfc43667c9042407ec445a3225559f74517e515b33976b71d9ad1cf856",
+  "control_branch_id": "branch:23e2b585acc07106903f2c914d848cf5634cd4ca2c143fb3731deddad1c191c8",
+  "control_option_id": "option:f7c399d25915131146afc8782c4efcd1d84079bdf1d66b60869767e181dca14b",
+  "control_outcome_id": "branch_outcome:b2903416721ee0c72272bc26f5b0ce57e62508a520f4d33129c3f2878fe2f7dd",
+  "epoch": 0,
+  "extensions": {},
+  "frozen_record_threshold": 0.16666666666666666,
+  "generation_settings": {
+    "max_new_tokens": 128,
+    "memory_records": [],
+    "refinement_diagnostics": {
+      "message": "answer must be an integer [x, y] pair"
+    },
+    "refinement_source": "```python\nrun_toy() -> [-7, -5]\n\nInitial point: [-4, -4]\n祖先点: [-4, -4]\n```",
+    "refinement_source_evidence_id": "evidence:691738fb29818e99a3cd22054827b1d3ac251e19d2eba3eba52d38318e41279a",
+    "role": "challenger",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "horizon": 1,
+  "intervention_branch_id": "branch:e73f3592f9e4eabcfa0a67c107e854188e3c0e05c71db002f61bfa51b12d5623",
+  "intervention_option_id": "option:da0840d3495d251863a027151b3330d51c20e92e971a512ab9f6916b9b3a7ca7",
+  "intervention_outcome_id": "branch_outcome:bedacde0ebab0baff323d00b29ffdb962dee927b58692b167f489c0593ac0e3e",
+  "preassigned": true,
+  "record_type": "audit_pair",
+  "resources": {
+    "verifier_calls": 2.0
+  },
+  "role_snapshot_id": "role_snapshot:7988663a42deeb6af13a4615e0dfe840181b73e456db1311d657cd5c05861ff8",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "start_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "status": "closed",
+  "verifier_id": "verifier:80535dd26ad2405dac5978ca2df62274dae4bb6b3ad197282a2208b3719cad97"
+}

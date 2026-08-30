@@ -1,0 +1,77 @@
+{
+  "adapter_hash": "245c28d57faa5ad37d45a4375b70e55498c53f660b7b87227425bbbef6947a5f",
+  "branch_id": "branch:e73f3592f9e4eabcfa0a67c107e854188e3c0e05c71db002f61bfa51b12d5623",
+  "extensions": {},
+  "log_probabilities": [
+    [
+      -0.04128728061914444,
+      -3.2186455882765586e-06,
+      -1.7881377516459906e-06,
+      -0.22800792753696442,
+      -2.9802276912960224e-06,
+      -7.748573807475623e-06,
+      -0.0002933310461230576,
+      -0.000860201776959002,
+      -0.010399674996733665,
+      -0.006398903671652079,
+      -1.0132738680113107e-05,
+      -4.017272294731811e-05,
+      -0.0001494772732257843,
+      -0.48116135597229004,
+      -0.012463891878724098,
+      -0.0009151084814220667
+    ]
+  ],
+  "persisted": true,
+  "prompts": [
+    "<|im_start|>user\nYou are solving a deterministic two-dimensional toy search.\n\nReturn an integer point [x, y] with both coordinates in [-8, 8].  The native\nscore is squared distance to (3, -2), so lower is better.  Define exactly one\ntop-level function `run_toy()` which returns the pair.  Use no filesystem,\nnetwork, GPU, randomness, or long-running computation.\n\nTarget squared distance: 0.0 (lower is better).\nYour previous program achieved squared distance = 53.000000.\nHere is the previous program:\n```python\n[-4, -4]\n```\n\nThe saved parent point is also available as `initial_point = [-4, -4]`.\n\nReturn the complete program in one final ```python block.\n\n\n## Frozen EVOLVE assignment\nRole: challenger. Attack assumptions and make only a bounded minimal repair.\nOption action: minimal_diagnostic_repair.\nHarness: Execute the assigned role and option against the frozen verified start. Respect the branch horizon and hard budget. Harness-local diagnostics are guidance only; only the independent common verifier may admit a candidate or change the scientific record.\nHorizon step: 1/1.\nReturn the complete candidate in the problem's required format.\nTarget archive cell descriptor: {\"quadrant\": \"south_west\", \"radial_band\": \"middle\"}\n\nRefinement nursery source (make exactly one minimal diagnostic-targeted change):\n```python\nrun_toy() -> [-7, -5]\n\nInitial point: [-4, -4]\n祖先点: [-4, -4]\n```\n\nIndependent verifier diagnostics:\n{\"message\": \"answer must be an integer [x, y] pair\"}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  ],
+  "record_type": "policy_trace",
+  "response_segments": [
+    "```python\nrun_toy() -> [-7, -5]\n```"
+  ],
+  "role": "challenger",
+  "role_snapshot_id": "role_snapshot:7988663a42deeb6af13a4615e0dfe840181b73e456db1311d657cd5c05861ff8",
+  "schema_version": 1,
+  "token_ids": [
+    [
+      73594,
+      12669,
+      198,
+      6108,
+      528,
+      2253,
+      368,
+      1464,
+      10055,
+      22,
+      11,
+      481,
+      20,
+      921,
+      73594,
+      151645
+    ]
+  ],
+  "token_masks": [
+    [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "trace_id": "policy_trace:7dba57ebc0e6e4777e35ef314d90ccce13240ea91c08512ff8756bae1986a60d"
+}

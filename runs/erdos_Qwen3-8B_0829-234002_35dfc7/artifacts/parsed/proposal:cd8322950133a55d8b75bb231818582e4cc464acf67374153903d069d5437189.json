@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:81bc6d940aff4f2f8e64656095f190b99fae945f5c6697b8deae6b88b080b924",
+  "created_at": "2026-08-30T03:42:37.252933Z",
+  "extensions": {},
+  "parent_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:cd8322950133a55d8b75bb231818582e4cc464acf67374153903d069d5437189",
+  "record_type": "proposal",
+  "run_id": "run:491dd30aa50c3a4629e16633c9fa7f239a2afd1622bd7b9dde7bca82dce62c5d",
+  "schema_version": 1,
+  "source_hash": "0393fe4f48aa26530dd327f4eb9a12cd561bf287e5f2152399ab35f30aae8a0c",
+  "source_text": "```python\nimport numpy as np\nimport scipy.optimize as optimize\nimport time\nimport copy\nfrom scipy.signal import correlate\n\ndef run(seed=42, budget_s=100, **kwargs):\n    np.random.seed(seed)\n    n_points = 100\n    h = initial_h_values.copy()\n    h = h[:n_points]\n    dx = 2.0 / n_points\n    sum_h = sum(h) * dx\n    while sum_h != 1.0:\n        if sum_h < 1.0:\n            h[-1] += (1.0 - sum_h) / dx\n        else:\n            h[-1] -= (sum_h - 1.0) / dx\n        sum_h = sum(h) * dx\n    \n    def objective(h_flat):\n        h = h_flat.reshape(n_points)\n        sum_h = sum(h) * dx\n        if abs(sum_h - 1.0) > 1e-6:\n            return float('inf')\n        h = np.clip(h, 0, 1)\n        correlate_result = correlate(h, 1 - h, mode='full')\n        c5 = np.max(correlate_result) * dx\n        return c5\n    \n    def update_h(h_flat):\n        h = h_flat.copy()\n        h = np.clip(h, 0, 1)\n        sum_h = sum(h) * dx\n        if abs(sum_h - 1.0) > 1e-6:\n            h[-1] = 1.0 if sum_h < 1.0 else 0.0\n        return h\n    \n    def evaluate(h_flat):\n        h = h_flat.copy()\n        h = np.clip(h, 0, 1)\n        sum_h = sum(h) * dx\n        if abs(sum_h - 1.0) > 1e-6:\n            return float('inf')\n        correlate_result = correlate(h, 1 - h, mode='full')\n        c5 = np.max(correlate_result) * dx\n        return c5\n    \n    def get_neighbor(h_flat):\n        h = h_flat.copy()\n        idx = np.random.randint(n_points)\n        h[idx] = np.random.uniform(0, 1)\n        return h\n    \n    start_time = time.time()\n    best_h = h.copy()\n    best_c5 = evaluate(best_h)\n    \n    for _ in range(1000):\n        if time.time() - start_time > budget_s:\n            break\n        h_flat = best_h.copy()\n        neighbor = get_neighbor(h_flat)\n        neighbor = update_h(neighbor)\n        neighbor_c5 = evaluate(neighbor)\n        if neighbor_c5 < best_c5:\n            best_h = neighbor\n            best_c5 = neighbor_c5\n    \n    return best_h, best_c5, n_points\n```"
+}

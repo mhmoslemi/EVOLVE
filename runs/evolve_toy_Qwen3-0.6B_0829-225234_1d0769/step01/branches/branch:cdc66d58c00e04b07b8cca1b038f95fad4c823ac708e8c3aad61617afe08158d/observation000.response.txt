@@ -1,0 +1,6 @@
+```python
+def run_toy():
+    initial_point = [-4, -4]
+    target_distance = 0.0
+    return initial_point
+```

@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:8b639808135bb8cf34660a4b2472d047b5b92395d06e690b00485e65f5312e0c",
+  "created_at": "2026-08-30T02:58:34.640104Z",
+  "extensions": {},
+  "parent_state_id": "state:941ba48efd4f20f68ee0f02aed0a790c39ed7e19192c3dc4bad61ae3a14cfbf4",
+  "parsed_candidate": null,
+  "problem_id": "evolve_toy",
+  "proposal_id": "proposal:c0f98da8a3bf1382a45faf39c93ce251f8c2169af104ac29864205a5b3d1ff98",
+  "record_type": "proposal",
+  "run_id": "run:7f165d0e0347d41cf001c9b9faba46e499922e2bd1985fa1621a7382c9d6bc3b",
+  "schema_version": 1,
+  "source_hash": "61cff623d5f1c99d05472b78a40c747629c8859b764e4a38f9edad5946fd0c92",
+  "source_text": "```python\ndef run_toy():\n    initial_point = [-4, -4]\n    target_squared_distance = 0.0\n\n    # Refine the mechanism by boosting the child point closer to the target point\n    updated_point = [5, 3]\n\n    # Ensure both coordinates stay within the valid range\n    if updated_point[0] < -8 or updated_point[0] > 8:\n        updated_point[0] = 8\n    if updated_point[1] < -8 or updated_point[1] > 8:\n        updated_point[1] = 8\n\n    #"
+}
