@@ -333,10 +333,16 @@ def _verify(
         persisted_answer=persisted_answer,
         verification_policy=verification_policy,
     )
-    decision = replace(
-        decision,
-        capture=replace(decision.capture, attempt_index=attempt_index),
-    )
+    # Preserve an adapter's immutable capture object when the service does not
+    # need to add or change anything.  Besides avoiding needless copies, this
+    # makes the exact verifier-owned capture available to downstream durable
+    # persistence.  Retry orchestration still replaces the capture when it
+    # supplies a different durable attempt index.
+    if decision.capture.attempt_index != attempt_index:
+        decision = replace(
+            decision,
+            capture=replace(decision.capture, attempt_index=attempt_index),
+        )
     descriptor, fingerprint, decision = _descriptor_and_fingerprint(
         adapter=adapter,
         persisted_answer=persisted_answer,

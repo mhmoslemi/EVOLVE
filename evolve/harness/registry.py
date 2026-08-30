@@ -125,6 +125,26 @@ class HarnessTrialRecord:
     def relative_gain(self) -> float:
         return float(self.candidate_gain - self.incumbent_gain)
 
+    def to_dict(self) -> Mapping[str, Any]:
+        """Return the JSON-safe durable projection of this matched trial."""
+
+        return {
+            "context_id": self.context_id,
+            "epoch": self.epoch,
+            "incumbent_harness_id": self.incumbent_harness_id,
+            "incumbent_harness_version": self.incumbent_harness_version,
+            "candidate_harness_id": self.candidate_harness_id,
+            "candidate_harness_version": self.candidate_harness_version,
+            "incumbent_gain": self.incumbent_gain,
+            "candidate_gain": self.candidate_gain,
+            "incumbent_cost": dict(self.incumbent_cost),
+            "candidate_cost": dict(self.candidate_cost),
+            "incumbent_valid": self.incumbent_valid,
+            "candidate_valid": self.candidate_valid,
+            "incumbent_failure_kind": self.incumbent_failure_kind,
+            "candidate_failure_kind": self.candidate_failure_kind,
+        }
+
 
 @dataclass(frozen=True)
 class HarnessEffectSummary:
@@ -177,25 +197,7 @@ class HarnessRegistry:
                 spec.to_dict() for spec in sorted(self.specs.values(), key=lambda item: item.harness_id)
             ],
             "active_ids": list(self.active_ids),
-            "trials": [
-                {
-                    "context_id": trial.context_id,
-                    "epoch": trial.epoch,
-                    "incumbent_harness_id": trial.incumbent_harness_id,
-                    "incumbent_harness_version": trial.incumbent_harness_version,
-                    "candidate_harness_id": trial.candidate_harness_id,
-                    "candidate_harness_version": trial.candidate_harness_version,
-                    "incumbent_gain": trial.incumbent_gain,
-                    "candidate_gain": trial.candidate_gain,
-                    "incumbent_cost": dict(trial.incumbent_cost),
-                    "candidate_cost": dict(trial.candidate_cost),
-                    "incumbent_valid": trial.incumbent_valid,
-                    "candidate_valid": trial.candidate_valid,
-                    "incumbent_failure_kind": trial.incumbent_failure_kind,
-                    "candidate_failure_kind": trial.candidate_failure_kind,
-                }
-                for trial in self.trials
-            ],
+            "trials": [trial.to_dict() for trial in self.trials],
         }
 
     @classmethod

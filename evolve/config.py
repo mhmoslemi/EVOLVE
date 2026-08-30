@@ -438,7 +438,8 @@ class EvolveSettings:
         required = self.learning.group_k + len(self.roles.enabled) - 1
         if production < required:
             raise EvolveConfigError(
-                "evolve.workers.max_inflight_branches leaves only "
+                "evolve reservations exceeding worker capacity: "
+                "max_inflight_branches leaves only "
                 f"{production} production slot(s) after paired audit, refinement, "
                 f"and harness reservations; at least {required} are required for "
                 "one homogeneous learning group and coverage of every role"

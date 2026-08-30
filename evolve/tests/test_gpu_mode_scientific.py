@@ -95,6 +95,7 @@ def test_payload_freezes_kernel_task_hardware_and_evaluator(
         "declared_gpu_type": "h100" if problem_type == "trimul" else "h200",
         "triton_version": "3.3.1",
         "kernel_gpu_id": 3,
+        "exclusive_evaluation": True,
     }
     assert first["evaluator"]["version"] == "libkernelbot_leaderboard_timeout_v1"
     assert first["evaluator"]["submission_mode"] == "leaderboard"
@@ -161,8 +162,9 @@ def test_saved_payload_replay_uses_only_timeout_runner_and_recomputes_reward(
     assert result.internal_reward == pytest.approx(problem.score_scale / 250.0)
     assert result.flags["proposal_replay"] is False
     assert result.flags["noisy_runtime"] is True
-    assert result.uncertainty is None
-    assert len(calls) == 1
+    assert result.uncertainty == 0.0
+    assert result.scores["verification_repeats"] == 3
+    assert len(calls) == 3
     assert calls[0][0] == payload["kernel_source"]
     assert calls[0][1] == payload["evaluator"]["lib_dir"]
     assert calls[0][2] == payload["task"]["task_yaml"]

@@ -1,10 +1,15 @@
 import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
 
 import pytest
 
 import evolve.cli as cli_module
 from evolve.cli import build_dry_plan, main
-from evolve.config import load_evolve_config
+from evolve.config import load_evolve_config, parse_evolve_args
 
 
 def _config(path):
@@ -122,3 +127,52 @@ def test_runtime_dependency_module_error_is_not_mislabeled(tmp_path, monkeypatch
     monkeypatch.setattr(cli_module.importlib, "import_module", missing_dependency)
     with pytest.raises(ModuleNotFoundError, match="runtime_dependency"):
         main(["--config", str(config_path)])
+
+
+def test_documented_run_commands_use_supported_cli_flags():
+    repository = Path(__file__).resolve().parents[2]
+    commands = [
+        line.strip()
+        for line in (repository / "README.md").read_text(
+            encoding="utf-8"
+        ).splitlines()
+        if line.strip().startswith("sh run.sh")
+    ]
+
+    assert commands
+    for command in commands:
+        words = shlex.split(command)
+        assert words[:2] == ["sh", "run.sh"]
+        parse_evolve_args(words[2:])
+
+
+def test_run_sh_forwards_explicit_validation_without_creating_a_run():
+    repository = Path(__file__).resolve().parents[2]
+    runs_before = sorted(
+        path.name for path in (repository / "runs").iterdir()
+    ) if (repository / "runs").is_dir() else []
+    environment = dict(os.environ)
+    environment["EVOLVE_PYTHON"] = sys.executable
+
+    completed = subprocess.run(
+        [
+            "sh",
+            "run.sh",
+            "--config",
+            "configs/erdos.yaml",
+            "--validate-config",
+        ],
+        cwd=repository,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10.0,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["valid"] is True
+    runs_after = sorted(
+        path.name for path in (repository / "runs").iterdir()
+    ) if (repository / "runs").is_dir() else []
+    assert runs_after == runs_before

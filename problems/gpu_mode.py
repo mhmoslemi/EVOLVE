@@ -40,6 +40,7 @@ import os
 import sys
 from collections import Counter
 from pathlib import Path
+from statistics import mean, stdev
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 from problems.base import (Problem, ParentContext, ResourceRequirements,
                            RewardResult, ScientificVerification, SeedState,
@@ -1084,9 +1085,11 @@ Rules:
                 )
             measurements.append(measured)
 
-        logs = "\n".join(log_parts)[:diagnostic_limit]
-        runtime_us = float(np.mean(measurements))
-        standard_error = float(np.std(measurements, ddof=1) / math.sqrt(len(measurements)))
+        # Joining three empty repeat logs produces ``"\n\n"`` and would
+        # falsely classify a clean verification as diagnostic-bearing.
+        logs = "\n".join(part for part in log_parts if part)[:diagnostic_limit]
+        runtime_us = float(mean(measurements))
+        standard_error = float(stdev(measurements) / math.sqrt(len(measurements)))
         conservative_runtime = runtime_us + 1.96 * standard_error
         reward = float(evaluator["score_scale"]) / conservative_runtime
         warning_count = logs.lower().count("warning")
@@ -1096,8 +1099,8 @@ Rules:
             answer_payload=answer,
             internal_reward=reward,
             raw_score=runtime_us,
-            # libkernelbot exposes an aggregate runtime but no sampling error.
-            # Do not manufacture zero uncertainty for a noisy benchmark.
+            # Repeated independently bounded evaluator calls provide the
+            # uncertainty estimate used for conservative record comparison.
             uncertainty=standard_error,
             message=f"verified saved kernel; runtime_us={runtime_us}",
             scores={

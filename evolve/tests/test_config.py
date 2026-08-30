@@ -148,7 +148,8 @@ def test_common_cli_aliases_and_symmetric_boolean_overrides(tmp_path):
     assert cfg.deterministic is False
     assert cfg.learning_rate == pytest.approx(0.002)
     assert cfg.evolve.learning.group_k == 4
-    assert cfg.problem_config["gpu_type"] == "H100"
+    assert cfg.gpu_type == "H100"
+    assert cfg.problem_runtime_config["gpu_type"] == "H100"
     assert cfg.problem_config["num_circles"] == 31
     assert resolved["group_size"] == 4
     assert metadata["cli_overrides"]["thinking"] is False
@@ -466,8 +467,10 @@ def test_gpu_problem_requires_real_paths_serial_verifier_and_exclusive_gpu(tmp_p
         "problem_type: trimul\n"
         f"task_yaml: {task}\n"
         f"lib_dir: {lib}\n"
+        "gpu_type: H100\n"
         "gpu_ids: [0]\n"
         "kernel_gpu_id: 1\n"
+        "kernel_timeout_s: 30\n"
         "reward_workers: 1\n"
         "max_seq_length: 2048\n"
         "max_new_tokens: 256\n",
@@ -502,6 +505,7 @@ def test_gpu_problem_rejects_missing_resource_declarations(tmp_path):
     path = _write_yaml(
         tmp_path / "gpu.yaml",
         "problem: gpu_mode\n"
+        "gpu_type: H100\n"
         "gpu_ids: [0]\n"
         "max_seq_length: 2048\n"
         "max_new_tokens: 256\n",

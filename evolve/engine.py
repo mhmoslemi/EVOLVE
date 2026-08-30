@@ -3234,7 +3234,9 @@ class EvolveEngine:
                     else "none"
                 ),
             )
-            _write_json_once(harness_dir / "harness.result.json", vars(trial))
+            _write_json_once(
+                harness_dir / "harness.result.json", trial.to_dict()
+            )
             harness_registry = harness_registry.record_trial(trial)
             promotion_decision = {
                 "schema_version": 1,

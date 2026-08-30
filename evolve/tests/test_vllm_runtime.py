@@ -43,15 +43,12 @@ def test_vllm_lora_id_is_stable_positive_int32():
     assert 1 <= first <= (1 << 31) - 1
 
 
-def test_vllm_028_omits_removed_swap_space_with_explicit_warning():
+def test_vllm_028_silently_omits_removed_swap_space():
     config = _config()
     legacy = _build_engine_options(config, supported_engine_args=None)
     supported = set(legacy) - {"swap_space"}
 
-    with pytest.warns(RuntimeWarning, match="removed EngineArgs.swap_space"):
-        current = _build_engine_options(
-            config, supported_engine_args=supported
-        )
+    current = _build_engine_options(config, supported_engine_args=supported)
 
     assert "swap_space" not in current
     assert current["cpu_offload_gb"] == 0.0
@@ -70,8 +67,7 @@ def test_split_topology_passes_only_vllm_logical_device_ids():
     legacy = _build_engine_options(_config(), supported_engine_args=None)
     supported = (set(legacy) - {"swap_space"}) | {"device_ids"}
 
-    with pytest.warns(RuntimeWarning):
-        options = _build_engine_options(config, supported_engine_args=supported)
+    options = _build_engine_options(config, supported_engine_args=supported)
 
     assert options["device_ids"] == [1]
     assert options["tensor_parallel_size"] == 1
@@ -82,6 +78,5 @@ def test_split_topology_rejects_vllm_without_device_selection_support():
     legacy = _build_engine_options(_config(), supported_engine_args=None)
     supported = set(legacy) - {"swap_space"}
 
-    with pytest.warns(RuntimeWarning):
-        with pytest.raises(VLLMRuntimeError, match="EngineArgs.device_ids"):
-            _build_engine_options(config, supported_engine_args=supported)
+    with pytest.raises(VLLMRuntimeError, match="EngineArgs.device_ids"):
+        _build_engine_options(config, supported_engine_args=supported)

@@ -10,8 +10,9 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 
 _RUNNER = r'''
@@ -72,15 +73,54 @@ def _kill_process_group(process: subprocess.Popen, *, hard: bool) -> None:
 
 
 def _resource_limiter(*, timeout_s: float, memory_mb: int, max_file_mb: int):
+    # Darwin cannot reliably lower RLIMIT_AS in a forked Python preexec hook:
+    # the inherited controller mappings can already exceed the requested
+    # candidate limit, causing exec itself to fail. Darwin memory is enforced
+    # by the parent-side process-group RSS watchdog below instead.
+    apply_address_space_limit = sys.platform != "darwin"
+
     def apply_limits() -> None:
         cpu_seconds = max(1, int(timeout_s) + 1)
         resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds + 1))
-        memory_bytes = int(memory_mb) * 1024 * 1024
-        resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
+        if apply_address_space_limit:
+            memory_bytes = int(memory_mb) * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
         file_bytes = int(max_file_mb) * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_FSIZE, (file_bytes, file_bytes))
         resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
     return apply_limits
+
+
+def _darwin_process_group_rss_bytes(process_group_id: int) -> Optional[int]:
+    """Best-effort total RSS for a spawned candidate process group on macOS."""
+
+    ps = shutil.which("ps")
+    if ps is None:
+        return None
+    try:
+        observed = subprocess.run(
+            [ps, "-axo", "pgid=,rss="],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if observed.returncode != 0:
+        return None
+    total_kib = 0
+    for line in observed.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            continue
+        try:
+            group_id, rss_kib = (int(fields[0]), int(fields[1]))
+        except ValueError:
+            continue
+        if group_id == process_group_id:
+            total_kib += max(0, rss_kib)
+    return total_kib * 1024
 
 
 def run_code(
@@ -96,8 +136,15 @@ def run_code(
 ) -> Mapping[str, Any]:
     """Execute a candidate without changing the controller working directory."""
 
-    if filesystem_policy != "temporary_only":
-        raise ValueError("only filesystem_policy='temporary_only' is supported")
+    # ``none`` is the legacy problem spelling for a candidate with no mounted
+    # problem data.  It executes in the same fresh temporary work directory as
+    # ``temporary_only``; keeping the spelling preserves frozen verifier
+    # identities while making the declared no-input policy operational.
+    if filesystem_policy not in {"none", "temporary_only"}:
+        raise ValueError(
+            "filesystem_policy must be 'none' or 'temporary_only' for the "
+            "generic subprocess sandbox"
+        )
     if not isinstance(code, str) or not code.strip():
         return {"ok": False, "error": "empty candidate source", "stdout": ""}
     with tempfile.TemporaryDirectory(prefix="evolve-verifier-") as directory_name:
@@ -141,16 +188,41 @@ def run_code(
                 ),
             )
             timed_out = False
+            memory_exceeded = False
             try:
-                process.wait(timeout=float(timeout_s))
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                _kill_process_group(process, hard=False)
                 try:
-                    process.wait(timeout=1.0)
+                    if sys.platform != "darwin":
+                        process.wait(timeout=float(timeout_s))
+                    else:
+                        deadline = time.monotonic() + float(timeout_s)
+                        memory_limit = int(memory_mb) * 1024 * 1024
+                        while process.poll() is None:
+                            remaining = deadline - time.monotonic()
+                            if remaining <= 0.0:
+                                timed_out = True
+                                break
+                            rss_bytes = _darwin_process_group_rss_bytes(
+                                process.pid
+                            )
+                            if (
+                                rss_bytes is not None
+                                and rss_bytes > memory_limit
+                            ):
+                                memory_exceeded = True
+                                break
+                            try:
+                                process.wait(timeout=min(0.05, remaining))
+                            except subprocess.TimeoutExpired:
+                                pass
                 except subprocess.TimeoutExpired:
-                    _kill_process_group(process, hard=True)
-                    process.wait(timeout=1.0)
+                    timed_out = True
+                if timed_out or memory_exceeded:
+                    _kill_process_group(process, hard=False)
+                    try:
+                        process.wait(timeout=1.0)
+                    except subprocess.TimeoutExpired:
+                        _kill_process_group(process, hard=True)
+                        process.wait(timeout=1.0)
             finally:
                 _kill_process_group(process, hard=True)
         stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace")[-diagnostics_chars:]
@@ -159,6 +231,13 @@ def run_code(
             return {
                 "ok": False,
                 "error": f"Timeout after {timeout_s}s",
+                "stdout": stdout_text,
+                "stderr": stderr_text,
+            }
+        if memory_exceeded:
+            return {
+                "ok": False,
+                "error": f"Memory limit exceeded ({memory_mb} MiB)",
                 "stdout": stdout_text,
                 "stderr": stderr_text,
             }

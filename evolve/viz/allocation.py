@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, Union
+import warnings
 
 import matplotlib
 
@@ -46,7 +47,16 @@ def plot_allocation(run_dir: Union[str, Path], output_path: Union[str, Path]) ->
         for axis in flat_axes:
             empty_figure_message(axis, "no committed allocation plans yet")
 
-    fig.tight_layout()
+    # Long content-addressed arm labels can exceed Matplotlib's tight-layout
+    # solver even though the saved figure remains usable. Keep plotting
+    # non-critical and quiet for live runs while preserving the artifact.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Tight layout not applied.*",
+            category=UserWarning,
+        )
+        fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=120)

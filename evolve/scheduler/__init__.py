@@ -372,8 +372,8 @@ def plan_epoch(
         ]
         learning_candidates.sort(
             key=lambda item: (
-                0 if item.reservation == "empty_cell" else 1,
-                0 if item.reservation == "global_exploration" else 1,
+                0 if "empty_cell" in item.reservations else 1,
+                0 if "global_exploration" in item.reservations else 1,
                 item.arm.arm_id,
             )
         )
@@ -388,7 +388,12 @@ def plan_epoch(
         role_candidates = [item for item in planned if item.arm.role == role]
         role_candidates.sort(
             key=lambda item: (
-                0 if item.reservation in ("empty_cell", "global_exploration", "role") else 1,
+                0
+                if any(
+                    label in item.reservations
+                    for label in ("empty_cell", "global_exploration", "role")
+                )
+                else 1,
                 item.arm.arm_id,
             )
         )

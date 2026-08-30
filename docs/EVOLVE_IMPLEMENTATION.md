@@ -8,10 +8,11 @@ modified during the 2026-08-29 source-audit pass.
 ## Current status
 
 All implementation phases have concrete runtime code, persistence, and
-reporting paths. Readiness is still **in progress** because the user explicitly
-requested that no tests or validation commands be run during the latest pass.
-The Definition of Done cannot be claimed until the required CPU, crash/recovery,
-and authorized model gates execute successfully.
+reporting paths. The complete deterministic CPU suite, composed fake engine,
+completed-barrier resume, partial-epoch replay, corruption, compilation, and
+shell gates pass as of 2026-08-29. Readiness is still **in progress** only at
+the external-runtime boundary: the required tiny real-model/vLLM smoke needs
+explicit user authorization and was not launched.
 
 ## A-to-Z phase checklist
 
@@ -61,9 +62,11 @@ and authorized model gates execute successfully.
   pointer, compatibility best mirrors, periodic answer output, append-only
   archive/memory streams, and artifact-only record/archive/provenance/allocation/
   audit/role/posterior/failure/resource plots are implemented.
-- [ ] **11 — Readiness gates.** Code paths are present, but the required CPU
-  suite, crash suite, full fake end-to-end/resume suite, and authorized tiny
-  model smoke have not all been executed after the latest changes.
+- [ ] **11 — Readiness gates.** The full CPU suite, repeated composed fake
+  end-to-end run, completed-barrier resume, partial-epoch durable replay, and
+  corrupted training-companion rejection pass. The explicitly authorized tiny
+  real-model/vLLM smoke remains unexecuted, so this phase and the Definition of
+  Done remain open.
 
 ## Decisions and invariants
 
@@ -119,6 +122,27 @@ and authorized model gates execute successfully.
 - Resource-only resume topology changes restore the saved training-device CUDA
   RNG onto the new training device; rollout identities remain independent of
   worker rank, completion order, and physical GPU number.
+- Complete verifier captures are preserved by identity when the service has no
+  missing fields to fill; a retry only replaces the capture when its durable
+  attempt index actually changes.
+- GPU-mode payload verification performs three bounded repeats using
+  standard-library statistics, records the standard error and conservative
+  runtime, treats empty repeat logs as clean, and persists exclusive evaluation
+  as part of the frozen hardware identity.
+- The generic subprocess sandbox accepts the legacy `none` policy as no mounted
+  problem data in a fresh temporary directory. Linux retains `RLIMIT_AS`;
+  macOS uses a parent-side process-group RSS watchdog because lowering
+  `RLIMIT_AS` in Python's forked pre-exec child fails before `exec`.
+- Harness trial records have an explicit JSON-safe durable projection; barrier
+  persistence never sends nested `FrozenDict` values directly to `json.dumps`.
+- Scheduler reservation overlap is evaluated from the complete reservation
+  label set, not only the primary label, so an arm can simultaneously satisfy
+  role, learning-group, empty-cell, and global-exploration requirements under
+  finite production capacity.
+- The composed fake-engine fixture reserves 4096 verifier calls. A smaller
+  512-call fixture could legitimately exhaust its remaining budget after one
+  run-ID-seeded portfolio and therefore did not deterministically guarantee
+  that the second-epoch resume path would execute.
 
 ## Artifact and schema versions
 
@@ -135,23 +159,78 @@ and authorized model gates execute successfully.
 
 ## Validation record
 
-No pytest invocation, compile check, shell syntax check, config validation, dry
-plan, model load, vLLM startup, training job, GPU benchmark, or plotting command
-was run during the latest source-audit pass, per the user's instruction. Any
-older validation notes predate these changes and are not treated as current
-evidence.
-
-## Remaining gates
-
-When testing is authorized, the minimum readiness sequence is:
+Executed on 2026-08-29 with CPU-only fixtures and fake workers. The host's bare
+`python` is Python 2.7, so the repository gates used the installed Python 3.11
+interpreter explicitly. Third-party pytest plugin auto-loading was disabled
+because an unrelated globally installed Hydra plugin crashes during pytest
+startup; no project plugin is required by the suite.
 
 ```sh
-python -m compileall evolve problems train_evolve.py
-python -m pytest evolve/tests -q -p no:cacheprovider
+/opt/homebrew/bin/python3.11 -m compileall -q evolve problems train_evolve.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /opt/homebrew/bin/python3.11 \
+  -m pytest evolve/tests -q -p no:cacheprovider
 sh -n run.sh
 ```
 
-Then run the CPU fake end-to-end and completed-barrier resume/crash scenarios.
-Only after those pass should an explicitly authorized tiny Qwen/vLLM smoke run
-exercise the selected installed versions and GPU topology. No expensive model,
-multi-GPU, or scientific experiment is authorized by this checklist.
+Results:
+
+- compilation: passed;
+- `run.sh` POSIX shell syntax: passed;
+- `git diff --check`: passed;
+- complete EVOLVE CPU suite: **349 passed in 12.10s**, no skips and no warnings;
+- focused pre-integration suite: **139 passed**;
+- affected config/GPU/toy/vLLM regression slice: **95 passed**;
+- all eight shipped YAMLs: **16/16** validation and dry-plan invocations passed,
+  with `model_loading: false` and `writes_run_directory: false` in every plan;
+- problem registry audit: all eight YAMLs instantiate the expected typed
+  problem/subtype, expose every required scientific hook, and declare the
+  expected CPU or exclusive-GPU verifier requirement;
+- launcher/docs audit: explicit `run.sh` validation and GPU-mode dry-plan pass,
+  every README `run.sh` command parses against the current CLI, and validation
+  leaves the existing run-directory name set unchanged;
+- expanded CLI/engine/sandbox boundary slice: **22 passed**;
+- composed fake engine coverage includes fresh bootstrap/epoch, confirmed best
+  publication, homogeneous role learning, matched audits/harness trials,
+  three-worker concurrent branch overlap and completion-order handling,
+  target-epoch resume, immutable old summaries, durable partial-epoch replay
+  from the identical allocation plan, shutdown, and fail-closed training-state
+  corruption. The completed-barrier resume test passed three additional
+  consecutive runs in **5.34s**, **5.39s**, and **5.92s**;
+- every JSON and nonblank JSONL record produced by the composed run parses, no
+  temporary artifact remains, and all nine artifact-only plots generate from
+  both an interrupted active-run fixture and a completed resumed run;
+- subprocess isolation: disposable working directory, legacy `none` policy,
+  Python socket denial, timeout and spawned-process-group cleanup, memory
+  enforcement, and bounded diagnostics pass on CPU;
+- recovery corruption matrix: malformed/future completion markers, unsafe
+  checkpoint paths, checkpoint hash mismatch, incomplete/missing training-state
+  companions, duplicate committed epochs, and the existing companion-content
+  corruption all fail closed.
+
+Failures found and fixed during these gates:
+
+- needless replacement of a complete verifier-owned execution capture;
+- top-level `gpu_type` fixture expectations lagging the problem-runtime
+  projection and explicit GPU benchmark hardware contract;
+- removed vLLM 0.28 `swap_space` warnings still expected by old tests;
+- GPU saved-payload verification referenced removed NumPy symbols;
+- empty repeated evaluator logs were misclassified as non-empty diagnostics;
+- macOS rejected the generic sandbox's memory limit inside `preexec_fn`;
+- harness audit barrier persistence was not JSON-safe;
+- overlapping scheduler reservations could select a role-only arm and then
+  falsely report the empty-cell reservation as unsatisfied;
+- the original 512-call fake integration budget could validly stop before the
+  second resumed epoch for some run-derived scheduler seeds; the fixture now
+  uses enough CPU-only verifier budget to make the recovery assertion stable.
+
+No model was loaded, no vLLM server was started, no CUDA/GPU benchmark ran, and
+no user-owned `runs/` directory was modified.
+
+## Remaining gates
+
+The CPU, fake end-to-end, completed-barrier resume, and targeted crash/corruption
+gates are complete. The remaining readiness gate is an explicitly authorized
+tiny Qwen/vLLM smoke run exercising the selected installed versions, adapter
+load/generation/training phase switch, and actual GPU topology. No real model,
+multi-GPU job, GPU benchmark, or scientific experiment is authorized by this
+checklist.
