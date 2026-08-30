@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
 
+from evolve.types import FrozenDict
+from evolve.workers.runtime import _apply_chat_template, _prompt_json
 from evolve.workers.vllm_runtime import (
     VLLMRuntimeError,
     _build_engine_options,
@@ -80,3 +83,39 @@ def test_split_topology_rejects_vllm_without_device_selection_support():
 
     with pytest.raises(VLLMRuntimeError, match="EngineArgs.device_ids"):
         _build_engine_options(config, supported_engine_args=supported)
+
+
+@pytest.mark.parametrize("thinking", [False, True])
+def test_chat_template_receives_resolved_thinking_mode(thinking):
+    class Tokenizer:
+        def apply_chat_template(self, messages, **kwargs):
+            self.messages = messages
+            self.kwargs = kwargs
+            return "rendered"
+
+    tokenizer = Tokenizer()
+    messages = [{"role": "user", "content": "prompt"}]
+
+    assert _apply_chat_template(tokenizer, messages, thinking=thinking) == "rendered"
+    assert tokenizer.messages == messages
+    assert tokenizer.kwargs == {
+        "tokenize": False,
+        "add_generation_prompt": True,
+        "enable_thinking": thinking,
+    }
+
+
+def test_prompt_json_thaws_nested_runtime_mappings():
+    value = FrozenDict(
+        {
+            "records": [
+                {"context": {"cell": "north_east"}, "effect": 0.25}
+            ]
+        }
+    )
+
+    assert json.loads(_prompt_json(value)) == {
+        "records": [
+            {"context": {"cell": "north_east"}, "effect": 0.25}
+        ]
+    }

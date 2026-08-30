@@ -22,6 +22,7 @@ from typing import Any, Mapping, Optional, Sequence
 from evolve.ids import content_hash
 from evolve.learning.trainer import GradientStepRequest, GradientStepResult
 from evolve.options.branch import BranchStepRequest, BranchStepResult
+from evolve.roles.adapters import thaw_json
 from evolve.roles.backend import BackboneIdentity, NamedAdapterBackendPort
 from evolve.runio import (
     ImmutableWriteError,
@@ -59,6 +60,30 @@ ROLE_INSTRUCTIONS = {
 
 class LiveRuntimeContractError(RuntimeError):
     """Frozen runtime identity or durable role/generation state changed."""
+
+
+def _prompt_json(value: Any) -> str:
+    """Serialize recursively frozen runtime values for model-visible prompts."""
+
+    return json.dumps(
+        thaw_json(value), ensure_ascii=False, sort_keys=True
+    )
+
+
+def _apply_chat_template(
+    tokenizer: Any,
+    messages: Sequence[Mapping[str, Any]],
+    *,
+    thinking: bool,
+) -> str:
+    """Render the configured Qwen thinking mode into the frozen prompt."""
+
+    return tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=bool(thinking),
+    )
 
 
 def backbone_identity_for_config(config: Any) -> BackboneIdentity:
@@ -273,7 +298,7 @@ class LiveEvolveRuntime:
         memory_records = request.branch.generation_settings.get("memory_records", ())
         memory = ""
         if memory_records:
-            memory = json.dumps(memory_records, ensure_ascii=False, sort_keys=True)
+            memory = _prompt_json(memory_records)
         messages = [dict(item) for item in build_problem_prompt(self.problem, parent, memory)]
         harness = self.state.harness_registry.spec(request.branch.harness_id)
         instruction = (
@@ -290,11 +315,7 @@ class LiveEvolveRuntime:
         )
         instruction += (
             "\nTarget archive cell descriptor: "
-            + json.dumps(
-                dict(target_descriptor.dimensions),
-                ensure_ascii=False,
-                sort_keys=True,
-            )
+            + _prompt_json(target_descriptor.dimensions)
         )
         failed_candidate = request.branch.generation_settings.get(
             "refinement_source"
@@ -311,11 +332,7 @@ class LiveEvolveRuntime:
                 if diagnostics:
                     instruction += (
                         "\n\nIndependent verifier diagnostics:\n"
-                        + json.dumps(
-                            diagnostics,
-                            ensure_ascii=False,
-                            sort_keys=True,
-                        )
+                        + _prompt_json(diagnostics)
                     )
             else:
                 instruction += (
@@ -327,8 +344,10 @@ class LiveEvolveRuntime:
             if messages[index].get("role") == "user":
                 messages[index]["content"] = str(messages[index].get("content", "")) + instruction
                 break
-        return self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+        return _apply_chat_template(
+            self.tokenizer,
+            messages,
+            thinking=self.config.thinking,
         )
 
     def _generation_job_path(self, request: BranchStepRequest) -> Path:
