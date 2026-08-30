@@ -1,0 +1,40 @@
+{
+  "aborted_audit_pairs": 2,
+  "admitted_branches": 0,
+  "archive_coverage": 1.0,
+  "arms_by_role": {
+    "challenger": 8,
+    "mechanist": 1,
+    "scout": 1
+  },
+  "audit_pairs": 2,
+  "budget_consumed": {
+    "verifier_calls": 9.0
+  },
+  "checkpoint": "checkpoint_epoch003.json",
+  "checkpoint_hash": "062d0e26315afc53dc9b698ad3a9296b157bc585ca2dd1bb4c6bea2242e933fb",
+  "closed_audit_pairs": 0,
+  "committed_epoch": 3,
+  "confirmed_raw_score": 0.48962887120768206,
+  "confirmed_reward": 2.0423631823626796,
+  "costs": {
+    "verifier_calls": 0.0
+  },
+  "epoch": 2,
+  "infrastructure_aborted": 16,
+  "planned_arms": 3,
+  "record_improved": false,
+  "reservation_slots": {
+    "audit_branch_slots": 4,
+    "empty_cell_slots": 2,
+    "global_exploration_slots": 2,
+    "harness_trial_slots": 2,
+    "no_memory_audit_slots": 2,
+    "refinement_slots": 2,
+    "remaining_production_slots": 5,
+    "role_guaranteed_slots": 3
+  },
+  "schema_version": 1,
+  "training_state": "checkpoint_epoch003.pt",
+  "training_state_hash": "7e297235f87ac263d319f1999feeec1a60d65bcef94ce8b5c0ef9024c7240934"
+}

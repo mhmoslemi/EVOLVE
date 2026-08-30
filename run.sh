@@ -13,10 +13,10 @@ CUDA_DEVICES="${EVOLVE_CUDA_DEVICES:-0}"
                       # Non-GPU problems: first trains; all others run vLLM.
                       # GPU mode: first trains, last evaluates, middle run vLLM.
                       # With <=2 GPUs, GPU-mode evaluation shares training.
-CPU_CORES="${EVOLVE_CPU_CORES:-40}"
+CPU_CORES="${EVOLVE_CPU_CORES:-1}"
                       # Fresh runs override problem eval_cpus with this value.
                       # Resumes retain their immutable saved verifier setting.
-TIME_LIMIT="${EVOLVE_RUN_TIME_LIMIT:-00:10}"
+TIME_LIMIT="${EVOLVE_RUN_TIME_LIMIT:-00:20}"
                       # Hard wall-clock limit from launch, exactly HH:MM.
 GRACEFUL_STOP_MINUTES="${EVOLVE_GRACEFUL_STOP_MINUTES:-5}"
                       # Send SIGINT this many minutes before the hard limit.
@@ -299,7 +299,14 @@ echo "EVOLVE · run guard · CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES · CPU c
 # and all of its descendants without touching unrelated jobs or processes.
 "$python_bin" -c '
 import os
+import signal
 import sys
+
+# POSIX shells may start asynchronous commands with SIGINT/SIGQUIT ignored.
+# Reset them before exec so the controller installs the normal Python SIGINT
+# handler and the watchdog graceful request reaches EvolveEngine.
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+signal.signal(signal.SIGQUIT, signal.SIG_DFL)
 os.setsid()
 os.execv(sys.argv[1], sys.argv[1:])
 ' "$python_bin" train_evolve.py "$@" &

@@ -1,0 +1,16 @@
+{
+  "assignment_probability": 0.5,
+  "assignment_seed": 4872676952993791398,
+  "candidate_branch_id": "branch:abd2289ec1d40505fffce496fe3dd2d5f3fb41da35851e6fbe0188bcce1d963c",
+  "candidate_harness_id": "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913",
+  "candidate_harness_version": "diagnostic_v1",
+  "context_id": "harness_audit:1c401423b476eb1f10bc8a3226b7ea9aa15448cc7b8d04436a7a9f489e82e854",
+  "context_version": "matched_harness_audit_context_v1",
+  "incumbent_branch_id": "branch:82e34d78e74911ad6508a5f6077a546b496b2305e162a31de1892cd7d18b896f",
+  "incumbent_harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "incumbent_harness_version": "baseline_v1",
+  "invariant_hash": "79de1a739a93d8cbefdf5f0b4efe1d6a78b289c58f48a9eacb065a71f9ee0fc9",
+  "preassigned": true,
+  "record_type": "matched_harness_audit_context",
+  "schema_version": 1
+}

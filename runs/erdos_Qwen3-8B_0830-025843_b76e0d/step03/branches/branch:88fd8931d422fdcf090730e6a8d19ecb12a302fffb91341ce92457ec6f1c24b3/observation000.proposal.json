@@ -1,0 +1,14 @@
+{
+  "branch_id": "branch:88fd8931d422fdcf090730e6a8d19ecb12a302fffb91341ce92457ec6f1c24b3",
+  "created_at": "",
+  "extensions": {},
+  "parent_state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22",
+  "parsed_candidate": null,
+  "problem_id": "erdos",
+  "proposal_id": "proposal:ce9233d1da2a58285a36a9ed49b0643ec3bd6406c0570709586c390f5140ffe0",
+  "record_type": "proposal",
+  "run_id": "run:0b5615584e074170acfb1316b289ce0d0f6e0ae2d9853a752da8a6bb06c17c4c",
+  "schema_version": 1,
+  "source_hash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+  "source_text": ""
+}

@@ -1,0 +1,33 @@
+{
+  "arm_id": "arm:8729840505f225f170dd5be1bb1a79b51b67695bf0a5af49dbbd8c98b3437d44",
+  "branch_id": "branch:b6a662bfea2b74f799f712d811dc3d38d00b8f348205ca20d3825e6da993dbcf",
+  "budget": {
+    "verifier_calls": 2.0
+  },
+  "channel": "production",
+  "epoch": 0,
+  "extensions": {},
+  "frozen": true,
+  "frozen_record_threshold": 2.0423631823626796,
+  "generation_settings": {
+    "max_new_tokens": 4096,
+    "memory_records": [],
+    "role": "mechanist",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "harness_version": "baseline_v1",
+  "horizon": 1,
+  "memory_view_hash": "1057b4fcd33e0de9513ccffe9dba3156251f508320f83e20aa8d9ed972a12191",
+  "memory_view_id": null,
+  "option_id": "option:5824009005f5db49437545e0329433c5160c5d75eebe0c169d5e4fab273ade05",
+  "option_version": "mechanist_develop_v1",
+  "record_type": "branch_spec",
+  "role_snapshot_id": "role_snapshot:6e64b780f494569538562af450f71fdcd5630aca26991e85ef2e660b9649b521",
+  "schema_version": 1,
+  "seed": 4957805610556592681,
+  "start_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "verifier_id": "verifier:da7706e40c93e62aec32914a72ec4e5f325bd159de42d304cb45b4840bdf5848",
+  "verifier_version": "answer_schema_v1"
+}

@@ -1,0 +1,33 @@
+{
+  "arm_id": "arm:62c9bf0305376e44c10a4ed38c401ee859e9c040e527269f104c512b7adc5741",
+  "branch_id": "branch:04ad5190fba3ea7c71a91b024d2193157897e06790d847ace42489c03c9bae71",
+  "budget": {
+    "verifier_calls": 4.0
+  },
+  "channel": "audit",
+  "epoch": 1,
+  "extensions": {},
+  "frozen": true,
+  "frozen_record_threshold": 2.0423631823626796,
+  "generation_settings": {
+    "max_new_tokens": 30000,
+    "memory_records": [],
+    "role": "scout",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "harness_version": "baseline_v1",
+  "horizon": 2,
+  "memory_view_hash": "63d0a8d2158f510c4d8fd7702d76aceaa5bf666125de11bdf82a7c4ec51b39a9",
+  "memory_view_id": null,
+  "option_id": "option:e08d9ca6d319ee3f063540f59f3bab40f3a019770f2673f1ed5d4c2ea16de254",
+  "option_version": "explore_v1",
+  "record_type": "branch_spec",
+  "role_snapshot_id": "role_snapshot:e48ce999ef44bd6c1a2802e249b20583c0bde62abcd5b8a8abcf5736b94740e5",
+  "schema_version": 1,
+  "seed": 7385312716886999794,
+  "start_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "verifier_id": "verifier:96f7d8cd73c0036f63fd8344ba2ebbd8a775f624905beec2fbafda8484ec33ab",
+  "verifier_version": "answer_schema_v1"
+}

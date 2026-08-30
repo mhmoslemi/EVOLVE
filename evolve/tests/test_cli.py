@@ -205,3 +205,14 @@ def test_run_sh_forwards_explicit_validation_without_creating_a_run():
         path.name for path in (repository / "runs").iterdir()
     ) if (repository / "runs").is_dir() else []
     assert runs_after == runs_before
+
+
+def test_run_sh_restores_interrupts_before_background_controller_exec():
+    repository = Path(__file__).resolve().parents[2]
+    launcher = (repository / "run.sh").read_text(encoding="utf-8")
+
+    assert "signal.signal(signal.SIGINT, signal.SIG_DFL)" in launcher
+    assert "signal.signal(signal.SIGQUIT, signal.SIG_DFL)" in launcher
+    assert launcher.index("signal.signal(signal.SIGINT, signal.SIG_DFL)") < launcher.index(
+        "os.execv(sys.argv[1], sys.argv[1:])"
+    )

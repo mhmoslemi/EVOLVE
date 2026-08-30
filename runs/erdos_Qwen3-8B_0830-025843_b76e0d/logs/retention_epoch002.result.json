@@ -1,0 +1,12 @@
+{
+  "keep_epoch": 2,
+  "latest_role_artifacts_preserved": true,
+  "policy": "latest",
+  "removed": [
+    "roles/challenger/adapter_epoch001",
+    "roles/mechanist/adapter_epoch001",
+    "roles/scout/adapter_epoch001"
+  ],
+  "resume_checkpoint_companions_preserved": true,
+  "schema_version": 1
+}

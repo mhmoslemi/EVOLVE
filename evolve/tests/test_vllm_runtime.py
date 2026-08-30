@@ -159,6 +159,32 @@ def test_prompt_json_thaws_nested_runtime_mappings():
     }
 
 
+def test_hf_to_vllm_phase_switch_retains_cpu_prompt_tokenizer():
+    """Normal GPU phase switching must not discard prompt rendering state."""
+
+    tokenizer = object()
+    next_state = object()
+    runtime = LiveEvolveRuntime.__new__(LiveEvolveRuntime)
+    runtime.config = SimpleNamespace(generation_backend="vllm")
+    runtime.state = object()
+    runtime.model = object()
+    runtime.backend = object()
+    runtime.port = object()
+    runtime.optimizers = object()
+    runtime.tokenizer = tokenizer
+    runtime._release_cuda = lambda: None
+    runtime._load_vllm = lambda: None
+
+    runtime.begin_epoch(next_state)
+
+    assert runtime.state is next_state
+    assert runtime.model is None
+    assert runtime.backend is None
+    assert runtime.port is None
+    assert runtime.optimizers is None
+    assert runtime.tokenizer is tokenizer
+
+
 def test_multistep_branch_uses_newly_admitted_parent_before_barrier(tmp_path):
     """A local descendant must not require visibility in the frozen archive."""
 

@@ -217,6 +217,15 @@ Results:
 
 Failures found and fixed during these gates:
 
+- normal HF-to-vLLM phase switching released the shared CPU tokenizer before
+  prompt rendering, so every branch became a zero-cost infrastructure failure;
+  the tokenizer now survives model phase switches, all-infrastructure epochs
+  fail before an empty barrier, and progress distinguishes verifier calls from
+  infrastructure-aborted branches;
+- the guarded launcher's background controller could inherit ignored SIGINT
+  handling from the POSIX shell, allowing work to continue after the announced
+  graceful deadline; the wrapper now restores default interrupt handling
+  before executing Python so EVOLVE can drain and checkpoint normally;
 - needless replacement of a complete verifier-owned execution capture;
 - top-level `gpu_type` fixture expectations lagging the problem-runtime
   projection and explicit GPU benchmark hardware contract;

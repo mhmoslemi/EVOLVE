@@ -19,6 +19,7 @@ max_seq_length: 512
 max_new_tokens: 128
 temperature: 1.0
 top_p: 1.0
+thinking: true  # Enable native reasoning when replaced with a live model.
 load_in_4bit: false
 lora_rank: 8
 lora_alpha: 8

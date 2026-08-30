@@ -1,0 +1,9 @@
+{
+  "attempt": 0,
+  "branch_id": "branch:b4bec2a7d1a829c61beb94770f095b21e59ff7a7bfa613a7fd95a03c7f647d01",
+  "exception_type": "AttributeError",
+  "message": "'NoneType' object has no attribute 'apply_chat_template'",
+  "schema_version": 1,
+  "seed": null,
+  "step_index": 0
+}

@@ -1,0 +1,33 @@
+{
+  "arm_id": "arm:9eb7bf6e5d4f8a8a71581f2dd717fb2a1c96f2d62bf199d525445c23458194d2",
+  "branch_id": "branch:a1806c457d45f83c0f4919a24f94306122e19b39781e6ac026cf077ff78d64ed",
+  "budget": {
+    "verifier_calls": 4.0
+  },
+  "channel": "production",
+  "epoch": 0,
+  "extensions": {},
+  "frozen": true,
+  "frozen_record_threshold": 2.0423631823626796,
+  "generation_settings": {
+    "max_new_tokens": 4096,
+    "memory_records": [],
+    "role": "challenger",
+    "temperature": 1.0,
+    "top_p": 1.0
+  },
+  "harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "harness_version": "baseline_v1",
+  "horizon": 2,
+  "memory_view_hash": "a4b9f3ea24af0d3b6f787e9e1d2215449a36edb7d47e810a1c69135932d1ea6e",
+  "memory_view_id": null,
+  "option_id": "option:a2231ac084d27e327e36cb5b24a8879b230ca087f4f18a6f612f0c5f0b1f87ac",
+  "option_version": "challenger_attack_v1",
+  "record_type": "branch_spec",
+  "role_snapshot_id": "role_snapshot:9647c0da9b47fac4b08b95feafb18c056b4c3e7d6e403058c76bdb94ff89a429",
+  "schema_version": 1,
+  "seed": 728279859948484289,
+  "start_state_id": "state:3b99510e3289fe27813abe1ed870af1e972ea1766ed369af9377c15e68aa4409",
+  "verifier_id": "verifier:da7706e40c93e62aec32914a72ec4e5f325bd159de42d304cb45b4840bdf5848",
+  "verifier_version": "answer_schema_v1"
+}

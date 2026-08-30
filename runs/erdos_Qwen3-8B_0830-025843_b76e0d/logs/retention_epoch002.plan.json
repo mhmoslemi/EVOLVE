@@ -1,0 +1,17 @@
+{
+  "keep_epoch": 2,
+  "planned_bytes": 1047761988,
+  "policy": "latest",
+  "preserved": [
+    "scientific evidence and logs",
+    "completed-barrier summaries and JSON checkpoints",
+    "checkpoint training/RNG companions",
+    "role adapter and optimizer snapshot epoch 2"
+  ],
+  "schema_version": 1,
+  "targets": [
+    "roles/challenger/adapter_epoch001",
+    "roles/mechanist/adapter_epoch001",
+    "roles/scout/adapter_epoch001"
+  ]
+}

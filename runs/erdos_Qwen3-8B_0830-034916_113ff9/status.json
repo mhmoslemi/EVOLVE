@@ -1,0 +1,103 @@
+{
+  "allocations": {
+    "by_channel": {},
+    "by_harness": {},
+    "by_option": {},
+    "by_role": {}
+  },
+  "archive_cells": 2,
+  "archive_coverage": 1.0,
+  "budget": {
+    "verifier_calls": {
+      "consumed": 9.0,
+      "limit": 256.0,
+      "remaining": 247.0
+    }
+  },
+  "causal_memory": {
+    "promoted": 0,
+    "quarantined": 0,
+    "records": 0,
+    "rejected": 0
+  },
+  "confirmed_record": {
+    "cell_id": "cell:191d8305d434cf25ef77bcd0b9874518959bc231e676dca76abaa852c29956fe",
+    "internal_reward": 2.0423631823626796,
+    "raw_score": 0.48962887120768206,
+    "state_id": "state:6833b972cf69471c1b4a5332c96d3b7701e442bbae99bc97a54117df3a283b22"
+  },
+  "epoch": 0,
+  "latest_epoch": {
+    "aborted_audit_pairs": 0,
+    "admission_rate": 0.0,
+    "admitted": 0,
+    "audit_pairs": 0,
+    "branches": 0,
+    "closed_audit_pairs": 0,
+    "infrastructure_aborted": 0,
+    "infrastructure_rate": 0.0
+  },
+  "latest_learning": {
+    "challenger": {
+      "adapter_hash": "800e88e7fda53bc4e36a794437a13380f49e053c9aaad805a42d498292d07102",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "mechanist": {
+      "adapter_hash": "9ea4bfc3042a88048b8b0734c99c561cb4b63e3e06fb59a9967bd233031ed15c",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    },
+    "scout": {
+      "adapter_hash": "18b12f5a29edf8c220ea010ea7562eba60861086822f05a547fb9edf1301cb1b",
+      "adapter_version": "adapter_v000000",
+      "group_id": null,
+      "optimizer_step": 0
+    }
+  },
+  "live_epoch": {
+    "branch_progress": 0.0,
+    "completed_branches": 0,
+    "completed_verifications": 0,
+    "epoch": 0,
+    "infrastructure_aborted": 0,
+    "provisional_best": null,
+    "provisional_is_committed": false,
+    "provisional_observation": null,
+    "remaining_branches": 6,
+    "stage": "production generation + verification",
+    "total_branches": 6,
+    "total_epochs": 30
+  },
+  "note": "epoch 0 active",
+  "roles": {
+    "challenger": {
+      "adapter_hash": "800e88e7fda53bc4e36a794437a13380f49e053c9aaad805a42d498292d07102",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "mechanist": {
+      "adapter_hash": "9ea4bfc3042a88048b8b0734c99c561cb4b63e3e06fb59a9967bd233031ed15c",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    },
+    "scout": {
+      "adapter_hash": "18b12f5a29edf8c220ea010ea7562eba60861086822f05a547fb9edf1301cb1b",
+      "adapter_version": "adapter_v000000",
+      "learning_groups": 0
+    }
+  },
+  "run_directory": "/scratch/mmoslem3/EVOLVE/runs/erdos_Qwen3-8B_0830-034916_113ff9",
+  "run_guard": {
+    "artifact_retention": "latest",
+    "cpu_cores": "1",
+    "cuda_visible_devices": "0",
+    "graceful_stop_minutes": "5",
+    "hard_deadline_epoch": "1788077355",
+    "time_limit_hh_mm": "00:20"
+  },
+  "run_id": "run:738125750dd2c32b20fe8207c53af44980f81cf869bb49a4b4c435558a6ac22e",
+  "schema_version": 1
+}

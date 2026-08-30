@@ -1,0 +1,10 @@
+{
+  "admitted": false,
+  "branch_id": "branch:b185cf59f8ecd4a8ba98cb92726dc47975ed4344f32db1926b2adf353e67f9b2",
+  "costs": {
+    "verifier_calls": 0.0
+  },
+  "evidence_id": "evidence:48393992ec910475261b228b3d880b4974eb6d8a0d8c485627247e7419905ae8",
+  "failure_kind": "infrastructure",
+  "proposal_id": "proposal:ced49d32000e60720094867c8b077b5cffeb998d2d433831cb401b65c917bc40"
+}

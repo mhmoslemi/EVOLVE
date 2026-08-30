@@ -1,0 +1,21 @@
+{
+  "attempt_index": 0,
+  "branch_id": "branch:14c81c908a7d520b44cdb222441515509536975299b8881656ed84c17d96227a",
+  "capture_hash": "7bc46eb796f5767a51d0cd1f6a37eaf6f50516ad720be0330d49f4f331618fde",
+  "completed_at": "",
+  "diagnostics": {
+    "worker_error": {
+      "exception_type": "AttributeError",
+      "message": "'NoneType' object has no attribute 'apply_chat_template'",
+      "phase": "generation"
+    }
+  },
+  "evidence_id": "evidence:4a819e562d97557224daf576e5a26922fc0b41ddea3285abcc392688c73bc2ee",
+  "phase": "generation",
+  "proposal_id": "proposal:4bca62c7cec61ddca2831376dd64013c4b8177d85ca331491c37af2ba024f0ab",
+  "resources": {
+    "verifier_calls": 0.0
+  },
+  "schema_version": 1,
+  "started_at": ""
+}

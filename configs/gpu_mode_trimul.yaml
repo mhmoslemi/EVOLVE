@@ -27,6 +27,7 @@ max_seq_length: 32000
 max_new_tokens: 8000
 temperature: 1.0
 top_p: 1.0
+thinking: true  # Enable the model's native reasoning mode in rendered prompts.
 load_in_4bit: true  # HF training only; never forwarded to vLLM.
 lora_rank: 32
 lora_alpha: 32

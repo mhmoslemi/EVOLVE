@@ -1,0 +1,20 @@
+{
+  "candidate_cost": {
+    "verifier_calls": 0.0
+  },
+  "candidate_failure_kind": "infrastructure",
+  "candidate_gain": 0.0,
+  "candidate_harness_id": "harness:1b4dfac0d90c7f4e7f3e6dcc5ae161d275a21884ff439832db9d1485930b8913",
+  "candidate_harness_version": "diagnostic_v1",
+  "candidate_valid": false,
+  "context_id": "harness_audit:1c401423b476eb1f10bc8a3226b7ea9aa15448cc7b8d04436a7a9f489e82e854",
+  "epoch": 4,
+  "incumbent_cost": {
+    "verifier_calls": 0.0
+  },
+  "incumbent_failure_kind": "infrastructure",
+  "incumbent_gain": 0.0,
+  "incumbent_harness_id": "harness:f6b27f40dda9fd393e047086784e9a759a249c5716010df51d85a9fc27e76428",
+  "incumbent_harness_version": "baseline_v1",
+  "incumbent_valid": false
+}

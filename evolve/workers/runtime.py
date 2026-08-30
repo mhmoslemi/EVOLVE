@@ -202,21 +202,31 @@ class LiveEvolveRuntime:
         except (ImportError, RuntimeError):
             pass
 
-    def _unload_hf(self) -> None:
+    def _unload_hf(self, *, release_tokenizer: bool = False) -> None:
+        """Release the HF model while retaining the CPU prompt tokenizer.
+
+        vLLM generation still renders problem chat prompts in this controller.
+        The tokenizer is CPU-owned and must therefore survive the normal
+        HF-to-vLLM phase switch.  It is released only when the whole runtime is
+        shutting down (or construction failed).
+        """
+
         if self.model is None:
             # A signal or loader exception can occur after the backend object
             # is created but before ``load()`` returns the model. Drop those
             # partial references and still flush allocator state.
             self.optimizers = None
             self.port = None
-            self.tokenizer = None
+            if release_tokenizer:
+                self.tokenizer = None
             self.backend = None
             self._release_cuda()
             return
         self.optimizers = None
         self.port = None
         self.model = None
-        self.tokenizer = None
+        if release_tokenizer:
+            self.tokenizer = None
         self.backend = None
         self._release_cuda()
 
@@ -329,6 +339,10 @@ class LiveEvolveRuntime:
         )
 
     def _render_prompt(self, request: BranchStepRequest, parent: ParentContext) -> str:
+        if self.tokenizer is None:
+            raise LiveRuntimeContractError(
+                "generation tokenizer is unavailable after the model phase switch"
+            )
         memory_records = request.branch.generation_settings.get("memory_records", ())
         memory = ""
         if memory_records:
@@ -1233,7 +1247,7 @@ class LiveEvolveRuntime:
             try:
                 self._unload_vllm()
             finally:
-                self._unload_hf()
+                self._unload_hf(release_tokenizer=True)
 
 
 __all__ = ["LiveEvolveRuntime", "backbone_identity_for_config"]

@@ -1,0 +1,29 @@
+{
+  "disable_existing_loggers": false,
+  "formatters": {
+    "vllm_file": {
+      "datefmt": "%Y-%m-%d %H:%M:%S",
+      "format": "%(levelname)s %(asctime)s [pid=%(process)d %(name)s:%(lineno)d] %(message)s"
+    }
+  },
+  "handlers": {
+    "vllm_file": {
+      "class": "logging.FileHandler",
+      "encoding": "utf-8",
+      "filename": "/scratch/mmoslem3/EVOLVE/runs/erdos_Qwen3-8B_0830-034340_0a5bff/logs/workers/vllm.log",
+      "formatter": "vllm_file",
+      "level": "INFO",
+      "mode": "a"
+    }
+  },
+  "loggers": {
+    "vllm": {
+      "handlers": [
+        "vllm_file"
+      ],
+      "level": "INFO",
+      "propagate": false
+    }
+  },
+  "version": 1
+}

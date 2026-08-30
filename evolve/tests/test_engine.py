@@ -20,6 +20,7 @@ from evolve.engine import (
     _apply_role_artifact_retention,
     _json_native_answer_payload,
     _latest_completed_checkpoint,
+    _require_epoch_runtime_progress,
 )
 from evolve.ids import content_hash, content_id
 from evolve.learning.trainer import (
@@ -399,6 +400,40 @@ def test_progress_format_and_live_status_expose_stage_and_remaining_work() -> No
     )
     assert "production generation + verification" in status
     assert "3/8 branches" in status
+
+
+def test_epoch_with_only_infrastructure_failures_refuses_empty_barrier() -> None:
+    evidence = SimpleNamespace(
+        diagnostics={
+            "worker_error": {
+                "exception_type": "AttributeError",
+                "message": "tokenizer unavailable",
+            }
+        }
+    )
+    execution = SimpleNamespace(
+        outcome=SimpleNamespace(infrastructure_aborted=True),
+        observations=(
+            SimpleNamespace(
+                verification=SimpleNamespace(evidence=evidence)
+            ),
+        ),
+    )
+
+    with pytest.raises(
+        EngineError,
+        match="only infrastructure-aborted branches.*tokenizer unavailable",
+    ):
+        _require_epoch_runtime_progress((execution,), epoch=2)
+
+
+def test_epoch_runtime_progress_accepts_any_scientific_branch() -> None:
+    executions = (
+        SimpleNamespace(outcome=SimpleNamespace(infrastructure_aborted=True)),
+        SimpleNamespace(outcome=SimpleNamespace(infrastructure_aborted=False)),
+    )
+
+    _require_epoch_runtime_progress(executions, epoch=0)
 
 
 def test_fake_epoch_and_completed_barrier_resume(tmp_path: Path, capsys) -> None:

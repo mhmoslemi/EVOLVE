@@ -149,6 +149,34 @@ class _RunAttachInterrupted(Exception):
     """Bootstrap was drained and recorded before model-worker construction."""
 
 
+def _require_epoch_runtime_progress(
+    executions: Sequence[BranchExecution], *, epoch: int
+) -> None:
+    """Refuse to commit an epoch made entirely of infrastructure failures."""
+
+    if executions and all(
+        execution.outcome.infrastructure_aborted for execution in executions
+    ):
+        first_error = None
+        for execution in executions:
+            for observation in execution.observations:
+                worker_error = observation.verification.evidence.diagnostics.get(
+                    "worker_error"
+                )
+                if isinstance(worker_error, Mapping):
+                    error_type = str(worker_error.get("exception_type", "worker error"))
+                    message = str(worker_error.get("message", "")).strip()
+                    first_error = f"{error_type}: {message}" if message else error_type
+                    break
+            if first_error is not None:
+                break
+        detail = f" First failure: {first_error}." if first_error else ""
+        raise EngineError(
+            f"epoch {epoch + 1} produced only infrastructure-aborted branches; "
+            f"refusing to commit an empty scientific barrier.{detail}"
+        )
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -2700,6 +2728,11 @@ class EvolveEngine:
                     )
                 )
 
+        # Do not spend audit, refinement, or harness reservations after the
+        # entire production phase failed in infrastructure. The assignments and
+        # failures above are already durable evidence for diagnosis.
+        _require_epoch_runtime_progress(executions, epoch=epoch)
+
         # -- randomized audits (matched intervention vs. control option) --
         audit_slots = plan.reservation_slots.audit_branch_slots
         audit_candidates = [
@@ -3632,6 +3665,11 @@ class EvolveEngine:
                 harness_dir / "harness.promotion.json", promotion_decision
             )
 
+        # An epoch containing no scientific execution at all is a runtime
+        # failure, not a completed search epoch.  Preserve its durable branch
+        # artifacts and stop before publishing an empty barrier.
+        _require_epoch_runtime_progress(executions, epoch=epoch)
+
         # Confirm the best provisional observation only after every scheduled
         # branch has closed. This makes the committed record independent of
         # worker completion order and verifies the saved answer payload rather
@@ -4055,14 +4093,23 @@ class EvolveEngine:
         ) -> None:
             nonlocal completed_verifications
             completed.append((item, execution))
-            completed_verifications += len(execution.observations)
+            completed_verifications += int(
+                float(execution.outcome.costs.get("verifier_calls", 0.0))
+            )
+            infrastructure_aborted = sum(
+                int(result.outcome.infrastructure_aborted)
+                for _, result in completed
+            )
             self._print_progress(
                 stage,
                 epoch=epoch,
                 completed=len(completed),
                 total=len(pending),
                 unit="branches",
-                detail=f"{completed_verifications} verifications completed",
+                detail=(
+                    f"{completed_verifications} verifier calls · "
+                    f"{infrastructure_aborted} infrastructure-aborted"
+                ),
             )
             self._write_live_progress_status(
                 layout,

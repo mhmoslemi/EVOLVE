@@ -1,0 +1,16 @@
+{
+  "cell_id": "cell:9fa71737936b6545a9f76b5b7183e32c3e8ab6371b40205175d5478480f285f1",
+  "champion_changed": false,
+  "champion_state_id": null,
+  "duplicate": false,
+  "evicted_slot_state_ids": [],
+  "evidence_id": "evidence:a956834ec4eb51731e4703b232846bb9667e61f0c15cc26df8302f182be23d5d",
+  "promising_state_ids": [
+    "state:5049658131c8e1db18bf12a29c0494d82d5ed05833d02fdc9ad887daf2b1b79b"
+  ],
+  "schema_version": 1,
+  "state_id": "state:d5fe7b57df1b4c3a9d8e4c5a32a9880f49c28619a52b78eb34baf9e2f19c6bb1",
+  "stepping_stone_state_ids": [
+    "state:d5fe7b57df1b4c3a9d8e4c5a32a9880f49c28619a52b78eb34baf9e2f19c6bb1"
+  ]
+}
