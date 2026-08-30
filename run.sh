@@ -221,7 +221,7 @@ if [ "$#" -eq 0 ]; then
         vllm_gpus=""
         vllm_gpu_count=0
         gpu_index=0
-        for gpu_id in $gpu_words; do
+        for gpu_id in $cuda_words; do
             gpu_index=$((gpu_index + 1))
             if [ "$gpu_index" -gt 1 ]; then
                 if [ -n "$vllm_gpus" ]; then
@@ -240,7 +240,7 @@ if [ "$#" -eq 0 ]; then
         vllm_gpus=""
         vllm_gpu_count=0
         gpu_index=0
-        for gpu_id in $gpu_words; do
+        for gpu_id in $cuda_words; do
             gpu_index=$((gpu_index + 1))
             if [ "$gpu_index" -gt 1 ] && [ "$gpu_index" -lt "$gpu_count" ]; then
                 if [ -n "$vllm_gpus" ]; then

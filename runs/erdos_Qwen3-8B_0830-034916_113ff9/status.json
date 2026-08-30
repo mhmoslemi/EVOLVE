@@ -58,15 +58,15 @@
     }
   },
   "live_epoch": {
-    "branch_progress": 0.16666666666666666,
-    "completed_branches": 1,
-    "completed_verifications": 1,
+    "branch_progress": 0.3333333333333333,
+    "completed_branches": 2,
+    "completed_verifications": 2,
     "epoch": 0,
     "infrastructure_aborted": 0,
     "provisional_best": null,
     "provisional_is_committed": false,
     "provisional_observation": null,
-    "remaining_branches": 5,
+    "remaining_branches": 4,
     "stage": "production generation + verification",
     "total_branches": 6,
     "total_epochs": 30
